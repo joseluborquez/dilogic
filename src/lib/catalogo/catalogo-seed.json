@@ -1,0 +1,3196 @@
+{
+  "CERQ": [
+    {
+      "sku": "CERQ_AB_001",
+      "descripcion": "ACEITE"
+    },
+    {
+      "sku": "CERQ_AB_002",
+      "descripcion": "ACEITE VEGETAL"
+    },
+    {
+      "sku": "CERQ_AB_003",
+      "descripcion": "ACEITE DE OLIVA"
+    },
+    {
+      "sku": "CERQ_AB_004",
+      "descripcion": "MANTECA DE CERDO HIDROGENADA"
+    },
+    {
+      "sku": "CERQ_AB_005",
+      "descripcion": "ARROZ PREGRANEADO"
+    },
+    {
+      "sku": "CERQ_AB_006",
+      "descripcion": "ARROZ BLANCO"
+    },
+    {
+      "sku": "CERQ_AB_007",
+      "descripcion": "FIDEOS CORBATITAS"
+    },
+    {
+      "sku": "CERQ_AB_008",
+      "descripcion": "FIDEOS ESPIRALES"
+    },
+    {
+      "sku": "CERQ_AB_009",
+      "descripcion": "TALLARINES Nº87"
+    },
+    {
+      "sku": "CERQ_AB_010",
+      "descripcion": "SPAGHETTI Nº5"
+    },
+    {
+      "sku": "CERQ_AB_011",
+      "descripcion": "CABELLOS DE ANGEL"
+    },
+    {
+      "sku": "CERQ_AB_012",
+      "descripcion": "LAZAÑA 11"
+    },
+    {
+      "sku": "CERQ_AB_013",
+      "descripcion": "SALSA TOMATE"
+    },
+    {
+      "sku": "CERQ_AB_014",
+      "descripcion": "SEMOLA"
+    },
+    {
+      "sku": "CERQ_AB_015",
+      "descripcion": "AVENA INSTANTANEA"
+    },
+    {
+      "sku": "CERQ_AB_016",
+      "descripcion": "ARVEJAS PARTIDAS AMARILLAS"
+    },
+    {
+      "sku": "CERQ_AB_017",
+      "descripcion": "GARBANZOS"
+    },
+    {
+      "sku": "CERQ_AB_018",
+      "descripcion": "LENTEJAS"
+    },
+    {
+      "sku": "CERQ_AB_019",
+      "descripcion": "POROTOS TORTOLA"
+    },
+    {
+      "sku": "CERQ_AB_020",
+      "descripcion": "CREMAS SURTIDAS"
+    },
+    {
+      "sku": "CERQ_AB_021",
+      "descripcion": "SOPAS SURTIDAS"
+    },
+    {
+      "sku": "CERQ_AB_022",
+      "descripcion": "CALDO VACUNO"
+    },
+    {
+      "sku": "CERQ_AB_023",
+      "descripcion": "CALDO AVE"
+    },
+    {
+      "sku": "CERQ_AB_024",
+      "descripcion": "CALDO VERDURAS"
+    },
+    {
+      "sku": "CERQ_AB_025",
+      "descripcion": "CHUÑO"
+    },
+    {
+      "sku": "CERQ_AB_026",
+      "descripcion": "HARINA TOSTADA"
+    },
+    {
+      "sku": "CERQ_AB_027",
+      "descripcion": "MAIZENA"
+    },
+    {
+      "sku": "CERQ_AB_028",
+      "descripcion": "LEVADURA"
+    },
+    {
+      "sku": "CERQ_AB_029",
+      "descripcion": "HARINA CRUDA"
+    },
+    {
+      "sku": "CERQ_AB_030",
+      "descripcion": "HARINA INTEGRAL"
+    },
+    {
+      "sku": "CERQ_AB_031",
+      "descripcion": "POLVO HORNEAR"
+    },
+    {
+      "sku": "CERQ_AB_032",
+      "descripcion": "SAL DE MESA"
+    },
+    {
+      "sku": "CERQ_AB_033",
+      "descripcion": "SAL DE MESA (Frasco)"
+    },
+    {
+      "sku": "CERQ_AB_034",
+      "descripcion": "JUGO DE LIMON"
+    },
+    {
+      "sku": "CERQ_AB_035",
+      "descripcion": "VINAGRE BLANCO"
+    },
+    {
+      "sku": "CERQ_AB_036",
+      "descripcion": "VINAGRE DE MANZANA"
+    },
+    {
+      "sku": "CERQ_AB_037",
+      "descripcion": "CREMA DE AJI"
+    },
+    {
+      "sku": "CERQ_AB_038",
+      "descripcion": "KETCHUP"
+    },
+    {
+      "sku": "CERQ_AB_039",
+      "descripcion": "MAYONESA"
+    },
+    {
+      "sku": "CERQ_AB_040",
+      "descripcion": "MAYONESA LIGHT"
+    },
+    {
+      "sku": "CERQ_AB_041",
+      "descripcion": "MOSTAZA"
+    },
+    {
+      "sku": "CERQ_AB_042",
+      "descripcion": "ALBAHACA  SECA"
+    },
+    {
+      "sku": "CERQ_AB_043",
+      "descripcion": "ALIÑO COMPLETO"
+    },
+    {
+      "sku": "CERQ_AB_044",
+      "descripcion": "OREGANO"
+    },
+    {
+      "sku": "CERQ_AB_045",
+      "descripcion": "LAUREL"
+    },
+    {
+      "sku": "CERQ_AB_046",
+      "descripcion": "MERKEN"
+    },
+    {
+      "sku": "CERQ_AB_047",
+      "descripcion": "PIMENTON EN POLVO"
+    },
+    {
+      "sku": "CERQ_AB_048",
+      "descripcion": "PIMIENTA NEGRA MOL."
+    },
+    {
+      "sku": "CERQ_AB_049",
+      "descripcion": "COMINO MOLIDO"
+    },
+    {
+      "sku": "CERQ_AB_050",
+      "descripcion": "CURRY"
+    },
+    {
+      "sku": "CERQ_AB_051",
+      "descripcion": "SALSA DE SOYA"
+    },
+    {
+      "sku": "CERQ_AB_052",
+      "descripcion": "ACETO BALSAMICO"
+    },
+    {
+      "sku": "CERQ_AB_053",
+      "descripcion": "MERMELADAS SURT."
+    },
+    {
+      "sku": "CERQ_AB_054",
+      "descripcion": "MERMELADAS SURT. LIGHT"
+    },
+    {
+      "sku": "CERQ_AB_055",
+      "descripcion": "DULCE MEMBRILLO"
+    },
+    {
+      "sku": "CERQ_AB_056",
+      "descripcion": "MIEL"
+    },
+    {
+      "sku": "CERQ_AB_057",
+      "descripcion": "DURAZNOS MITADES"
+    },
+    {
+      "sku": "CERQ_AB_058",
+      "descripcion": "PIÑAS RODAJAS"
+    },
+    {
+      "sku": "CERQ_AB_059",
+      "descripcion": "FRUTILLAS"
+    },
+    {
+      "sku": "CERQ_AB_060",
+      "descripcion": "COCKTAIL DE FRUTAS"
+    },
+    {
+      "sku": "CERQ_AB_061",
+      "descripcion": "ARVEJAS"
+    },
+    {
+      "sku": "CERQ_AB_062",
+      "descripcion": "ESPARRAGOS"
+    },
+    {
+      "sku": "CERQ_AB_063",
+      "descripcion": "PALMITOS"
+    },
+    {
+      "sku": "CERQ_AB_064",
+      "descripcion": "PIMIENTO MORRON"
+    },
+    {
+      "sku": "CERQ_AB_065",
+      "descripcion": "CHAMPIÑONES"
+    },
+    {
+      "sku": "CERQ_AB_066",
+      "descripcion": "ATUN EN LOMITOS"
+    },
+    {
+      "sku": "CERQ_AB_067",
+      "descripcion": "CHORITOS EN CONSERVA"
+    },
+    {
+      "sku": "CERQ_AB_068",
+      "descripcion": "CHOLGAS EN CONSERVA"
+    },
+    {
+      "sku": "CERQ_AB_069",
+      "descripcion": "SURTIDO DE MARISCOS"
+    },
+    {
+      "sku": "CERQ_AB_070",
+      "descripcion": "JUREL TIPO SALMON"
+    },
+    {
+      "sku": "CERQ_AB_071",
+      "descripcion": "PAN RALLADO"
+    },
+    {
+      "sku": "CERQ_AB_072",
+      "descripcion": "MASA PARA PIZZA"
+    },
+    {
+      "sku": "CERQ_AB_073",
+      "descripcion": "PAN MOLDE"
+    },
+    {
+      "sku": "CERQ_AB_074",
+      "descripcion": "AZUCAR FLOR"
+    },
+    {
+      "sku": "CERQ_AB_075",
+      "descripcion": "COBERTURA  CHOCOLATE"
+    },
+    {
+      "sku": "CERQ_AB_076",
+      "descripcion": "COCO  RALLADO"
+    },
+    {
+      "sku": "CERQ_AB_077",
+      "descripcion": "CHOCOLATE POLVO (amargo)"
+    },
+    {
+      "sku": "CERQ_AB_078",
+      "descripcion": "CHOCOLATE POLVO (dulce)"
+    },
+    {
+      "sku": "CERQ_AB_079",
+      "descripcion": "VAINILLA"
+    },
+    {
+      "sku": "CERQ_AB_080",
+      "descripcion": "FLAN SURTIDO"
+    },
+    {
+      "sku": "CERQ_AB_081",
+      "descripcion": "JALEA SURTIDA"
+    },
+    {
+      "sku": "CERQ_AB_082",
+      "descripcion": "CHANCACA"
+    },
+    {
+      "sku": "CERQ_AB_083",
+      "descripcion": "LECHE CONDENSADA"
+    },
+    {
+      "sku": "CERQ_AB_084",
+      "descripcion": "LECHE EVAPORADA"
+    },
+    {
+      "sku": "CERQ_AB_085",
+      "descripcion": "PASAS NEGRAS"
+    },
+    {
+      "sku": "CERQ_AB_086",
+      "descripcion": "PASAS RUBIAS"
+    },
+    {
+      "sku": "CERQ_AB_087",
+      "descripcion": "ACEITUNAS"
+    },
+    {
+      "sku": "CERQ_AB_088",
+      "descripcion": "PICKLES"
+    },
+    {
+      "sku": "CERQ_AB_089",
+      "descripcion": "NUECES"
+    },
+    {
+      "sku": "CERQ_AB_090",
+      "descripcion": "HUESILLOS"
+    },
+    {
+      "sku": "CERQ_AB_091",
+      "descripcion": "TRIGOMOTE"
+    },
+    {
+      "sku": "CERQ_AB_092",
+      "descripcion": "CIRUELAS  SECAS"
+    },
+    {
+      "sku": "CERQ_AB_093",
+      "descripcion": "PAPAS FRITAS"
+    },
+    {
+      "sku": "CERQ_AB_094",
+      "descripcion": "MANI SALADO"
+    },
+    {
+      "sku": "CERQ_AB_095",
+      "descripcion": "TORTILLAS MEXICANAS XL"
+    },
+    {
+      "sku": "CERQ_AB_096",
+      "descripcion": "GALLETAS KUKY"
+    },
+    {
+      "sku": "CERQ_AB_097",
+      "descripcion": "GALLETAS CHAMPAÑITA"
+    },
+    {
+      "sku": "CERQ_AB_098",
+      "descripcion": "GALLETAS CRAKELET"
+    },
+    {
+      "sku": "CERQ_AB_099",
+      "descripcion": "GALLETAS DONUTS"
+    },
+    {
+      "sku": "CERQ_AB_100",
+      "descripcion": "GALLETAS TRITON"
+    },
+    {
+      "sku": "CERQ_AB_101",
+      "descripcion": "GALLETAS TUAREG"
+    },
+    {
+      "sku": "CERQ_AB_102",
+      "descripcion": "GALLETAS DE AGUA"
+    },
+    {
+      "sku": "CERQ_AB_103",
+      "descripcion": "GALLETAS DE SODA"
+    },
+    {
+      "sku": "CERQ_AB_104",
+      "descripcion": "CEREAL CHOCAPIC"
+    },
+    {
+      "sku": "CERQ_AB_105",
+      "descripcion": "CEREAL ZUCARITAS/CORNFLEX"
+    },
+    {
+      "sku": "CERQ_AB_106",
+      "descripcion": "AJO EN POLVO"
+    },
+    {
+      "sku": "CERQ_AB_107",
+      "descripcion": "FIDEOS RAVIOLES"
+    },
+    {
+      "sku": "CERQ_AB_108",
+      "descripcion": "FIDEOS CARACOLITOS"
+    },
+    {
+      "sku": "CERQ_CC_001",
+      "descripcion": "POLLO ENTERO ($ X KILO)"
+    },
+    {
+      "sku": "CERQ_CC_002",
+      "descripcion": "PECHUGA DE POLLO"
+    },
+    {
+      "sku": "CERQ_CC_003",
+      "descripcion": "TRUTRO DE POLLO (ENTERO)"
+    },
+    {
+      "sku": "CERQ_CC_004",
+      "descripcion": "PECHUGA DE PAVO"
+    },
+    {
+      "sku": "CERQ_AB_109",
+      "descripcion": "AGUA MINERAL C/GAS"
+    },
+    {
+      "sku": "CERQ_AB_110",
+      "descripcion": "AGUA MINERAL S/GAS"
+    },
+    {
+      "sku": "CERQ_AB_111",
+      "descripcion": "AGUA PURIFICADA"
+    },
+    {
+      "sku": "CERQ_AB_112",
+      "descripcion": "BEBIDA COCA-COLA"
+    },
+    {
+      "sku": "CERQ_AB_113",
+      "descripcion": "BEBIDA COCA-COLA LIGHT"
+    },
+    {
+      "sku": "CERQ_AB_114",
+      "descripcion": "BEBIDA COCA-COLA ZERO"
+    },
+    {
+      "sku": "CERQ_AB_115",
+      "descripcion": "BEBIDA FANTA"
+    },
+    {
+      "sku": "CERQ_AB_116",
+      "descripcion": "BEBIDA SPRITE"
+    },
+    {
+      "sku": "CERQ_AB_117",
+      "descripcion": "BEBIDA BILZ"
+    },
+    {
+      "sku": "CERQ_AB_118",
+      "descripcion": "BEBIDA PAP"
+    },
+    {
+      "sku": "CERQ_AB_119",
+      "descripcion": "BEBIDA KEM PIÑA"
+    },
+    {
+      "sku": "CERQ_AB_120",
+      "descripcion": "BEBIDA LIMON SODA"
+    },
+    {
+      "sku": "CERQ_AB_121",
+      "descripcion": "BEBIDA GINGER ALE"
+    },
+    {
+      "sku": "CERQ_AB_122",
+      "descripcion": "JUGO DE NARANJA"
+    },
+    {
+      "sku": "CERQ_AB_123",
+      "descripcion": "JUGO DE NARANJA light"
+    },
+    {
+      "sku": "CERQ_AB_124",
+      "descripcion": "JUGO DE PIÑA"
+    },
+    {
+      "sku": "CERQ_AB_125",
+      "descripcion": "JUGO DE DURAZNO"
+    },
+    {
+      "sku": "CERQ_AB_126",
+      "descripcion": "JUGO DE DAMASCO"
+    },
+    {
+      "sku": "CERQ_AB_127",
+      "descripcion": "JUGO DE MANZANA"
+    },
+    {
+      "sku": "CERQ_AB_128",
+      "descripcion": "JUGOS EN POLVO"
+    },
+    {
+      "sku": "CERQ_AB_129",
+      "descripcion": "JUGOS EN POLVO"
+    },
+    {
+      "sku": "CERQ_AB_130",
+      "descripcion": "AZUCAR GRANULADA"
+    },
+    {
+      "sku": "CERQ_AB_131",
+      "descripcion": "CAFÉ TRADICIONAL"
+    },
+    {
+      "sku": "CERQ_AB_132",
+      "descripcion": "CAFÉ TRADICIONAL"
+    },
+    {
+      "sku": "CERQ_AB_133",
+      "descripcion": "CAFÉ DECAFEINADO"
+    },
+    {
+      "sku": "CERQ_AB_134",
+      "descripcion": "CAFÉ FINA SELECCIÓN"
+    },
+    {
+      "sku": "CERQ_AB_135",
+      "descripcion": "CAFÉ GRANO MOLIDO"
+    },
+    {
+      "sku": "CERQ_AB_136",
+      "descripcion": "ENDULZANTE"
+    },
+    {
+      "sku": "CERQ_AB_137",
+      "descripcion": "MILO"
+    },
+    {
+      "sku": "CERQ_AB_138",
+      "descripcion": "TE"
+    },
+    {
+      "sku": "CERQ_AB_139",
+      "descripcion": "TE HIERBAS SURTIDAS"
+    },
+    {
+      "sku": "CERQ_AB_140",
+      "descripcion": "TE HIERBAS SURTIDAS"
+    },
+    {
+      "sku": "CERQ_AB_141",
+      "descripcion": "YERBA MATE PRENSADA"
+    },
+    {
+      "sku": "CERQ_CC_005",
+      "descripcion": "ABASTERO"
+    },
+    {
+      "sku": "CERQ_CC_006",
+      "descripcion": "ASADO DE TIRA"
+    },
+    {
+      "sku": "CERQ_CC_007",
+      "descripcion": "ASIENTO"
+    },
+    {
+      "sku": "CERQ_CC_008",
+      "descripcion": "BISTEC POSTA"
+    },
+    {
+      "sku": "CERQ_CC_009",
+      "descripcion": "CARNE MOLIDA"
+    },
+    {
+      "sku": "CERQ_CC_010",
+      "descripcion": "HUACHALOMO"
+    },
+    {
+      "sku": "CERQ_CC_011",
+      "descripcion": "LOMO LISO"
+    },
+    {
+      "sku": "CERQ_CC_012",
+      "descripcion": "LOMO VETADO"
+    },
+    {
+      "sku": "CERQ_CC_013",
+      "descripcion": "OSOBUCO"
+    },
+    {
+      "sku": "CERQ_CC_014",
+      "descripcion": "PLATEADA"
+    },
+    {
+      "sku": "CERQ_CC_015",
+      "descripcion": "POLLO GANSO"
+    },
+    {
+      "sku": "CERQ_CC_016",
+      "descripcion": "POSTA NEGRA"
+    },
+    {
+      "sku": "CERQ_CC_017",
+      "descripcion": "POSTA PALETA"
+    },
+    {
+      "sku": "CERQ_CC_018",
+      "descripcion": "POSTA ROSADA"
+    },
+    {
+      "sku": "CERQ_CC_019",
+      "descripcion": "PUNTA PICANA"
+    },
+    {
+      "sku": "CERQ_CC_020",
+      "descripcion": "SOBRECOSTILLA"
+    },
+    {
+      "sku": "CERQ_CC_021",
+      "descripcion": "TAPAPECHO"
+    },
+    {
+      "sku": "CERQ_CC_022",
+      "descripcion": "LONGANIZA"
+    },
+    {
+      "sku": "CERQ_CC_023",
+      "descripcion": "PRIETAS"
+    },
+    {
+      "sku": "CERQ_CC_024",
+      "descripcion": "VIENESAS"
+    },
+    {
+      "sku": "CERQ_AB_142",
+      "descripcion": "JAMON SANDWICH / PIERNA PAQUETE"
+    },
+    {
+      "sku": "CERQ_AB_143",
+      "descripcion": "JAMON DE PAVO PAQUETE"
+    },
+    {
+      "sku": "CERQ_AB_144",
+      "descripcion": "MORTADELA LISA PAQUETE"
+    },
+    {
+      "sku": "CERQ_AB_145",
+      "descripcion": "SALAME PAQUETE"
+    },
+    {
+      "sku": "CERQ_AB_146",
+      "descripcion": "PATE DE CAMPO"
+    },
+    {
+      "sku": "CERQ_AB_147",
+      "descripcion": "PATE DE CERDO"
+    },
+    {
+      "sku": "CERQ_AB_148",
+      "descripcion": "PATE DE TERNERA"
+    },
+    {
+      "sku": "CERQ_AB_149",
+      "descripcion": "PATE DE JAMON"
+    },
+    {
+      "sku": "CERQ_AB_150",
+      "descripcion": "TOCINO LAMINADO PAQUETE"
+    },
+    {
+      "sku": "CERQ_CC_025",
+      "descripcion": "LOMO DE CERDO"
+    },
+    {
+      "sku": "CERQ_CC_026",
+      "descripcion": "COSTILLAR FRESCO"
+    },
+    {
+      "sku": "CERQ_CC_027",
+      "descripcion": "COSTILLAR  AHUMADO"
+    },
+    {
+      "sku": "CERQ_CC_028",
+      "descripcion": "PULPA DE CERDO"
+    },
+    {
+      "sku": "CERQ_CC_029",
+      "descripcion": "CHULETA CERDO"
+    },
+    {
+      "sku": "CERQ_CC_030",
+      "descripcion": "HAMBURGUESA PREMIUM"
+    },
+    {
+      "sku": "CERQ_CC_031",
+      "descripcion": "ARVEJAS"
+    },
+    {
+      "sku": "CERQ_CC_032",
+      "descripcion": "BROCOLIS"
+    },
+    {
+      "sku": "CERQ_CC_033",
+      "descripcion": "COLIFLOR"
+    },
+    {
+      "sku": "CERQ_CC_034",
+      "descripcion": "CHOCLOS (GRANO)"
+    },
+    {
+      "sku": "CERQ_CC_035",
+      "descripcion": "CHOCLOS (TROZO)"
+    },
+    {
+      "sku": "CERQ_CC_036",
+      "descripcion": "JARDINERA"
+    },
+    {
+      "sku": "CERQ_CC_037",
+      "descripcion": "PASTELERA DE CHOCLO"
+    },
+    {
+      "sku": "CERQ_CC_038",
+      "descripcion": "HABAS BOLSA"
+    },
+    {
+      "sku": "CERQ_CC_039",
+      "descripcion": "POROTOS GRANADOS BOLSA"
+    },
+    {
+      "sku": "CERQ_CC_040",
+      "descripcion": "POROTOS  VERDES  BOLSA"
+    },
+    {
+      "sku": "CERQ_CC_041",
+      "descripcion": "PAPAS PRE FRITAS BOLSA"
+    },
+    {
+      "sku": "CERQ_CC_042",
+      "descripcion": "PAPAS DUQUESAS"
+    },
+    {
+      "sku": "CERQ_CC_043",
+      "descripcion": "MERLUZA"
+    },
+    {
+      "sku": "CERQ_CC_044",
+      "descripcion": "SURTIDO MARISCOS"
+    },
+    {
+      "sku": "CERQ_CC_045",
+      "descripcion": "FRAMBUESAS PAQUETE"
+    },
+    {
+      "sku": "CERQ_FV_001",
+      "descripcion": "MANZANAS ROJAS"
+    },
+    {
+      "sku": "CERQ_FV_002",
+      "descripcion": "MANZANAS VERDES"
+    },
+    {
+      "sku": "CERQ_FV_003",
+      "descripcion": "DURAZNOS"
+    },
+    {
+      "sku": "CERQ_FV_004",
+      "descripcion": "CIRUELAS"
+    },
+    {
+      "sku": "CERQ_FV_005",
+      "descripcion": "PLATANOS"
+    },
+    {
+      "sku": "CERQ_FV_006",
+      "descripcion": "NARANJAS"
+    },
+    {
+      "sku": "CERQ_FV_007",
+      "descripcion": "MANDARINAS"
+    },
+    {
+      "sku": "CERQ_FV_008",
+      "descripcion": "PERAS"
+    },
+    {
+      "sku": "CERQ_FV_009",
+      "descripcion": "KIWIS"
+    },
+    {
+      "sku": "CERQ_FV_010",
+      "descripcion": "PIÑA"
+    },
+    {
+      "sku": "CERQ_AB_151",
+      "descripcion": "LECHE ENTERA"
+    },
+    {
+      "sku": "CERQ_AB_152",
+      "descripcion": "LECHE SEMI DESCREMADA"
+    },
+    {
+      "sku": "CERQ_AB_153",
+      "descripcion": "LECHE SIN LACTOSA"
+    },
+    {
+      "sku": "CERQ_AB_154",
+      "descripcion": "LECHE DESCREMADA"
+    },
+    {
+      "sku": "CERQ_AB_155",
+      "descripcion": "LECHE EN POLVO"
+    },
+    {
+      "sku": "CERQ_AB_156",
+      "descripcion": "LECHE EN POLVO SVELTY"
+    },
+    {
+      "sku": "CERQ_AB_157",
+      "descripcion": "LECHE CULTIVADA SURT."
+    },
+    {
+      "sku": "CERQ_AB_158",
+      "descripcion": "LECHE CULTIVADA S/LACTOSA"
+    },
+    {
+      "sku": "CERQ_AB_159",
+      "descripcion": "CREMA PARA BATIR"
+    },
+    {
+      "sku": "CERQ_AB_160",
+      "descripcion": "CREMA"
+    },
+    {
+      "sku": "CERQ_AB_161",
+      "descripcion": "QUESO LAMINADO"
+    },
+    {
+      "sku": "CERQ_AB_162",
+      "descripcion": "QUESO RALLADO"
+    },
+    {
+      "sku": "CERQ_AB_163",
+      "descripcion": "QUESO CREMA"
+    },
+    {
+      "sku": "CERQ_AB_164",
+      "descripcion": "QUESO CREMA"
+    },
+    {
+      "sku": "CERQ_AB_165",
+      "descripcion": "QUESILLO"
+    },
+    {
+      "sku": "CERQ_AB_166",
+      "descripcion": "MANTEQUILLA"
+    },
+    {
+      "sku": "CERQ_AB_167",
+      "descripcion": "MARGARINA"
+    },
+    {
+      "sku": "CERQ_AB_168",
+      "descripcion": "MANJAR"
+    },
+    {
+      "sku": "CERQ_AB_169",
+      "descripcion": "YOGHURT BATIDO NORMAL"
+    },
+    {
+      "sku": "CERQ_AB_170",
+      "descripcion": "YOGHURT BATIDO LIGHT"
+    },
+    {
+      "sku": "CERQ_AB_171",
+      "descripcion": "YOGHURT BATIDO S/LACTOSA"
+    },
+    {
+      "sku": "CERQ_AB_172",
+      "descripcion": "YOGHURT FRUTOS/GRIEGO"
+    },
+    {
+      "sku": "CERQ_AB_173",
+      "descripcion": "YOGHURT BATIDO NORMAL"
+    },
+    {
+      "sku": "CERQ_AB_174",
+      "descripcion": "QUESO TROZO GAUDA"
+    },
+    {
+      "sku": "CERQ_AB_175",
+      "descripcion": "HUEVO EXTRA COLOR"
+    },
+    {
+      "sku": "CERQ_AB_176",
+      "descripcion": "CARBON"
+    },
+    {
+      "sku": "CERQ_FV_090",
+      "descripcion": "ACELGAS"
+    },
+    {
+      "sku": "CERQ_FV_011",
+      "descripcion": "AJI VERDE"
+    },
+    {
+      "sku": "CERQ_FV_012",
+      "descripcion": "AJO CHILENO"
+    },
+    {
+      "sku": "CERQ_FV_013",
+      "descripcion": "APIOS"
+    },
+    {
+      "sku": "CERQ_FV_014",
+      "descripcion": "BETARRAGA"
+    },
+    {
+      "sku": "CERQ_FV_015",
+      "descripcion": "BROCOLI"
+    },
+    {
+      "sku": "CERQ_FV_016",
+      "descripcion": "CEBOLLAS"
+    },
+    {
+      "sku": "CERQ_FV_017",
+      "descripcion": "CEBOLLIN"
+    },
+    {
+      "sku": "CERQ_FV_018",
+      "descripcion": "CIBOULETTE"
+    },
+    {
+      "sku": "CERQ_FV_019",
+      "descripcion": "CILANTRO"
+    },
+    {
+      "sku": "CERQ_FV_020",
+      "descripcion": "COLIFLOR"
+    },
+    {
+      "sku": "CERQ_FV_021",
+      "descripcion": "CHOCLO ENTERO"
+    },
+    {
+      "sku": "CERQ_FV_022",
+      "descripcion": "LECHUGA"
+    },
+    {
+      "sku": "CERQ_FV_023",
+      "descripcion": "LIMONES"
+    },
+    {
+      "sku": "CERQ_FV_024",
+      "descripcion": "PALTAS"
+    },
+    {
+      "sku": "CERQ_FV_025",
+      "descripcion": "CHAMPIÑONES BLANCOS"
+    },
+    {
+      "sku": "CERQ_FV_026",
+      "descripcion": "PAPAS"
+    },
+    {
+      "sku": "CERQ_FV_027",
+      "descripcion": "PEPINOS (ENSALADA)"
+    },
+    {
+      "sku": "CERQ_FV_028",
+      "descripcion": "PEREJIL"
+    },
+    {
+      "sku": "CERQ_FV_029",
+      "descripcion": "PIMIENTO ROJO"
+    },
+    {
+      "sku": "CERQ_FV_030",
+      "descripcion": "PIMIENTO VERDE"
+    },
+    {
+      "sku": "CERQ_FV_031",
+      "descripcion": "REPOLLO MORADO"
+    },
+    {
+      "sku": "CERQ_FV_032",
+      "descripcion": "REPOLLO"
+    },
+    {
+      "sku": "CERQ_FV_033",
+      "descripcion": "TOMATES"
+    },
+    {
+      "sku": "CERQ_FV_034",
+      "descripcion": "ZANAHORIA"
+    },
+    {
+      "sku": "CERQ_FV_035",
+      "descripcion": "ZAPALLO CAMOTE"
+    },
+    {
+      "sku": "CERQ_FV_036",
+      "descripcion": "ZAPALLO ITALIANO"
+    }
+  ],
+  "MTX": [
+    {
+      "sku": "MTX_AB_001",
+      "descripcion": "ACEITE DE OLIVA 500 CC"
+    },
+    {
+      "sku": "MTX_AB_002",
+      "descripcion": "ACEITE VEGETAL 900 ML"
+    },
+    {
+      "sku": "MTX_AB_003",
+      "descripcion": "ACEITUNAS 250 G"
+    },
+    {
+      "sku": "MTX_AB_004",
+      "descripcion": "ACETO BALSAMICO 1000 CC"
+    },
+    {
+      "sku": "MTX_AB_005",
+      "descripcion": "AGUA MINERAL C/GAS 1,6 LT"
+    },
+    {
+      "sku": "MTX_AB_006",
+      "descripcion": "AGUA MINERAL C/GAS 500 CC"
+    },
+    {
+      "sku": "MTX_AB_007",
+      "descripcion": "AGUA MINERAL SABORIZADA C/GAS 1,6 LT"
+    },
+    {
+      "sku": "MTX_AB_008",
+      "descripcion": "AJI COLOR  15 G"
+    },
+    {
+      "sku": "MTX_AB_009",
+      "descripcion": "AJI MERQUEN 15 G"
+    },
+    {
+      "sku": "MTX_AB_010",
+      "descripcion": "AJI PASTA 900 G"
+    },
+    {
+      "sku": "MTX_AB_011",
+      "descripcion": "AJÍ PASTA PET 240 G"
+    },
+    {
+      "sku": "MTX_AB_012",
+      "descripcion": "AJO EN POLVO 15 GR"
+    },
+    {
+      "sku": "MTX_AB_013",
+      "descripcion": "ALBAHACA SECA 6 G"
+    },
+    {
+      "sku": "MTX_AB_014",
+      "descripcion": "ALIÑO COMPLETO 15 G"
+    },
+    {
+      "sku": "MTX_AB_015",
+      "descripcion": "ALUSA FILM PLASTICO 20 MT"
+    },
+    {
+      "sku": "MTX_AB_016",
+      "descripcion": "ALUSA FOIL ALUMINIO 7,5 MT"
+    },
+    {
+      "sku": "MTX_AB_017",
+      "descripcion": "ARROLLADO HUASO 150 G"
+    },
+    {
+      "sku": "MTX_AB_018",
+      "descripcion": "ARROZ GRADO 1 1 KG"
+    },
+    {
+      "sku": "MTX_AB_019",
+      "descripcion": "ARVEJAS PARTIDAS 1 KG"
+    },
+    {
+      "sku": "MTX_AB_020",
+      "descripcion": "ATUN EN LOMITOS AL ACEITE 160 G"
+    },
+    {
+      "sku": "MTX_AB_021",
+      "descripcion": "ATUN EN LOMITOS AL AGUA 160 G"
+    },
+    {
+      "sku": "MTX_AB_022",
+      "descripcion": "AVENA INSTANTANEA 1000G"
+    },
+    {
+      "sku": "MTX_AB_023",
+      "descripcion": "AZUCAR 1 KG"
+    },
+    {
+      "sku": "MTX_AB_024",
+      "descripcion": "AZÚCAR FLOR 500 G"
+    },
+    {
+      "sku": "MTX_AB_025",
+      "descripcion": "BEBIDA LATA LIGHT 350 CC"
+    },
+    {
+      "sku": "MTX_AB_026",
+      "descripcion": "BEBIDA LATA NORMAL 350 CC"
+    },
+    {
+      "sku": "MTX_AB_027",
+      "descripcion": "BEBIDAS LIGHT SURTIDAS 1,5 LT"
+    },
+    {
+      "sku": "MTX_AB_028",
+      "descripcion": "BEBIDAS NORMALES SURTIDAS 1,5 LT"
+    },
+    {
+      "sku": "MTX_AB_029",
+      "descripcion": "BIOSAL 125 G"
+    },
+    {
+      "sku": "MTX_AB_030",
+      "descripcion": "BOLSA PLASTICA CON CIERRE  26x27 19 UND"
+    },
+    {
+      "sku": "MTX_AB_031",
+      "descripcion": "CAFE DE GRANO MOLIDO 250 G"
+    },
+    {
+      "sku": "MTX_AB_032",
+      "descripcion": "CAFE DESCAFEINADO DECAF 170 G"
+    },
+    {
+      "sku": "MTX_AB_033",
+      "descripcion": "CAFE NESCAFE 170 G"
+    },
+    {
+      "sku": "MTX_AB_034",
+      "descripcion": "CALDILLO MARISCOS SURTIDO EN AGUA 190 G"
+    },
+    {
+      "sku": "MTX_AB_035",
+      "descripcion": "CALDO CONCENTRADO CARNE 4 G"
+    },
+    {
+      "sku": "MTX_AB_036",
+      "descripcion": "CALDO CONCENTRADO COSTILLA 4 G"
+    },
+    {
+      "sku": "MTX_AB_037",
+      "descripcion": "CALDO CONCENTRADO GALLINA 4 G"
+    },
+    {
+      "sku": "MTX_AB_038",
+      "descripcion": "CALDO CONCENTRADO VERDURA 4 G"
+    },
+    {
+      "sku": "MTX_AB_039",
+      "descripcion": "CANELA ENTERA 15 G"
+    },
+    {
+      "sku": "MTX_AB_040",
+      "descripcion": "CANELA POLVO 15 G"
+    },
+    {
+      "sku": "MTX_AB_041",
+      "descripcion": "CARBON BOLSA 2,5 KG UND"
+    },
+    {
+      "sku": "MTX_AB_042",
+      "descripcion": "CEREAL  MILO 480 G"
+    },
+    {
+      "sku": "MTX_AB_043",
+      "descripcion": "CEREAL CHOCAPIC 350 G"
+    },
+    {
+      "sku": "MTX_AB_044",
+      "descripcion": "CEREAL CORN FLAKES 480 G"
+    },
+    {
+      "sku": "MTX_AB_045",
+      "descripcion": "CEREAL GRANOLA 320 G"
+    },
+    {
+      "sku": "MTX_AB_046",
+      "descripcion": "CEREAL ZUCARITAS 450 G"
+    },
+    {
+      "sku": "MTX_AB_047",
+      "descripcion": "CHAMPIÑON LAMINADO 400 G"
+    },
+    {
+      "sku": "MTX_AB_048",
+      "descripcion": "CHANCACA DELICIOSA 400 G"
+    },
+    {
+      "sku": "MTX_AB_049",
+      "descripcion": "CHOCOLATE DULCE EN POLVO 200 G"
+    },
+    {
+      "sku": "MTX_AB_050",
+      "descripcion": "CHORITOS EN ACEITE 190 G"
+    },
+    {
+      "sku": "MTX_AB_051",
+      "descripcion": "CHORITOS EN AGUA 190 G"
+    },
+    {
+      "sku": "MTX_AB_052",
+      "descripcion": "CHORIZO PARRILLERO 1 KG"
+    },
+    {
+      "sku": "MTX_AB_053",
+      "descripcion": "CHUCHOCA 0,5 KG"
+    },
+    {
+      "sku": "MTX_AB_054",
+      "descripcion": "CHUCRUT 300 G"
+    },
+    {
+      "sku": "MTX_AB_055",
+      "descripcion": "COCKTAIL DE FRUTA 560 G"
+    },
+    {
+      "sku": "MTX_AB_056",
+      "descripcion": "COCO RALLADO 100 G"
+    },
+    {
+      "sku": "MTX_AB_057",
+      "descripcion": "COMINO MOLIDO 15 G"
+    },
+    {
+      "sku": "MTX_AB_058",
+      "descripcion": "CREMA DE LECHE (NESTLÉ) 236 G"
+    },
+    {
+      "sku": "MTX_AB_059",
+      "descripcion": "CREMA LÍQUIDA PARA BATIR 1 LT"
+    },
+    {
+      "sku": "MTX_AB_060",
+      "descripcion": "CREMAS NATUREZZA SURTIDAS 65 G"
+    },
+    {
+      "sku": "MTX_AB_061",
+      "descripcion": "CURRY EN POLVO 15 G"
+    },
+    {
+      "sku": "MTX_AB_062",
+      "descripcion": "CUS CUS 250 G"
+    },
+    {
+      "sku": "MTX_AB_063",
+      "descripcion": "DULCE MEMBRILLO 1 KG"
+    },
+    {
+      "sku": "MTX_AB_064",
+      "descripcion": "DURAZNO EN MITADES 590 G"
+    },
+    {
+      "sku": "MTX_AB_065",
+      "descripcion": "DURAZNO EN TROCITOS 590 G"
+    },
+    {
+      "sku": "MTX_AB_066",
+      "descripcion": "ENDULZANTE LÍQUIDO STEVIA 250 ML"
+    },
+    {
+      "sku": "MTX_AB_067",
+      "descripcion": "ESENCIA VAINILLA 100 CC"
+    },
+    {
+      "sku": "MTX_AB_068",
+      "descripcion": "ESPÁRRAGOS 425 G"
+    },
+    {
+      "sku": "MTX_AB_069",
+      "descripcion": "ESTRAGON 5 G"
+    },
+    {
+      "sku": "MTX_AB_070",
+      "descripcion": "FIDEOS CABELLITOS  400 G"
+    },
+    {
+      "sku": "MTX_AB_071",
+      "descripcion": "FIDEOS CARACOLITOS 400 G"
+    },
+    {
+      "sku": "MTX_AB_072",
+      "descripcion": "FIDEOS CORBATAS 400 G"
+    },
+    {
+      "sku": "MTX_AB_073",
+      "descripcion": "FIDEOS ESPAGUETTI  N°5 400 G"
+    },
+    {
+      "sku": "MTX_AB_074",
+      "descripcion": "FIDEOS ESPIRALES 400 G"
+    },
+    {
+      "sku": "MTX_AB_075",
+      "descripcion": "FIDEOS FETUCCINI 400 G"
+    },
+    {
+      "sku": "MTX_AB_076",
+      "descripcion": "FIDEOS LASAÑA TRADICIONAL/PRECOCIDA 360 G"
+    },
+    {
+      "sku": "MTX_AB_077",
+      "descripcion": "FIDEOS MOSTACHOLIS 400 G"
+    },
+    {
+      "sku": "MTX_AB_078",
+      "descripcion": "FIDEOS QUIFAROS 400 G"
+    },
+    {
+      "sku": "MTX_AB_079",
+      "descripcion": "FIDEOS TALLARINES N°77 400 G"
+    },
+    {
+      "sku": "MTX_AB_080",
+      "descripcion": "FLAN SABORES SURTIDOS 90 G"
+    },
+    {
+      "sku": "MTX_AB_081",
+      "descripcion": "FLAN SABORES SURTIDOS LIGHT 17 G"
+    },
+    {
+      "sku": "MTX_AB_082",
+      "descripcion": "FOSFOROS (10 CAJITAS) 10 UND"
+    },
+    {
+      "sku": "MTX_AB_083",
+      "descripcion": "FRUTILLAS AL JUGO 500 G"
+    },
+    {
+      "sku": "MTX_AB_084",
+      "descripcion": "GALLETA KUKY MCKAY 120G"
+    },
+    {
+      "sku": "MTX_AB_085",
+      "descripcion": "GALLETA SODA MACKAY 180 G"
+    },
+    {
+      "sku": "MTX_AB_086",
+      "descripcion": "GALLETAS COSTA SURTIDAS 120 G"
+    },
+    {
+      "sku": "MTX_AB_087",
+      "descripcion": "GALLETAS DE AGUA MACKAY 180G"
+    },
+    {
+      "sku": "MTX_AB_088",
+      "descripcion": "GALLETAS MACKAY CRIOLLITAS 100 G"
+    },
+    {
+      "sku": "MTX_AB_089",
+      "descripcion": "GALLETAS MACKAY MANT,VIN,COC,LIM,MAR,NIZ 150G"
+    },
+    {
+      "sku": "MTX_AB_090",
+      "descripcion": "GALLETAS MINI SURTIDAS 40 G"
+    },
+    {
+      "sku": "MTX_AB_091",
+      "descripcion": "GALLETAS TRITON 120 G"
+    },
+    {
+      "sku": "MTX_AB_092",
+      "descripcion": "GARBANZOS PELADOS 1 KG"
+    },
+    {
+      "sku": "MTX_AB_093",
+      "descripcion": "GELATINA/JALEA  SABORES SURTIDOS 100 G"
+    },
+    {
+      "sku": "MTX_AB_094",
+      "descripcion": "GELATINA/JALEA SIN SABOR 30 G"
+    },
+    {
+      "sku": "MTX_AB_095",
+      "descripcion": "HARINA CRUDA 25 KG"
+    },
+    {
+      "sku": "MTX_AB_096",
+      "descripcion": "HARINA INTEGRAL 1 KG"
+    },
+    {
+      "sku": "MTX_AB_097",
+      "descripcion": "HARINA TOSTADA 1 KG"
+    },
+    {
+      "sku": "MTX_AB_098",
+      "descripcion": "HUESILLOS 0,5 KG"
+    },
+    {
+      "sku": "MTX_AB_099",
+      "descripcion": "HUEVOS UNIDAD 1 UND"
+    },
+    {
+      "sku": "MTX_AB_100",
+      "descripcion": "JAMON PIERNA 150 G"
+    },
+    {
+      "sku": "MTX_AB_101",
+      "descripcion": "JAMON SANDWICH 150 G"
+    },
+    {
+      "sku": "MTX_AB_102",
+      "descripcion": "JUGO LIMON SUCEDANEO 5 LT"
+    },
+    {
+      "sku": "MTX_AB_103",
+      "descripcion": "JUGO LIMON SUCEDANEO 500 CC"
+    },
+    {
+      "sku": "MTX_AB_104",
+      "descripcion": "JUGOS EN POLVO LIGHT SABORES SURTIDOS 7 G"
+    },
+    {
+      "sku": "MTX_AB_105",
+      "descripcion": "JUGOS EN POLVO SABORES SURTIDOS 20 G"
+    },
+    {
+      "sku": "MTX_AB_106",
+      "descripcion": "JUGOS NÉCTAR TETRAPACK SURTIDO NORMAL 1 LT"
+    },
+    {
+      "sku": "MTX_AB_107",
+      "descripcion": "JUGOS NÉCTAR TETRAPACK SURTIDO NORMAL 200 CC"
+    },
+    {
+      "sku": "MTX_AB_108",
+      "descripcion": "JUREL TIPO SALMON 425 G"
+    },
+    {
+      "sku": "MTX_AB_109",
+      "descripcion": "KETCHUP 900G"
+    },
+    {
+      "sku": "MTX_AB_110",
+      "descripcion": "KETCHUP PET 240 G"
+    },
+    {
+      "sku": "MTX_AB_111",
+      "descripcion": "LAUREL ENTERO 5 G"
+    },
+    {
+      "sku": "MTX_AB_112",
+      "descripcion": "LECHE CONDENSADA 397 G"
+    },
+    {
+      "sku": "MTX_AB_113",
+      "descripcion": "LECHE EN POLVO INSTANTÁNEA 700 G"
+    },
+    {
+      "sku": "MTX_AB_114",
+      "descripcion": "LECHE EN POLVO INSTANTÁNEA DESCREMADA 800 G"
+    },
+    {
+      "sku": "MTX_AB_115",
+      "descripcion": "LECHE ENTERA LÍQUIDA 31% MATERIA GRASA 1 LT"
+    },
+    {
+      "sku": "MTX_AB_116",
+      "descripcion": "LECHE EVAPORADA 390 G"
+    },
+    {
+      "sku": "MTX_AB_117",
+      "descripcion": "LECHE LIQUIDA CON SABOR 1 LT"
+    },
+    {
+      "sku": "MTX_AB_118",
+      "descripcion": "LECHE LIQUIDA DESCREMADA 1 LT"
+    },
+    {
+      "sku": "MTX_AB_119",
+      "descripcion": "LECHE LIQUIDA SIN LACTOSA 1 LT"
+    },
+    {
+      "sku": "MTX_AB_120",
+      "descripcion": "LECHE VEGETAL NOT CHOCOLATE 1 LT"
+    },
+    {
+      "sku": "MTX_AB_121",
+      "descripcion": "LECHE VEGETAL NOT ORIGINAL 1 LT"
+    },
+    {
+      "sku": "MTX_AB_122",
+      "descripcion": "LENTEJAS 6 MM 1 KG"
+    },
+    {
+      "sku": "MTX_AB_123",
+      "descripcion": "LEVADURA 500 G"
+    },
+    {
+      "sku": "MTX_AB_124",
+      "descripcion": "LINAZA 200 G"
+    },
+    {
+      "sku": "MTX_AB_125",
+      "descripcion": "MAICENA 1 KG"
+    },
+    {
+      "sku": "MTX_AB_126",
+      "descripcion": "MANI NATURAL 160 G"
+    },
+    {
+      "sku": "MTX_AB_127",
+      "descripcion": "MANJAR 1 KG"
+    },
+    {
+      "sku": "MTX_AB_128",
+      "descripcion": "MANTECA DE CERDO 500 G"
+    },
+    {
+      "sku": "MTX_AB_129",
+      "descripcion": "MANTEQUILLA 250 G"
+    },
+    {
+      "sku": "MTX_AB_130",
+      "descripcion": "MARGARINA 500 G"
+    },
+    {
+      "sku": "MTX_AB_131",
+      "descripcion": "MAYONESA 940 G"
+    },
+    {
+      "sku": "MTX_AB_132",
+      "descripcion": "MAYONESA NOT 350 G VEGANA"
+    },
+    {
+      "sku": "MTX_AB_133",
+      "descripcion": "MERMELADA SURTIDA 250 G"
+    },
+    {
+      "sku": "MTX_AB_134",
+      "descripcion": "MERMELADA SURTIDA LIGHT 200 G"
+    },
+    {
+      "sku": "MTX_AB_135",
+      "descripcion": "MIEL DE ABEJA 1 KG"
+    },
+    {
+      "sku": "MTX_AB_136",
+      "descripcion": "MILO 1 KG"
+    },
+    {
+      "sku": "MTX_AB_137",
+      "descripcion": "MIX FRUTOS SECO PRIMAVERA 250G"
+    },
+    {
+      "sku": "MTX_AB_138",
+      "descripcion": "MIX FRUTOS SECOS 250 G"
+    },
+    {
+      "sku": "MTX_AB_139",
+      "descripcion": "MIX TROPICAL FRUTOS SECOS 250 G"
+    },
+    {
+      "sku": "MTX_AB_140",
+      "descripcion": "MORTADELA JAMONADA 150 G"
+    },
+    {
+      "sku": "MTX_AB_141",
+      "descripcion": "MORTADELA LISA 150 G"
+    },
+    {
+      "sku": "MTX_AB_142",
+      "descripcion": "MOSTAZA 900 G"
+    },
+    {
+      "sku": "MTX_AB_143",
+      "descripcion": "MOSTAZA PET 240 G"
+    },
+    {
+      "sku": "MTX_AB_144",
+      "descripcion": "NUEZ MOSCADA MOLIDA 5 G"
+    },
+    {
+      "sku": "MTX_AB_145",
+      "descripcion": "OREGANO ENTERO 50 G"
+    },
+    {
+      "sku": "MTX_AB_146",
+      "descripcion": "PALMITOS EN RODAJAS 400 G"
+    },
+    {
+      "sku": "MTX_AB_147",
+      "descripcion": "PALMITOS ENTEROS 400 G"
+    },
+    {
+      "sku": "MTX_AB_148",
+      "descripcion": "PAN DE MOLDE BLANCO FAMILIAR 1 UND"
+    },
+    {
+      "sku": "MTX_AB_149",
+      "descripcion": "PAN DE MOLDE INTEGRAL FAMILIAR 1 UND"
+    },
+    {
+      "sku": "MTX_AB_150",
+      "descripcion": "PASAS MORENAS 100 G"
+    },
+    {
+      "sku": "MTX_AB_151",
+      "descripcion": "PASAS RUBIAS 100 G"
+    },
+    {
+      "sku": "MTX_AB_152",
+      "descripcion": "PATE JAMON 125 G"
+    },
+    {
+      "sku": "MTX_AB_153",
+      "descripcion": "PATE SURTIDO 125 G"
+    },
+    {
+      "sku": "MTX_AB_154",
+      "descripcion": "PECHUGA PAVO COCIDA 200 G"
+    },
+    {
+      "sku": "MTX_AB_155",
+      "descripcion": "PICKLES 1000 G"
+    },
+    {
+      "sku": "MTX_AB_156",
+      "descripcion": "PIMENTON EN POLVO 100 G"
+    },
+    {
+      "sku": "MTX_AB_157",
+      "descripcion": "PIMIENTA MOLIDA  NEGRA 15 G"
+    },
+    {
+      "sku": "MTX_AB_158",
+      "descripcion": "PIMIENTA MOLIDA BLANCA 15 G"
+    },
+    {
+      "sku": "MTX_AB_159",
+      "descripcion": "PIÑA EN RODAJAS 560 G"
+    },
+    {
+      "sku": "MTX_AB_160",
+      "descripcion": "POLVO DE HORNEAR 100 G"
+    },
+    {
+      "sku": "MTX_AB_161",
+      "descripcion": "POROTOS BLANCO 1 KG"
+    },
+    {
+      "sku": "MTX_AB_162",
+      "descripcion": "POROTOS HALLADO 1 KG"
+    },
+    {
+      "sku": "MTX_AB_163",
+      "descripcion": "POROTOS NEGRO 1 KG"
+    },
+    {
+      "sku": "MTX_AB_164",
+      "descripcion": "PROTEÍNA VEGETAL DE SOYA 300 G"
+    },
+    {
+      "sku": "MTX_AB_165",
+      "descripcion": "PULPA DE CERDO 1 KG"
+    },
+    {
+      "sku": "MTX_AB_166",
+      "descripcion": "QUESILLO 320 G"
+    },
+    {
+      "sku": "MTX_AB_167",
+      "descripcion": "QUESO CREMA 227 G"
+    },
+    {
+      "sku": "MTX_AB_168",
+      "descripcion": "QUESO DE CABEZA 150 G"
+    },
+    {
+      "sku": "MTX_AB_169",
+      "descripcion": "QUESO GAUDA LAMINADO 1 KG"
+    },
+    {
+      "sku": "MTX_AB_170",
+      "descripcion": "QUESO RALLADO PARMESANO 80 G"
+    },
+    {
+      "sku": "MTX_AB_171",
+      "descripcion": "QUINOA 600 G"
+    },
+    {
+      "sku": "MTX_AB_172",
+      "descripcion": "SAL FINA 1 KG"
+    },
+    {
+      "sku": "MTX_AB_173",
+      "descripcion": "SAL GRUESA 1 KG"
+    },
+    {
+      "sku": "MTX_AB_174",
+      "descripcion": "SALAME LAMINADO 150 G"
+    },
+    {
+      "sku": "MTX_AB_175",
+      "descripcion": "SALCHICHON CERVEZA 150 G"
+    },
+    {
+      "sku": "MTX_AB_176",
+      "descripcion": "SALSA DE SOYA 500 CC"
+    },
+    {
+      "sku": "MTX_AB_177",
+      "descripcion": "SALSA DE TOMATES 200 G"
+    },
+    {
+      "sku": "MTX_AB_178",
+      "descripcion": "SALSA POSTRES SABORES SURTIDOS 250 CC"
+    },
+    {
+      "sku": "MTX_AB_179",
+      "descripcion": "SEMILLA DE CHIA 175 G"
+    },
+    {
+      "sku": "MTX_AB_180",
+      "descripcion": "SEMILLA SESAMO 100 G"
+    },
+    {
+      "sku": "MTX_AB_181",
+      "descripcion": "SEMILLA ZAPALLO 110 G"
+    },
+    {
+      "sku": "MTX_AB_182",
+      "descripcion": "SEMOLA 500 G"
+    },
+    {
+      "sku": "MTX_AB_183",
+      "descripcion": "SERVILLETAS 40 UND"
+    },
+    {
+      "sku": "MTX_AB_184",
+      "descripcion": "SOPAS NATUREZZA SURTIDAS 55G"
+    },
+    {
+      "sku": "MTX_AB_185",
+      "descripcion": "TE  YELLOW 100 BOLSITAS 100 UND"
+    },
+    {
+      "sku": "MTX_AB_186",
+      "descripcion": "TE HIERBAS  100 UND"
+    },
+    {
+      "sku": "MTX_AB_187",
+      "descripcion": "TRIGO MOTE 1 KG"
+    },
+    {
+      "sku": "MTX_AB_188",
+      "descripcion": "VINAGRE BLANCO 500 CC"
+    },
+    {
+      "sku": "MTX_AB_189",
+      "descripcion": "VINAGRE TINTO 500 CC"
+    },
+    {
+      "sku": "MTX_AB_190",
+      "descripcion": "YERBA MATE 1 KG"
+    },
+    {
+      "sku": "MTX_AB_191",
+      "descripcion": "YOGURTH BATIDO SURTIDO 1 LT"
+    },
+    {
+      "sku": "MTX_AB_192",
+      "descripcion": "YOGURTH BATIDO SURTIDO 125 G"
+    },
+    {
+      "sku": "MTX_AB_193",
+      "descripcion": "YOGURTH BATIDO SURTIDO LIGHT 125 G"
+    },
+    {
+      "sku": "MTX_AB_194",
+      "descripcion": "YOGURTH BATIDO SURTIDO SIN LACTOSA 125 G"
+    },
+    {
+      "sku": "MTX_AB_195",
+      "descripcion": "YOGURTH BATIDO TROZO 125 G"
+    },
+    {
+      "sku": "MTX_CC_001",
+      "descripcion": "ABASTERO DE VACUNO 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_002",
+      "descripcion": "ARVEJAS CONGELADAS 1 KG"
+    },
+    {
+      "sku": "MTX_CC_003",
+      "descripcion": "ASADO CARNICERO 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_004",
+      "descripcion": "ASADO DE TIRA VACUNO 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_005",
+      "descripcion": "ASIENTO 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_006",
+      "descripcion": "BROCOLI CONGELADO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_007",
+      "descripcion": "CARNE MOLIDA 1 KG"
+    },
+    {
+      "sku": "MTX_CC_008",
+      "descripcion": "CHOCLILLO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_009",
+      "descripcion": "CHOCLO EN GRANO CONGELADO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_010",
+      "descripcion": "CHOCLO EN TROZO CONGELADO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_011",
+      "descripcion": "CHORITOS CONGELADOS IQF 1 KG"
+    },
+    {
+      "sku": "MTX_CC_012",
+      "descripcion": "CHULETAS DE CERDO BOLSA 700 GR"
+    },
+    {
+      "sku": "MTX_CC_013",
+      "descripcion": "CHULETAS DE CERDO VETADA 1 KG"
+    },
+    {
+      "sku": "MTX_CC_014",
+      "descripcion": "COLIFLOR CONGELADO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_015",
+      "descripcion": "COSTILLAR CERDO FRESCO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_016",
+      "descripcion": "COSTILLAR DE CERDO AHUMADO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_017",
+      "descripcion": "ENSALADA PRIMAVERA CONGELADO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_018",
+      "descripcion": "GANSO 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_019",
+      "descripcion": "GUATITAS 1 KG"
+    },
+    {
+      "sku": "MTX_CC_020",
+      "descripcion": "HABAS CONGELADAS 1 KG"
+    },
+    {
+      "sku": "MTX_CC_021",
+      "descripcion": "HAMBURGUESAS DE VACUNO 100 G"
+    },
+    {
+      "sku": "MTX_CC_022",
+      "descripcion": "HAMBURGUESAS VEGANA 100G"
+    },
+    {
+      "sku": "MTX_CC_023",
+      "descripcion": "HUACHALOMO 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_024",
+      "descripcion": "LOMO DE CERDO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_025",
+      "descripcion": "LOMO LISO 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_026",
+      "descripcion": "LOMO VETADO 1 KG NAC"
+    },
+    {
+      "sku": "MTX_CC_027",
+      "descripcion": "LONGANIZA 1 KG"
+    },
+    {
+      "sku": "MTX_CC_028",
+      "descripcion": "MARISCOS SURTIDOS IQF 1 KG"
+    },
+    {
+      "sku": "MTX_CC_029",
+      "descripcion": "MERLUZA CONGELADA IQF 1 KG"
+    },
+    {
+      "sku": "MTX_CC_030",
+      "descripcion": "OSOBUCO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_031",
+      "descripcion": "PAPAS DUQUESA CONGELADAS 1 KG"
+    },
+    {
+      "sku": "MTX_CC_032",
+      "descripcion": "PAPAS PRE-FRITAS CONGELADAS 1 KG"
+    },
+    {
+      "sku": "MTX_CC_033",
+      "descripcion": "PASTA DE CHOCLO CONGELADA 1 KG"
+    },
+    {
+      "sku": "MTX_CC_034",
+      "descripcion": "PECHUGA DE PAVO ASADA 125 G"
+    },
+    {
+      "sku": "MTX_CC_035",
+      "descripcion": "PECHUGA DESHUESADA POLLO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_036",
+      "descripcion": "PECHUGA ENTERA DE POLLO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_037",
+      "descripcion": "PECHUGA ENTERA PAVO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_038",
+      "descripcion": "PLATEADA 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_039",
+      "descripcion": "POLLO ENTERO 1 UND"
+    },
+    {
+      "sku": "MTX_CC_040",
+      "descripcion": "POLLO GANSO 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_041",
+      "descripcion": "POROTOS GRANADOS CONGELADOS 1 KG"
+    },
+    {
+      "sku": "MTX_CC_042",
+      "descripcion": "POROTOS VERDES CONGELADOS 1 KG"
+    },
+    {
+      "sku": "MTX_CC_043",
+      "descripcion": "POSTA NEGRA 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_044",
+      "descripcion": "POSTA PALETA 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_045",
+      "descripcion": "POSTA ROSADA 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_046",
+      "descripcion": "PRIETAS 250 G"
+    },
+    {
+      "sku": "MTX_CC_047",
+      "descripcion": "PUNTA GANSO 1 KG NAC"
+    },
+    {
+      "sku": "MTX_CC_048",
+      "descripcion": "SALCHICHAS 1 KG"
+    },
+    {
+      "sku": "MTX_CC_049",
+      "descripcion": "SALMON FILETE IQF 1 KG"
+    },
+    {
+      "sku": "MTX_CC_050",
+      "descripcion": "SOBRECOSTILLA 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_051",
+      "descripcion": "TAPABARRIGA 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_052",
+      "descripcion": "TAPAPECHO 1 KG NAC."
+    },
+    {
+      "sku": "MTX_CC_053",
+      "descripcion": "TRUTRO CORTO DE POLLO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_054",
+      "descripcion": "TRUTRO ENTERO DE POLLO 1 KG"
+    },
+    {
+      "sku": "MTX_CC_055",
+      "descripcion": "TRUTRO LARGO DE POLLO 1 KG"
+    },
+    {
+      "sku": "MTX_FV_001",
+      "descripcion": "ACELGAS PAQ"
+    },
+    {
+      "sku": "MTX_FV_002",
+      "descripcion": "AJI VERDE 1 KG"
+    },
+    {
+      "sku": "MTX_FV_003",
+      "descripcion": "AJO CHILOTE 1 KG"
+    },
+    {
+      "sku": "MTX_FV_004",
+      "descripcion": "AJO CHINO 1 KG"
+    },
+    {
+      "sku": "MTX_FV_005",
+      "descripcion": "ALBAHACA PAQ"
+    },
+    {
+      "sku": "MTX_FV_006",
+      "descripcion": "APIO MATA UND"
+    },
+    {
+      "sku": "MTX_FV_007",
+      "descripcion": "BETARRAGAS 1 KG"
+    },
+    {
+      "sku": "MTX_FV_008",
+      "descripcion": "BROCOLI UND"
+    },
+    {
+      "sku": "MTX_FV_009",
+      "descripcion": "CEBOLLA 1 KG"
+    },
+    {
+      "sku": "MTX_FV_010",
+      "descripcion": "CEBOLLIN PAQ"
+    },
+    {
+      "sku": "MTX_FV_011",
+      "descripcion": "CEREZAS 1 KG"
+    },
+    {
+      "sku": "MTX_FV_012",
+      "descripcion": "CILANTRO UND"
+    },
+    {
+      "sku": "MTX_FV_013",
+      "descripcion": "CIRUELA 1 KG"
+    },
+    {
+      "sku": "MTX_FV_014",
+      "descripcion": "COCHAYUYO PAQ"
+    },
+    {
+      "sku": "MTX_FV_015",
+      "descripcion": "COLIFLOR UND"
+    },
+    {
+      "sku": "MTX_FV_016",
+      "descripcion": "JENGIBRE 0,1 KG"
+    },
+    {
+      "sku": "MTX_FV_017",
+      "descripcion": "KIWI 1 KG"
+    },
+    {
+      "sku": "MTX_FV_018",
+      "descripcion": "LECHUGA ESCAROLA 1 UND"
+    },
+    {
+      "sku": "MTX_FV_019",
+      "descripcion": "LIMONES 1 KG"
+    },
+    {
+      "sku": "MTX_FV_020",
+      "descripcion": "MANDARINAS 1 KG"
+    },
+    {
+      "sku": "MTX_FV_021",
+      "descripcion": "MANZANAS ROJAS 1 KG"
+    },
+    {
+      "sku": "MTX_FV_022",
+      "descripcion": "MANZANAS VERDES 1 KG"
+    },
+    {
+      "sku": "MTX_FV_023",
+      "descripcion": "MELON TUNA UND"
+    },
+    {
+      "sku": "MTX_FV_024",
+      "descripcion": "MEMBRILLO 1 KG"
+    },
+    {
+      "sku": "MTX_FV_025",
+      "descripcion": "NARANJAS THOMPSON 1 KG"
+    },
+    {
+      "sku": "MTX_FV_026",
+      "descripcion": "NECTARIN PLATANO 1 KG"
+    },
+    {
+      "sku": "MTX_FV_027",
+      "descripcion": "PALTA HASS 1 KG"
+    },
+    {
+      "sku": "MTX_FV_028",
+      "descripcion": "PAPAS SACO 25 KG"
+    },
+    {
+      "sku": "MTX_FV_029",
+      "descripcion": "PEPINO ENSALADA 1 KG"
+    },
+    {
+      "sku": "MTX_FV_030",
+      "descripcion": "PERAS 1 KG"
+    },
+    {
+      "sku": "MTX_FV_031",
+      "descripcion": "PEREJIL PAQ"
+    },
+    {
+      "sku": "MTX_FV_032",
+      "descripcion": "PIMIENTO MORRON ROJO 1 KG"
+    },
+    {
+      "sku": "MTX_FV_033",
+      "descripcion": "PIMIENTO MORRON VERDE 1 KG"
+    },
+    {
+      "sku": "MTX_FV_034",
+      "descripcion": "PIÑA 1 UND"
+    },
+    {
+      "sku": "MTX_FV_035",
+      "descripcion": "PLATANOS 1 KG"
+    },
+    {
+      "sku": "MTX_FV_036",
+      "descripcion": "REPOLLO BLANCO 1 UND"
+    },
+    {
+      "sku": "MTX_FV_037",
+      "descripcion": "REPOLLO MORADO UND"
+    },
+    {
+      "sku": "MTX_FV_038",
+      "descripcion": "SANDIA UND KG"
+    },
+    {
+      "sku": "MTX_FV_039",
+      "descripcion": "TOMATES 1 KG"
+    },
+    {
+      "sku": "MTX_FV_040",
+      "descripcion": "ZANAHORIAS 1 KG"
+    },
+    {
+      "sku": "MTX_FV_041",
+      "descripcion": "ZAPALLO CAMOTE 1 KG"
+    },
+    {
+      "sku": "MTX_FV_042",
+      "descripcion": "ZAPALLO ITALIANO 1 KG"
+    }
+  ],
+  "YDR": [
+    {
+      "sku": "YDR_AB_001",
+      "descripcion": "ACEITE  BOT."
+    },
+    {
+      "sku": "YDR_AB_002",
+      "descripcion": "ACEITE DE OLIVA 500 ML."
+    },
+    {
+      "sku": "YDR_AB_003",
+      "descripcion": "ACEITUNAS 250 GRS"
+    },
+    {
+      "sku": "YDR_AB_004",
+      "descripcion": "AJI COLOR"
+    },
+    {
+      "sku": "YDR_AB_005",
+      "descripcion": "AJI CREMA 900 GR"
+    },
+    {
+      "sku": "YDR_AB_006",
+      "descripcion": "AJI PASTA PET 240 GR"
+    },
+    {
+      "sku": "YDR_AB_007",
+      "descripcion": "AJO POLVO X 15 GR"
+    },
+    {
+      "sku": "YDR_AB_008",
+      "descripcion": "ALIÑO COMPLETO 15 GRS"
+    },
+    {
+      "sku": "YDR_AB_009",
+      "descripcion": "ARROZ LARGO GRADO 1"
+    },
+    {
+      "sku": "YDR_AB_010",
+      "descripcion": "ARVEJA LATA"
+    },
+    {
+      "sku": "YDR_AB_011",
+      "descripcion": "ARVEJAS PARTIDAS SECAS"
+    },
+    {
+      "sku": "YDR_AB_012",
+      "descripcion": "ATUN LOMITO 180 GRS"
+    },
+    {
+      "sku": "YDR_AB_013",
+      "descripcion": "AVENA (INST) 700 GR."
+    },
+    {
+      "sku": "YDR_AB_014",
+      "descripcion": "AZUCAR  GRANULADA"
+    },
+    {
+      "sku": "YDR_AB_015",
+      "descripcion": "AZUCAR FLOR"
+    },
+    {
+      "sku": "YDR_AB_016",
+      "descripcion": "CAFÉ FINA SELECCION 200 GR"
+    },
+    {
+      "sku": "YDR_AB_017",
+      "descripcion": "CAFÉ NESCAFE   400 GRS"
+    },
+    {
+      "sku": "YDR_AB_018",
+      "descripcion": "CAFÉ NESCAFE 170GRS"
+    },
+    {
+      "sku": "YDR_AB_019",
+      "descripcion": "CALDO AVE"
+    },
+    {
+      "sku": "YDR_AB_020",
+      "descripcion": "CALDO COSTILLA"
+    },
+    {
+      "sku": "YDR_AB_021",
+      "descripcion": "CALDO GALLINA"
+    },
+    {
+      "sku": "YDR_AB_022",
+      "descripcion": "CALDO VERDURA"
+    },
+    {
+      "sku": "YDR_AB_023",
+      "descripcion": "CEREAL X 480 GRS"
+    },
+    {
+      "sku": "YDR_AB_024",
+      "descripcion": "CHAMPIÑONES FILETEADO 400 GRS"
+    },
+    {
+      "sku": "YDR_AB_025",
+      "descripcion": "CHANCACA 400 GR"
+    },
+    {
+      "sku": "YDR_AB_026",
+      "descripcion": "CHORITOS  190GR"
+    },
+    {
+      "sku": "YDR_AB_027",
+      "descripcion": "CHORITOS X 425 GRS"
+    },
+    {
+      "sku": "YDR_AB_028",
+      "descripcion": "CIRUELAS SECAS  X KG"
+    },
+    {
+      "sku": "YDR_AB_029",
+      "descripcion": "COCTEL DE FRUTAS  560GRS"
+    },
+    {
+      "sku": "YDR_AB_030",
+      "descripcion": "COCTEL DE FRUTAS  X 3 KG"
+    },
+    {
+      "sku": "YDR_AB_031",
+      "descripcion": "CREMA CHANTILLY X KG"
+    },
+    {
+      "sku": "YDR_AB_032",
+      "descripcion": "CREMAS MAGGI 70 GRS"
+    },
+    {
+      "sku": "YDR_AB_033",
+      "descripcion": "DULCE DE MEMBRILLO KG"
+    },
+    {
+      "sku": "YDR_AB_034",
+      "descripcion": "DURAZNO MITAD JUGO 560GRS"
+    },
+    {
+      "sku": "YDR_AB_035",
+      "descripcion": "DURAZNO MITAD JUGO 800GRS"
+    },
+    {
+      "sku": "YDR_AB_036",
+      "descripcion": "ENDULSANTE LIQUIDO STEVIA 270ML"
+    },
+    {
+      "sku": "YDR_AB_037",
+      "descripcion": "FIDEOS CABELLO  400 GR"
+    },
+    {
+      "sku": "YDR_AB_038",
+      "descripcion": "FIDEOS CORBATAS  400 GR"
+    },
+    {
+      "sku": "YDR_AB_039",
+      "descripcion": "FIDEOS ESPIRALES 400 GR"
+    },
+    {
+      "sku": "YDR_AB_040",
+      "descripcion": "FIDEOS SPAGHETTI  400 GR"
+    },
+    {
+      "sku": "YDR_AB_041",
+      "descripcion": "FIDEOS SPAGHETTI INTEGRAL"
+    },
+    {
+      "sku": "YDR_AB_042",
+      "descripcion": "FINA MAIZ (MAICENA)"
+    },
+    {
+      "sku": "YDR_AB_043",
+      "descripcion": "FLAN CAJITA"
+    },
+    {
+      "sku": "YDR_AB_044",
+      "descripcion": "FRUTILLA JUGO 410 GR"
+    },
+    {
+      "sku": "YDR_AB_045",
+      "descripcion": "GALLETA AGUA"
+    },
+    {
+      "sku": "YDR_AB_046",
+      "descripcion": "GALLETA FRAC"
+    },
+    {
+      "sku": "YDR_AB_047",
+      "descripcion": "GALLETA MINI  ZELS (SALADA)"
+    },
+    {
+      "sku": "YDR_AB_048",
+      "descripcion": "GALLETA NICK"
+    },
+    {
+      "sku": "YDR_AB_049",
+      "descripcion": "GALLETA SODA"
+    },
+    {
+      "sku": "YDR_AB_050",
+      "descripcion": "GARBANZOS KG"
+    },
+    {
+      "sku": "YDR_AB_051",
+      "descripcion": "HARINA 000"
+    },
+    {
+      "sku": "YDR_AB_052",
+      "descripcion": "HUESILLOS"
+    },
+    {
+      "sku": "YDR_AB_053",
+      "descripcion": "HUEVOS"
+    },
+    {
+      "sku": "YDR_AB_054",
+      "descripcion": "JALEA"
+    },
+    {
+      "sku": "YDR_AB_055",
+      "descripcion": "JUGO DE LIMÓN BOT 500 ML"
+    },
+    {
+      "sku": "YDR_AB_056",
+      "descripcion": "JUGO SOBRE"
+    },
+    {
+      "sku": "YDR_AB_057",
+      "descripcion": "JUREL ENVASADO"
+    },
+    {
+      "sku": "YDR_AB_058",
+      "descripcion": "KETCHUP 900 GR"
+    },
+    {
+      "sku": "YDR_AB_059",
+      "descripcion": "KETCHUP PET 240 GR"
+    },
+    {
+      "sku": "YDR_AB_060",
+      "descripcion": "LECHE CONDENSADA"
+    },
+    {
+      "sku": "YDR_AB_061",
+      "descripcion": "LENTEJAS KG"
+    },
+    {
+      "sku": "YDR_AB_062",
+      "descripcion": "LEVADURA 500 GRS"
+    },
+    {
+      "sku": "YDR_AB_063",
+      "descripcion": "MANTECA KG"
+    },
+    {
+      "sku": "YDR_AB_064",
+      "descripcion": "MARISCO SURTIDO SIMPLE 184 GRS"
+    },
+    {
+      "sku": "YDR_AB_065",
+      "descripcion": "MARISCO SURTIDO SIMPLE 425 GRS"
+    },
+    {
+      "sku": "YDR_AB_066",
+      "descripcion": "MAYONESA HELLMANNS 900 GR."
+    },
+    {
+      "sku": "YDR_AB_067",
+      "descripcion": "MAYONESA HELLMANNS SUPREME POTE"
+    },
+    {
+      "sku": "YDR_AB_068",
+      "descripcion": "MAYONESA NATURA 940 GR"
+    },
+    {
+      "sku": "YDR_AB_069",
+      "descripcion": "MERKEN 15 GR"
+    },
+    {
+      "sku": "YDR_AB_070",
+      "descripcion": "MERMELADA 250 GRS"
+    },
+    {
+      "sku": "YDR_AB_071",
+      "descripcion": "MIEL KG"
+    },
+    {
+      "sku": "YDR_AB_072",
+      "descripcion": "MILO 1 KG"
+    },
+    {
+      "sku": "YDR_AB_073",
+      "descripcion": "MOSTAZA 900 GR."
+    },
+    {
+      "sku": "YDR_AB_074",
+      "descripcion": "MOSTAZA PET 240 GR"
+    },
+    {
+      "sku": "YDR_AB_075",
+      "descripcion": "OREGANO 50 GRAMOS"
+    },
+    {
+      "sku": "YDR_AB_076",
+      "descripcion": "PALMITOS 400 GRS"
+    },
+    {
+      "sku": "YDR_AB_077",
+      "descripcion": "PALMITOS 800 GRS"
+    },
+    {
+      "sku": "YDR_AB_078",
+      "descripcion": "PAN RAYADO 150 GR"
+    },
+    {
+      "sku": "YDR_AB_079",
+      "descripcion": "PASAS MORENAS Y RUBIAS 100 GR"
+    },
+    {
+      "sku": "YDR_AB_080",
+      "descripcion": "PASTA RAVIOLES CARNE 400 GRS"
+    },
+    {
+      "sku": "YDR_AB_081",
+      "descripcion": "PASTAS MASA LASAGÑA 400 GRS"
+    },
+    {
+      "sku": "YDR_AB_082",
+      "descripcion": "PICKLE KG"
+    },
+    {
+      "sku": "YDR_AB_083",
+      "descripcion": "PIMIENTA NEGRA 100 GRS"
+    },
+    {
+      "sku": "YDR_AB_084",
+      "descripcion": "PIMIENTO MORRON  180 GRS"
+    },
+    {
+      "sku": "YDR_AB_085",
+      "descripcion": "PIÑA RODAJA JUGO 3 KG"
+    },
+    {
+      "sku": "YDR_AB_086",
+      "descripcion": "PIÑA RODAJA JUGO 560 GRS"
+    },
+    {
+      "sku": "YDR_AB_087",
+      "descripcion": "POLVO HORNEAR X 100"
+    },
+    {
+      "sku": "YDR_AB_088",
+      "descripcion": "POROTOS  SECOS BLANCO Ó HALLADO KG"
+    },
+    {
+      "sku": "YDR_AB_089",
+      "descripcion": "POROTOS  SECOS NEGROS KG"
+    },
+    {
+      "sku": "YDR_AB_090",
+      "descripcion": "POROTOS  SECOS TORTOLA KG"
+    },
+    {
+      "sku": "YDR_AB_091",
+      "descripcion": "PURE DE PAPAS  KILO"
+    },
+    {
+      "sku": "YDR_AB_092",
+      "descripcion": "QUESO RALLADO  40 GRS"
+    },
+    {
+      "sku": "YDR_AB_093",
+      "descripcion": "SAL FRASCO 500 GRS"
+    },
+    {
+      "sku": "YDR_AB_094",
+      "descripcion": "SAL KG"
+    },
+    {
+      "sku": "YDR_AB_095",
+      "descripcion": "SALSA ESPAÑOLA"
+    },
+    {
+      "sku": "YDR_AB_096",
+      "descripcion": "SALSA POSTRES (CHOCOLATE, FRUTILLA, ETC…)"
+    },
+    {
+      "sku": "YDR_AB_097",
+      "descripcion": "SALSA SOYA 500 ML"
+    },
+    {
+      "sku": "YDR_AB_098",
+      "descripcion": "SALSA TOMATE 200 CC"
+    },
+    {
+      "sku": "YDR_AB_099",
+      "descripcion": "SÉMOLA  PAQUETE X KG"
+    },
+    {
+      "sku": "YDR_AB_100",
+      "descripcion": "SOPAS SOBRES 70 GRS"
+    },
+    {
+      "sku": "YDR_AB_101",
+      "descripcion": "TE BOLSITA  20 UNIDADES"
+    },
+    {
+      "sku": "YDR_AB_102",
+      "descripcion": "TE HIERBA SURTIDA 100 UN"
+    },
+    {
+      "sku": "YDR_AB_103",
+      "descripcion": "TE X 100"
+    },
+    {
+      "sku": "YDR_AB_104",
+      "descripcion": "TRIGO MOTE KG"
+    },
+    {
+      "sku": "YDR_AB_105",
+      "descripcion": "YERBA MATE TARAGUI"
+    },
+    {
+      "sku": "YDR_AB_106",
+      "descripcion": "VINAGRE ROSADO O BLANCO  500 ML"
+    },
+    {
+      "sku": "YDR_AB_107",
+      "descripcion": "AGUA C/GAS 600"
+    },
+    {
+      "sku": "YDR_AB_108",
+      "descripcion": "AGUA S/GAS 600"
+    },
+    {
+      "sku": "YDR_AB_109",
+      "descripcion": "MINERAL C/GAS 1,6"
+    },
+    {
+      "sku": "YDR_AB_110",
+      "descripcion": "MINERAL S/GAS 1,6"
+    },
+    {
+      "sku": "YDR_AB_111",
+      "descripcion": "JUGO  1.5 LT"
+    },
+    {
+      "sku": "YDR_AB_112",
+      "descripcion": "BEBIDA 2,0 LT"
+    },
+    {
+      "sku": "YDR_AB_113",
+      "descripcion": "CREMA LARGA VIDA 1 LT."
+    },
+    {
+      "sku": "YDR_AB_114",
+      "descripcion": "CREMA LARGA VIDA 240 GRS"
+    },
+    {
+      "sku": "YDR_AB_115",
+      "descripcion": "LECHE LARGA VIDA 1 LT."
+    },
+    {
+      "sku": "YDR_AB_116",
+      "descripcion": "LECHE LARGA VIDA SEMI-DESCREMADA 1 LT."
+    },
+    {
+      "sku": "YDR_AB_117",
+      "descripcion": "LECHE NIDO"
+    },
+    {
+      "sku": "YDR_AB_118",
+      "descripcion": "LECHE POLVO 700 GR"
+    },
+    {
+      "sku": "YDR_AB_119",
+      "descripcion": "MANTEQUILLA 250 GRS"
+    },
+    {
+      "sku": "YDR_AB_120",
+      "descripcion": "MARGARINA"
+    },
+    {
+      "sku": "YDR_AB_121",
+      "descripcion": "MARGARINA 250 GRS"
+    },
+    {
+      "sku": "YDR_AB_122",
+      "descripcion": "YOGHURT BATIDO 125 GR"
+    },
+    {
+      "sku": "YDR_AB_123",
+      "descripcion": "YOGHURT BOLSA 1 LT."
+    },
+    {
+      "sku": "YDR_AB_124",
+      "descripcion": "QUESILLO POTE"
+    },
+    {
+      "sku": "YDR_AB_125",
+      "descripcion": "MANJAR KG"
+    },
+    {
+      "sku": "YDR_AB_126",
+      "descripcion": "QUESO GAUDA"
+    },
+    {
+      "sku": "YDR_AB_127",
+      "descripcion": "PATE JAMON"
+    },
+    {
+      "sku": "YDR_AB_128",
+      "descripcion": "PATE TERNERA"
+    },
+    {
+      "sku": "YDR_AB_129",
+      "descripcion": "MORTADELA JAMONADA AGROSUPER"
+    },
+    {
+      "sku": "YDR_AB_130",
+      "descripcion": "MORTADELA JAMONADA MEDINGUER"
+    },
+    {
+      "sku": "YDR_AB_131",
+      "descripcion": "SALAME"
+    },
+    {
+      "sku": "YDR_AB_132",
+      "descripcion": "JAMON SANDWICH CORTADO AGROSUPER"
+    },
+    {
+      "sku": "YDR_AB_133",
+      "descripcion": "JAMON SANDWICH CORTADO MEDINGUER"
+    },
+    {
+      "sku": "YDR_AB_134",
+      "descripcion": "CERVEZERO"
+    },
+    {
+      "sku": "YDR_CC_001",
+      "descripcion": "ASIENTO VACUNO"
+    },
+    {
+      "sku": "YDR_CC_002",
+      "descripcion": "FILETE"
+    },
+    {
+      "sku": "YDR_CC_003",
+      "descripcion": "LOMO LISO"
+    },
+    {
+      "sku": "YDR_CC_004",
+      "descripcion": "LOMO VETADO"
+    },
+    {
+      "sku": "YDR_CC_005",
+      "descripcion": "OSOBUCO"
+    },
+    {
+      "sku": "YDR_CC_006",
+      "descripcion": "PLATEADA"
+    },
+    {
+      "sku": "YDR_CC_007",
+      "descripcion": "POSTA ROSADA Ó NEGRA"
+    },
+    {
+      "sku": "YDR_CC_008",
+      "descripcion": "TAPAPECHO"
+    },
+    {
+      "sku": "YDR_CC_009",
+      "descripcion": "CHULETA VETADA"
+    },
+    {
+      "sku": "YDR_CC_010",
+      "descripcion": "CHURRASCO (CONGELADO)"
+    },
+    {
+      "sku": "YDR_CC_011",
+      "descripcion": "ARVEJAS CONJELADAS"
+    },
+    {
+      "sku": "YDR_CC_012",
+      "descripcion": "BROCOLI CONG"
+    },
+    {
+      "sku": "YDR_CC_013",
+      "descripcion": "CARNE MOLIDA"
+    },
+    {
+      "sku": "YDR_CC_014",
+      "descripcion": "CERDO COSTILLAR"
+    },
+    {
+      "sku": "YDR_CC_015",
+      "descripcion": "CERDO PULPA"
+    },
+    {
+      "sku": "YDR_CC_016",
+      "descripcion": "CHOCLO GRANO"
+    },
+    {
+      "sku": "YDR_CC_017",
+      "descripcion": "CHOCLO TROZO"
+    },
+    {
+      "sku": "YDR_CC_018",
+      "descripcion": "COLIFLOR CONG"
+    },
+    {
+      "sku": "YDR_CC_019",
+      "descripcion": "GUATITAS DE VACUNO"
+    },
+    {
+      "sku": "YDR_CC_020",
+      "descripcion": "HABAS CONG"
+    },
+    {
+      "sku": "YDR_CC_021",
+      "descripcion": "HUMITA"
+    },
+    {
+      "sku": "YDR_CC_022",
+      "descripcion": "JARDINERA O PRIMAVERA"
+    },
+    {
+      "sku": "YDR_CC_023",
+      "descripcion": "LOMO CENTRO CERDO"
+    },
+    {
+      "sku": "YDR_CC_024",
+      "descripcion": "LONGANIZAS AGROSUPER"
+    },
+    {
+      "sku": "YDR_CC_025",
+      "descripcion": "LONGANIZAS MODINGUER"
+    },
+    {
+      "sku": "YDR_CC_026",
+      "descripcion": "MERLUZA CONGELADA"
+    },
+    {
+      "sku": "YDR_CC_027",
+      "descripcion": "MARISCOS SURTIDOS CONGELADOS"
+    },
+    {
+      "sku": "YDR_CC_028",
+      "descripcion": "MILANESA POLLO"
+    },
+    {
+      "sku": "YDR_CC_029",
+      "descripcion": "PAPAS PRE-FRITAS"
+    },
+    {
+      "sku": "YDR_CC_030",
+      "descripcion": "PAVO PECHUGA C/HUESO"
+    },
+    {
+      "sku": "YDR_CC_031",
+      "descripcion": "PAVO PECHUGA S/HUESO"
+    },
+    {
+      "sku": "YDR_CC_032",
+      "descripcion": "POLLO  1/2 PECHUGA S/HUESO"
+    },
+    {
+      "sku": "YDR_CC_033",
+      "descripcion": "POLLO  ENTERO"
+    },
+    {
+      "sku": "YDR_CC_034",
+      "descripcion": "POLLO  PECHUGA C/HUESO"
+    },
+    {
+      "sku": "YDR_CC_035",
+      "descripcion": "POLLO FILETILLO"
+    },
+    {
+      "sku": "YDR_CC_036",
+      "descripcion": "POLLO TRUTRO ENTERO Ó CORTO"
+    },
+    {
+      "sku": "YDR_CC_037",
+      "descripcion": "POROTO VERDE"
+    },
+    {
+      "sku": "YDR_CC_038",
+      "descripcion": "PURE PALTA"
+    },
+    {
+      "sku": "YDR_CC_039",
+      "descripcion": "SALMÓN CONGELADO"
+    },
+    {
+      "sku": "YDR_CC_040",
+      "descripcion": "VACUNO HAMBURGUESA"
+    },
+    {
+      "sku": "YDR_CC_041",
+      "descripcion": "VIENESAS AGROSUPER"
+    },
+    {
+      "sku": "YDR_CC_042",
+      "descripcion": "VIENESAS MODINGUER"
+    },
+    {
+      "sku": "YDR_FV_001",
+      "descripcion": "ACELGA"
+    },
+    {
+      "sku": "YDR_FV_002",
+      "descripcion": "AJI VERDE"
+    },
+    {
+      "sku": "YDR_FV_003",
+      "descripcion": "AJO CABEZA"
+    },
+    {
+      "sku": "YDR_FV_004",
+      "descripcion": "APIO MATA"
+    },
+    {
+      "sku": "YDR_FV_005",
+      "descripcion": "BETARRAGA"
+    },
+    {
+      "sku": "YDR_FV_006",
+      "descripcion": "BROCOLI"
+    },
+    {
+      "sku": "YDR_FV_007",
+      "descripcion": "CEBOLLA"
+    },
+    {
+      "sku": "YDR_FV_008",
+      "descripcion": "CILANTRO"
+    },
+    {
+      "sku": "YDR_FV_009",
+      "descripcion": "COLIFLOR"
+    },
+    {
+      "sku": "YDR_FV_010",
+      "descripcion": "KIWI"
+    },
+    {
+      "sku": "YDR_FV_011",
+      "descripcion": "LECHUGA"
+    },
+    {
+      "sku": "YDR_FV_012",
+      "descripcion": "LIMON"
+    },
+    {
+      "sku": "YDR_FV_013",
+      "descripcion": "MANDARINAS"
+    },
+    {
+      "sku": "YDR_FV_014",
+      "descripcion": "MANZANA"
+    },
+    {
+      "sku": "YDR_FV_015",
+      "descripcion": "MELÓN"
+    },
+    {
+      "sku": "YDR_FV_016",
+      "descripcion": "NARANJA"
+    },
+    {
+      "sku": "YDR_FV_017",
+      "descripcion": "PALTAS"
+    },
+    {
+      "sku": "YDR_FV_018",
+      "descripcion": "PAPAS"
+    },
+    {
+      "sku": "YDR_FV_019",
+      "descripcion": "PIMIENTO MORRON"
+    },
+    {
+      "sku": "YDR_FV_020",
+      "descripcion": "PEPINO ENSALADA"
+    },
+    {
+      "sku": "YDR_FV_021",
+      "descripcion": "PERAS"
+    },
+    {
+      "sku": "YDR_FV_022",
+      "descripcion": "PEREJIL"
+    },
+    {
+      "sku": "YDR_FV_023",
+      "descripcion": "PLATANO"
+    },
+    {
+      "sku": "YDR_FV_024",
+      "descripcion": "REPOLLO"
+    },
+    {
+      "sku": "YDR_FV_025",
+      "descripcion": "SANDIA KG"
+    },
+    {
+      "sku": "YDR_FV_026",
+      "descripcion": "TOMATES"
+    },
+    {
+      "sku": "YDR_FV_027",
+      "descripcion": "ZANAHORIA"
+    },
+    {
+      "sku": "YDR_FV_028",
+      "descripcion": "ZAPALLO CAMOTE"
+    },
+    {
+      "sku": "YDR_FV_029",
+      "descripcion": "ZAPALLO ITALIANO"
+    },
+    {
+      "sku": "YDR_AS_001",
+      "descripcion": "ALUSA FOIL MTS (ALUMINIO)"
+    },
+    {
+      "sku": "YDR_AS_002",
+      "descripcion": "ALUSA PLAST"
+    },
+    {
+      "sku": "YDR_AS_003",
+      "descripcion": "ANTIBACTERIAL SPRAY"
+    },
+    {
+      "sku": "YDR_AS_004",
+      "descripcion": "BOLSA  BASURA 50X70"
+    },
+    {
+      "sku": "YDR_AS_005",
+      "descripcion": "BOLSA BASURA 110X150"
+    },
+    {
+      "sku": "YDR_AS_006",
+      "descripcion": "BOLSA BASURA 70 X 90"
+    },
+    {
+      "sku": "YDR_AS_007",
+      "descripcion": "BOLSA BASURA 80 X 120"
+    },
+    {
+      "sku": "YDR_AS_008",
+      "descripcion": "BOLSA BASURA 90 X 110"
+    },
+    {
+      "sku": "YDR_AS_009",
+      "descripcion": "BOLSA CAMISETA"
+    },
+    {
+      "sku": "YDR_AS_010",
+      "descripcion": "CAJA AISLAPOL (35 LIBRAS)"
+    },
+    {
+      "sku": "YDR_AS_011",
+      "descripcion": "CAJA AISLAPOL (70 LIBRAS)"
+    },
+    {
+      "sku": "YDR_AS_012",
+      "descripcion": "CLORO GEL"
+    },
+    {
+      "sku": "YDR_AS_013",
+      "descripcion": "CLORO LT"
+    },
+    {
+      "sku": "YDR_AS_014",
+      "descripcion": "DES. AMBIENTAL"
+    },
+    {
+      "sku": "YDR_AS_015",
+      "descripcion": "DES. PASTILLA URINARIO COLORES"
+    },
+    {
+      "sku": "YDR_AS_016",
+      "descripcion": "DES. WC."
+    },
+    {
+      "sku": "YDR_AS_017",
+      "descripcion": "DET.  2,5 KG."
+    },
+    {
+      "sku": "YDR_AS_018",
+      "descripcion": "DET. CIF CREMA 750 GRS"
+    },
+    {
+      "sku": "YDR_AS_019",
+      "descripcion": "ESCOBILLON PLASTICO"
+    },
+    {
+      "sku": "YDR_AS_020",
+      "descripcion": "ESPONJA BONOBRIL"
+    },
+    {
+      "sku": "YDR_AS_021",
+      "descripcion": "GUANTES  GOMA  LATEX"
+    },
+    {
+      "sku": "YDR_AS_022",
+      "descripcion": "GUANTES QUIRURGICOS 50 PARES"
+    },
+    {
+      "sku": "YDR_AS_023",
+      "descripcion": "INSECTICIDA"
+    },
+    {
+      "sku": "YDR_AS_024",
+      "descripcion": "JABON BARRA GRANDE"
+    },
+    {
+      "sku": "YDR_AS_025",
+      "descripcion": "JABON LIQUIDO 750 ML"
+    },
+    {
+      "sku": "YDR_AS_026",
+      "descripcion": "LAVALOSA QUICK X 500"
+    },
+    {
+      "sku": "YDR_AS_027",
+      "descripcion": "LAVALOZA 500 CC"
+    },
+    {
+      "sku": "YDR_AS_028",
+      "descripcion": "LIMPIA PISOS  900 CC"
+    },
+    {
+      "sku": "YDR_AS_029",
+      "descripcion": "LIMPIAVIDRIO 500 CC"
+    },
+    {
+      "sku": "YDR_AS_030",
+      "descripcion": "MASCARILLAS"
+    },
+    {
+      "sku": "YDR_AS_031",
+      "descripcion": "PALA BASURA PLASTICA"
+    },
+    {
+      "sku": "YDR_AS_032",
+      "descripcion": "PAÑO COCINA"
+    },
+    {
+      "sku": "YDR_AS_033",
+      "descripcion": "PAPEL HIGENICO INDUSTRIAL"
+    },
+    {
+      "sku": "YDR_AS_034",
+      "descripcion": "PAPEL HIGENICO PEQUEÑO"
+    },
+    {
+      "sku": "YDR_AS_035",
+      "descripcion": "SERV. MESA 200 UNIDADES"
+    },
+    {
+      "sku": "YDR_AS_036",
+      "descripcion": "SPONGI"
+    },
+    {
+      "sku": "YDR_AS_037",
+      "descripcion": "TOALLA PAPEL  12 MTS"
+    },
+    {
+      "sku": "YDR_AS_038",
+      "descripcion": "TOALLA PAPEL INDUSTRIAL"
+    },
+    {
+      "sku": "YDR_AS_039",
+      "descripcion": "TRAPERO PISO"
+    },
+    {
+      "sku": "YDR_AS_040",
+      "descripcion": "VIRUTILLA OLLA"
+    },
+    {
+      "sku": "YDR_AS_041",
+      "descripcion": "VIRUTILLA PARRILLA"
+    },
+    {
+      "sku": "YDR_AS_042",
+      "descripcion": "TOALLA CHEF"
+    }
+  ]
+}
