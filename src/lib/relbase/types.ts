@@ -33,6 +33,10 @@ export interface RelbaseDteProducto {
   price: number;
   quantity: number;
   tax_affected: boolean;
+  // Sin esto, Relbase no siempre completa la descripcion impresa igual que
+  // al crear la guia a mano (reportado por Hugo, 11-jul-2026): se envia
+  // explicita, tomada del catalogo (productos_catalogo.descripcion).
+  description?: string;
 }
 
 export interface RelbaseCrearDtePayload {

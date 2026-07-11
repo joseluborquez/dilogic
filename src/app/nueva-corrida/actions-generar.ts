@@ -17,6 +17,7 @@ interface FilaAGenerar {
   categoria: string | null;
   productIdRelbase: number;
   precio: number;
+  descripcion: string | null;
 }
 
 export interface ResultadoGrupo {
@@ -177,6 +178,7 @@ export async function generarGuiasAction(
             price: f.precio,
             quantity: f.cantidad,
             tax_affected: true,
+            ...(f.descripcion ? { description: f.descripcion } : {}),
           })),
         });
 
