@@ -171,9 +171,6 @@ export async function generarGuiasAction(
           address: empresa.dispatch_address ?? "",
           city_id: empresa.dispatch_city_id ?? 0,
           commune_id: empresa.dispatch_commune_id ?? 0,
-          dispatch_address: empresa.dispatch_address ?? "",
-          dispatch_city_id: empresa.dispatch_city_id ?? 0,
-          dispatch_commune_id: empresa.dispatch_commune_id ?? 0,
           contact: contacto,
           products: lote.map((f) => ({
             product_id: f.productIdRelbase,
