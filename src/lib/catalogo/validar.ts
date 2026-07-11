@@ -17,11 +17,23 @@ export interface ProductoCatalogoResumen {
   descripcion: string | null;
   productIdRelbase: number | null;
   precio: number | null;
+  familia: string | null;
 }
 
 export interface CatalogoEmpresa {
   mapa: Map<string, ProductoCatalogoResumen>;
   fuente: "supabase" | "local";
+}
+
+/**
+ * Los SKUs de Dilogic siguen el patron EMPRESA_CATEGORIA_NUMERO (ej.
+ * CERQ_AB_017 -> "AB" = Abarrotes, CC = Carne Congelada, FV = Fruta y
+ * Verdura). Se usa como respaldo cuando el catalogo aun no tiene `familia`
+ * poblada para un SKU (ej. una empresa nueva recien cargada).
+ */
+function derivarFamiliaDeSku(sku: string): string | null {
+  const partes = sku.split("_");
+  return partes.length === 3 ? partes[1] : null;
 }
 
 function tieneSupabaseConfigurado(): boolean {
@@ -54,7 +66,7 @@ export async function obtenerCatalogoEmpresa(codigoInterno: string): Promise<Cat
 
     const { data: productos, error: errorProductos } = await supabase
       .from("productos_catalogo")
-      .select("sku, descripcion, product_id_relbase, precio")
+      .select("sku, descripcion, product_id_relbase, precio, familia")
       .eq("empresa_id", empresa.id);
 
     if (errorProductos) throw errorProductos;
@@ -65,6 +77,7 @@ export async function obtenerCatalogoEmpresa(codigoInterno: string): Promise<Cat
         descripcion: p.descripcion,
         productIdRelbase: p.product_id_relbase,
         precio: p.precio,
+        familia: p.familia ?? derivarFamiliaDeSku(p.sku),
       });
     }
     return { mapa, fuente: "supabase" };
@@ -75,7 +88,12 @@ export async function obtenerCatalogoEmpresa(codigoInterno: string): Promise<Cat
   ] ?? [];
   const mapa = new Map<string, ProductoCatalogoResumen>();
   for (const p of productosLocal) {
-    mapa.set(p.sku, { descripcion: p.descripcion, productIdRelbase: null, precio: null });
+    mapa.set(p.sku, {
+      descripcion: p.descripcion,
+      productIdRelbase: null,
+      precio: null,
+      familia: derivarFamiliaDeSku(p.sku),
+    });
   }
   return { mapa, fuente: "local" };
 }
@@ -104,6 +122,7 @@ export function validarFilas(filas: FilaPedido[], catalogo: CatalogoEmpresa["map
 
     return {
       ...fila,
+      categoria: producto?.familia ?? fila.categoria,
       estado,
       mensajes,
       descripcionProducto: producto?.descripcion ?? null,

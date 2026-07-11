@@ -19,7 +19,7 @@ export function EstadoStamp({ estado }: { estado: EstadoFila }) {
   const cfg = CONFIG[estado];
   return (
     <span
-      className={`inline-block -rotate-2 select-none rounded-sm border-2 px-2 py-0.5 font-display text-[11px] font-semibold tracking-wider whitespace-nowrap ${cfg.className}`}
+      className={`inline-block select-none rounded-sm border-2 px-2 py-0.5 font-display text-[11px] font-semibold tracking-wider whitespace-nowrap ${cfg.className}`}
     >
       {cfg.label}
     </span>

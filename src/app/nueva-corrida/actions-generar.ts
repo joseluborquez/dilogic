@@ -52,6 +52,18 @@ function agruparPorCategoria(filas: FilaAGenerar[]): Map<string | null, FilaAGen
   return grupos;
 }
 
+// Relbase rechaza cualquier documento electronico con mas de 60 productos:
+// un grupo (categoria) que exceda ese tamano debe partirse en varias guias.
+const MAX_PRODUCTOS_POR_DOCUMENTO = 60;
+
+function dividirEnLotes<T>(items: T[], tamano: number): T[][] {
+  const lotes: T[][] = [];
+  for (let i = 0; i < items.length; i += tamano) {
+    lotes.push(items.slice(i, i + tamano));
+  }
+  return lotes;
+}
+
 export async function generarGuiasAction(
   _prevState: EstadoGeneracion,
   formData: FormData
@@ -144,77 +156,81 @@ export async function generarGuiasAction(
   let totalError = 0;
 
   for (const [categoria, filasGrupo] of grupos) {
-    try {
-      const respuesta = await crearGuiaDespacho(credenciales, {
-        type_document: 52,
-        start_date: fecha,
-        end_date: fecha,
-        customer_id: empresa.relbase_customer_id,
-        ware_house_id: empresa.relbase_ware_house_id,
-        type_transfer: TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
-        dispatch_address: empresa.dispatch_address ?? "",
-        dispatch_city_id: empresa.dispatch_city_id ?? 0,
-        dispatch_commune_id: empresa.dispatch_commune_id ?? 0,
-        contact: contacto,
-        products: filasGrupo.map((f) => ({
-          product_id: f.productIdRelbase,
-          price: f.precio,
-          quantity: f.cantidad,
-          tax_affected: true,
-        })),
-      });
+    const lotes = dividirEnLotes(filasGrupo, MAX_PRODUCTOS_POR_DOCUMENTO);
 
-      const folio = String(respuesta.folio ?? respuesta.id);
+    for (const lote of lotes) {
+      try {
+        const respuesta = await crearGuiaDespacho(credenciales, {
+          type_document: 52,
+          start_date: fecha,
+          end_date: fecha,
+          customer_id: empresa.relbase_customer_id,
+          ware_house_id: empresa.relbase_ware_house_id,
+          type_transfer: TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
+          dispatch_address: empresa.dispatch_address ?? "",
+          dispatch_city_id: empresa.dispatch_city_id ?? 0,
+          dispatch_commune_id: empresa.dispatch_commune_id ?? 0,
+          contact: contacto,
+          products: lote.map((f) => ({
+            product_id: f.productIdRelbase,
+            price: f.precio,
+            quantity: f.cantidad,
+            tax_affected: true,
+          })),
+        });
 
-      await supabase.from("guias_generadas").insert(
-        filasGrupo.map((f) => ({
-          corrida_id: corrida.id,
-          sku: f.codigo,
-          product_id_relbase: f.productIdRelbase,
-          cantidad: f.cantidad,
-          categoria: f.categoria,
-          folio_relbase: folio,
+        const folio = String(respuesta.folio ?? respuesta.id);
+
+        await supabase.from("guias_generadas").insert(
+          lote.map((f) => ({
+            corrida_id: corrida.id,
+            sku: f.codigo,
+            product_id_relbase: f.productIdRelbase,
+            cantidad: f.cantidad,
+            categoria: f.categoria,
+            folio_relbase: folio,
+            estado: "generada",
+            fecha_generacion: new Date().toISOString(),
+          }))
+        );
+
+        totalExitosas += lote.length;
+        resultados.push({
+          categoria,
+          filas: lote.map((f) => f.fila),
           estado: "generada",
-          fecha_generacion: new Date().toISOString(),
-        }))
-      );
+          folio,
+          mensajeError: null,
+        });
+      } catch (err) {
+        const mensaje =
+          err instanceof RelbaseApiError
+            ? `Relbase respondio ${err.status}: ${JSON.stringify(err.body)}`
+            : err instanceof Error
+              ? err.message
+              : "Error desconocido";
 
-      totalExitosas += filasGrupo.length;
-      resultados.push({
-        categoria,
-        filas: filasGrupo.map((f) => f.fila),
-        estado: "generada",
-        folio,
-        mensajeError: null,
-      });
-    } catch (err) {
-      const mensaje =
-        err instanceof RelbaseApiError
-          ? `Relbase respondio ${err.status}: ${JSON.stringify(err.body)}`
-          : err instanceof Error
-            ? err.message
-            : "Error desconocido";
+        await supabase.from("guias_generadas").insert(
+          lote.map((f) => ({
+            corrida_id: corrida.id,
+            sku: f.codigo,
+            product_id_relbase: f.productIdRelbase,
+            cantidad: f.cantidad,
+            categoria: f.categoria,
+            estado: "error",
+            mensaje_error: mensaje,
+          }))
+        );
 
-      await supabase.from("guias_generadas").insert(
-        filasGrupo.map((f) => ({
-          corrida_id: corrida.id,
-          sku: f.codigo,
-          product_id_relbase: f.productIdRelbase,
-          cantidad: f.cantidad,
-          categoria: f.categoria,
+        totalError += lote.length;
+        resultados.push({
+          categoria,
+          filas: lote.map((f) => f.fila),
           estado: "error",
-          mensaje_error: mensaje,
-        }))
-      );
-
-      totalError += filasGrupo.length;
-      resultados.push({
-        categoria,
-        filas: filasGrupo.map((f) => f.fila),
-        estado: "error",
-        folio: null,
-        mensajeError: mensaje,
-      });
+          folio: null,
+          mensajeError: mensaje,
+        });
+      }
     }
   }
 

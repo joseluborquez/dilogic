@@ -24,6 +24,14 @@ function sqlString(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
+// Los SKUs siguen el patron EMPRESA_CATEGORIA_NUMERO (ej. CERQ_AB_017 -> "AB"
+// = Abarrotes, CC = Carne Congelada, FV = Fruta y Verdura). Se usa para
+// agrupar guias por categoria (ver src/lib/catalogo/validar.ts).
+function derivarFamilia(sku) {
+  const partes = sku.split("_");
+  return partes.length === 3 ? partes[1] : null;
+}
+
 async function main() {
   const rows = [];
 
@@ -42,7 +50,7 @@ async function main() {
         continue;
       }
       seen.add(sku);
-      rows.push({ codigo_interno: empresa.codigo_interno, sku, descripcion });
+      rows.push({ codigo_interno: empresa.codigo_interno, sku, descripcion, familia: derivarFamilia(sku) });
     }
   }
 
@@ -51,7 +59,10 @@ async function main() {
   ).join(",\n");
 
   const catalogoValuesSql = rows
-    .map((r) => `  (${sqlString(r.codigo_interno)}, ${sqlString(r.sku)}, ${sqlString(r.descripcion)})`)
+    .map(
+      (r) =>
+        `  (${sqlString(r.codigo_interno)}, ${sqlString(r.sku)}, ${sqlString(r.descripcion)}, ${sqlString(r.familia)})`
+    )
     .join(",\n");
 
   const sql = `-- Generado por scripts/generate-catalog-seed.mjs a partir de
@@ -65,13 +76,13 @@ values
 ${empresasSql}
 on conflict (codigo_interno) do nothing;
 
-insert into productos_catalogo (empresa_id, sku, descripcion)
-select e.id, v.sku, v.descripcion
+insert into productos_catalogo (empresa_id, sku, descripcion, familia)
+select e.id, v.sku, v.descripcion, v.familia
 from (values
 ${catalogoValuesSql}
-) as v(codigo_interno, sku, descripcion)
+) as v(codigo_interno, sku, descripcion, familia)
 join empresas e on e.codigo_interno = v.codigo_interno
-on conflict (empresa_id, sku) do update set descripcion = excluded.descripcion;
+on conflict (empresa_id, sku) do update set descripcion = excluded.descripcion, familia = excluded.familia;
 `;
 
   const outPath = path.join(projectRoot, "supabase", "seed.sql");
