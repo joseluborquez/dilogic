@@ -23,7 +23,6 @@ export function GenerarGuiasForm({ empresaCodigo, nombreArchivo, filas }: Props)
     categoria: f.categoria,
     productIdRelbase: f.productIdRelbase,
     precio: f.precio,
-    descripcion: f.descripcionProducto,
   }));
 
   return (
