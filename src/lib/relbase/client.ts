@@ -115,10 +115,14 @@ export async function crearGuiaDespacho(
   credenciales: RelbaseCredenciales,
   payload: RelbaseCrearDtePayload
 ): Promise<RelbaseCrearDteResponse> {
-  return request<RelbaseCrearDteResponse>("/dtes", credenciales, {
+  // La respuesta viene envuelta en {data: {...}}, igual que el resto de la
+  // API (confirmado 11-jul-2026: sin este unwrap, .folio/.id quedan
+  // undefined aunque el documento se haya creado correctamente en Relbase).
+  const res = await request<{ data: RelbaseCrearDteResponse }>("/dtes", credenciales, {
     method: "POST",
     body: JSON.stringify(payload),
   });
+  return res.data;
 }
 
 /** Solo lectura: trae el detalle de un DTE ya creado, incluida la URL (firmada, ~1h) del PDF. */
