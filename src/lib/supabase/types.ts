@@ -49,6 +49,9 @@ export type ProductoCatalogo = {
   product_id_relbase: number | null;
   precio: number | null;
   descripcion: string | null;
+  // Nota corta de unidad/empaque (ej. "1 lt. Bot."), atributo "description"
+  // de Relbase — separado del nombre del producto (arriba).
+  descripcion_relbase: string | null;
   familia: string | null;
   activo: boolean;
   ultima_sincronizacion: string | null;

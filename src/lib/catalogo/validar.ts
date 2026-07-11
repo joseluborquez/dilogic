@@ -9,12 +9,16 @@ export interface FilaValidada extends FilaPedido {
   estado: EstadoFila;
   mensajes: string[];
   descripcionProducto: string | null;
+  // Nota corta de unidad/empaque (ej. "1 lt. Bot."), atributo "description"
+  // de Relbase — no confundir con descripcionProducto (el nombre).
+  descripcionUnidad: string | null;
   productIdRelbase: number | null;
   precio: number | null;
 }
 
 export interface ProductoCatalogoResumen {
   descripcion: string | null;
+  descripcionUnidad: string | null;
   productIdRelbase: number | null;
   precio: number | null;
   familia: string | null;
@@ -66,7 +70,7 @@ export async function obtenerCatalogoEmpresa(codigoInterno: string): Promise<Cat
 
     const { data: productos, error: errorProductos } = await supabase
       .from("productos_catalogo")
-      .select("sku, descripcion, product_id_relbase, precio, familia")
+      .select("sku, descripcion, descripcion_relbase, product_id_relbase, precio, familia")
       .eq("empresa_id", empresa.id);
 
     if (errorProductos) throw errorProductos;
@@ -75,6 +79,7 @@ export async function obtenerCatalogoEmpresa(codigoInterno: string): Promise<Cat
     for (const p of productos ?? []) {
       mapa.set(p.sku, {
         descripcion: p.descripcion,
+        descripcionUnidad: p.descripcion_relbase,
         productIdRelbase: p.product_id_relbase,
         precio: p.precio,
         familia: p.familia ?? derivarFamiliaDeSku(p.sku),
@@ -90,6 +95,7 @@ export async function obtenerCatalogoEmpresa(codigoInterno: string): Promise<Cat
   for (const p of productosLocal) {
     mapa.set(p.sku, {
       descripcion: p.descripcion,
+      descripcionUnidad: null,
       productIdRelbase: null,
       precio: null,
       familia: derivarFamiliaDeSku(p.sku),
@@ -126,6 +132,7 @@ export function validarFilas(filas: FilaPedido[], catalogo: CatalogoEmpresa["map
       estado,
       mensajes,
       descripcionProducto: producto?.descripcion ?? null,
+      descripcionUnidad: producto?.descripcionUnidad ?? null,
       productIdRelbase: producto?.productIdRelbase ?? null,
       precio: producto?.precio ?? null,
     };

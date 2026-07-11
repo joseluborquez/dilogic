@@ -73,7 +73,7 @@ export async function sincronizarLotePaginas(
   const credenciales = await obtenerCredencialesCompartidas();
   const supabase = getSupabaseServiceClient();
 
-  const porCodigo = new Map<string, { id: number; precio: number }>();
+  const porCodigo = new Map<string, { id: number; precio: number; descripcionRelbase: string | null }>();
   let totalPages = startPage; // se corrige con la respuesta de la primera pagina del lote
 
   for (let page = startPage; page < startPage + cantidadPaginas; page++) {
@@ -82,7 +82,7 @@ export async function sincronizarLotePaginas(
     if (page > totalPages) break;
     for (const p of pagina.data.products) {
       if (!p.code) continue;
-      porCodigo.set(p.code, { id: p.id, precio: Number(p.price) });
+      porCodigo.set(p.code, { id: p.id, precio: Number(p.price), descripcionRelbase: p.description ?? null });
     }
   }
 
@@ -94,9 +94,25 @@ export async function sincronizarLotePaginas(
   const actualizaciones = (nuestroCatalogo ?? [])
     .map((row) => {
       const match = porCodigo.get(row.sku);
-      return match ? { id: row.id, product_id_relbase: match.id, precio: match.precio } : null;
+      return match
+        ? {
+            id: row.id,
+            product_id_relbase: match.id,
+            precio: match.precio,
+            descripcionRelbase: match.descripcionRelbase,
+          }
+        : null;
     })
-    .filter((u): u is { id: string; product_id_relbase: number; precio: number } => u !== null);
+    .filter(
+      (
+        u
+      ): u is {
+        id: string;
+        product_id_relbase: number;
+        precio: number;
+        descripcionRelbase: string | null;
+      } => u !== null
+    );
 
   await Promise.all(
     actualizaciones.map((u) =>
@@ -105,6 +121,7 @@ export async function sincronizarLotePaginas(
         .update({
           product_id_relbase: u.product_id_relbase,
           precio: u.precio,
+          descripcion_relbase: u.descripcionRelbase,
           ultima_sincronizacion: new Date().toISOString(),
         })
         .eq("id", u.id)
@@ -152,6 +169,7 @@ export async function sincronizarPendientesDirecto(): Promise<ResumenSincronizac
         .update({
           product_id_relbase: producto.id,
           precio: Number(producto.price),
+          descripcion_relbase: producto.description ?? null,
           ultima_sincronizacion: new Date().toISOString(),
         })
         .eq("id", p.id);

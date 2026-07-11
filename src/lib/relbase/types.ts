@@ -9,6 +9,9 @@ export interface RelbaseProducto {
   code: string | null;
   company_id: number;
   business_id: number;
+  // Nota corta de unidad/empaque (ej. "1 lt. Bot."), distinta de "name":
+  // confirmado 11-jul-2026 contra GET /productos?query=CERQ_AB_003.
+  description: string | null;
   // Confirmado contra la respuesta real de GET /productos (09-jul-2026).
   [key: string]: unknown;
 }
