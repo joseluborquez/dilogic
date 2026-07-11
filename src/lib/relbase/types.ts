@@ -42,6 +42,14 @@ export interface RelbaseCrearDtePayload {
   customer_id: number;
   ware_house_id: number;
   type_transfer: number; // confirmado: 6 = "Otros traslados no venta" (PRD 6.3)
+  // Direccion PRINCIPAL del documento (schema oficial: api.relbase.cl/api/v1/docs.json,
+  // confirmado 11-jul-2026 contra un DTE real donde estos 3 campos vienen
+  // poblados y los dispatch_* de abajo en null). Es la que valida el mensaje
+  // de error "Address Debe ingresar direccion" — dispatch_* NO la reemplaza,
+  // es un campo aparte y opcional.
+  address: string;
+  city_id: number;
+  commune_id: number;
   dispatch_address: string;
   dispatch_city_id: number;
   dispatch_commune_id: number;
