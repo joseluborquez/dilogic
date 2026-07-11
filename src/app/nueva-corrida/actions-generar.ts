@@ -2,11 +2,12 @@
 
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { decryptToken } from "@/lib/crypto/tokens";
-import { crearGuiaDespacho, RelbaseApiError } from "@/lib/relbase/client";
+import { crearGuiaDespacho, obtenerDte, RelbaseApiError } from "@/lib/relbase/client";
 import {
   TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
   type RelbaseCredenciales,
 } from "@/lib/relbase/types";
+import { guardarPdfGuia } from "@/lib/storage/guias-pdf";
 import { EMPRESAS } from "./empresas";
 
 interface FilaAGenerar {
@@ -181,6 +182,23 @@ export async function generarGuiasAction(
 
         const folio = String(respuesta.folio ?? respuesta.id);
 
+        // El PDF es secundario a la guia ya creada en Relbase: si falla su
+        // descarga/guardado, la fila igual queda "generada" con su folio.
+        let pdfPath: string | null = null;
+        try {
+          const detalle = await obtenerDte(credenciales, respuesta.id);
+          if (detalle.pdf_file?.url) {
+            pdfPath = await guardarPdfGuia({
+              empresaCodigo,
+              categoria,
+              folio,
+              pdfUrl: detalle.pdf_file.url,
+            });
+          }
+        } catch {
+          pdfPath = null;
+        }
+
         await supabase.from("guias_generadas").insert(
           lote.map((f) => ({
             corrida_id: corrida.id,
@@ -191,6 +209,7 @@ export async function generarGuiasAction(
             folio_relbase: folio,
             estado: "generada",
             fecha_generacion: new Date().toISOString(),
+            pdf_path: pdfPath,
           }))
         );
 

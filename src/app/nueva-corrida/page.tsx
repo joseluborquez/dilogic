@@ -12,9 +12,14 @@ export default function NuevaCorridaPage() {
             Sube el pedido ya depurado, revisa la validación por fila y genera las guías en Relbase.
           </p>
         </div>
-        <Link href="/catalogo" className="shrink-0 text-sm text-teal hover:underline">
-          Sincronizar catálogo →
-        </Link>
+        <div className="flex shrink-0 flex-col items-end gap-1 text-sm">
+          <Link href="/historial" className="text-teal hover:underline">
+            Historial de guías →
+          </Link>
+          <Link href="/catalogo" className="text-teal hover:underline">
+            Sincronizar catálogo →
+          </Link>
+        </div>
       </header>
 
       <NuevaCorridaForm />

@@ -57,6 +57,15 @@ export interface RelbaseCrearDteResponse {
   [key: string]: unknown;
 }
 
+export interface RelbaseDteDetalle {
+  id: number;
+  folio: number | string;
+  // URL firmada de S3, expira ~1h (confirmado 11-jul-2026): descargar de
+  // inmediato, no persistir esta URL tal cual.
+  pdf_file: { url: string } | null;
+  [key: string]: unknown;
+}
+
 export interface RelbaseTipoTraslado {
   id: number;
   name: string;

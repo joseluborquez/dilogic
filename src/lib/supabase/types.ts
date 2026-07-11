@@ -80,6 +80,7 @@ export type GuiaGenerada = {
   mensaje_error: string | null;
   fecha_generacion: string | null;
   created_at: string;
+  pdf_path: string | null;
 };
 
 export interface Database {

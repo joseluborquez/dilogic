@@ -6,6 +6,7 @@ import {
   type RelbaseCrearDtePayload,
   type RelbaseCrearDteResponse,
   type RelbaseCredenciales,
+  type RelbaseDteDetalle,
   type RelbaseProducto,
   type RelbaseProductosPage,
   type RelbaseTiposTrasladoResponse,
@@ -118,6 +119,15 @@ export async function crearGuiaDespacho(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+/** Solo lectura: trae el detalle de un DTE ya creado, incluida la URL (firmada, ~1h) del PDF. */
+export async function obtenerDte(
+  credenciales: RelbaseCredenciales,
+  id: number
+): Promise<RelbaseDteDetalle> {
+  const res = await request<{ data: RelbaseDteDetalle }>(`/dtes/${id}`, credenciales);
+  return res.data;
 }
 
 export { RelbaseApiError };
