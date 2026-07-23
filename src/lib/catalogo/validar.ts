@@ -120,11 +120,15 @@ export function validarFilas(filas: FilaPedido[], catalogo: CatalogoEmpresa["map
       mensajes.push("Producto sin product_id de Relbase (falta sincronizar).");
     }
 
-    if (vistos.has(fila.codigo)) {
+    // La clave incluye el centro: un mismo codigo pedido por varios centros
+    // (formato matriz) es normal, no un duplicado. Solo es repetido si el
+    // mismo codigo aparece dos veces para el mismo centro (misma guia).
+    const claveVisto = `${fila.codigo}::${fila.centro ?? ""}`;
+    if (vistos.has(claveVisto)) {
       if (estado !== "error") estado = "advertencia";
       mensajes.push("Codigo repetido en el archivo.");
     }
-    vistos.add(fila.codigo);
+    vistos.add(claveVisto);
 
     return {
       ...fila,
