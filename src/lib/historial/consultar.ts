@@ -5,6 +5,7 @@ import { obtenerUrlFirmadaPdf } from "@/lib/storage/guias-pdf";
 
 export interface GuiaAgrupada {
   folio: string | null;
+  centro: string | null;
   estado: "generada" | "error";
   cantidadProductos: number;
   cantidadTotal: number;
@@ -33,7 +34,9 @@ export async function obtenerHistorial(): Promise<EmpresaAgrupada[]> {
   const { data: corridas } = await supabase.from("corridas").select("id, empresa_id");
   const { data: filas } = await supabase
     .from("guias_generadas")
-    .select("corrida_id, categoria, folio_relbase, estado, cantidad, mensaje_error, fecha_generacion, created_at, pdf_path")
+    .select(
+      "corrida_id, categoria, centro, folio_relbase, estado, cantidad, mensaje_error, fecha_generacion, created_at, pdf_path"
+    )
     .order("created_at", { ascending: false })
     .limit(MAX_GUIAS);
 
@@ -49,6 +52,7 @@ export async function obtenerHistorial(): Promise<EmpresaAgrupada[]> {
         string,
         {
           folio: string | null;
+          centro: string | null;
           estado: "generada" | "error";
           cantidadProductos: number;
           cantidadTotal: number;
@@ -83,6 +87,7 @@ export async function obtenerHistorial(): Promise<EmpresaAgrupada[]> {
     } else {
       porGuia.set(claveGuia, {
         folio: fila.folio_relbase,
+        centro: fila.centro,
         estado: fila.estado === "generada" ? "generada" : "error",
         cantidadProductos: 1,
         cantidadTotal: Number(fila.cantidad),
@@ -105,6 +110,7 @@ export async function obtenerHistorial(): Promise<EmpresaAgrupada[]> {
           .sort((a, b) => (b.fecha ?? "").localeCompare(a.fecha ?? ""))
           .map(async (g) => ({
             folio: g.folio,
+            centro: g.centro,
             estado: g.estado,
             cantidadProductos: g.cantidadProductos,
             cantidadTotal: g.cantidadTotal,

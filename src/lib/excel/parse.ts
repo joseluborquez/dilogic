@@ -43,7 +43,7 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
   const idxCantidad = encontrarColumna(headers, ALIAS_CANTIDAD);
   const idxCategoria = encontrarColumna(headers, ALIAS_CATEGORIA);
 
-  if (idxCodigo === -1 || idxCantidad === -1) {
+  if (idxCodigo === -1) {
     errores.push({
       fila: null,
       mensaje:
@@ -55,34 +55,88 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
   const dataRows = rows.slice(headerIndex + 1);
   const filas: FilaPedido[] = [];
 
+  // Formato largo: una columna "cantidad", un solo centro por archivo (el
+  // contacto se ingresa manualmente al generar las guias).
+  if (idxCantidad !== -1) {
+    dataRows.forEach((row, i) => {
+      const numeroFila = headerIndex + i + 2; // +1 por encabezado, +1 por indice base 1
+      const codigo = String(row[idxCodigo] ?? "").trim();
+      const cantidadRaw = row[idxCantidad];
+      const categoria =
+        idxCategoria !== -1 && row[idxCategoria] != null
+          ? String(row[idxCategoria]).trim() || null
+          : null;
+
+      if (!codigo && (cantidadRaw === undefined || cantidadRaw === null || cantidadRaw === "")) {
+        return; // fila vacia, se ignora silenciosamente
+      }
+
+      if (!codigo) {
+        errores.push({ fila: numeroFila, mensaje: "Falta el codigo." });
+        return;
+      }
+
+      const cantidad = typeof cantidadRaw === "number" ? cantidadRaw : Number(cantidadRaw);
+      if (!Number.isFinite(cantidad) || cantidad <= 0) {
+        errores.push({
+          fila: numeroFila,
+          mensaje: `Cantidad invalida para el codigo ${codigo}: "${cantidadRaw ?? ""}".`,
+        });
+        return;
+      }
+
+      filas.push({ fila: numeroFila, codigo, cantidad, categoria, centro: null });
+    });
+
+    return { filas, errores };
+  }
+
+  // Formato matriz: sin columna "cantidad" propia, cada columna restante es
+  // un centro de cultivo distinto (ej. CODIGO | CHALACAYEC | QUEMADA | ...) y
+  // cada celda es la cantidad pedida por ese centro para ese codigo.
+  const columnasCentro = headers
+    .map((nombre, idx) => ({ idx, nombre: nombre.trim() }))
+    .filter(({ idx, nombre }) => idx !== idxCodigo && idx !== idxCategoria && nombre !== "");
+
+  if (columnasCentro.length === 0) {
+    errores.push({
+      fila: null,
+      mensaje:
+        "No se encontraron las columnas requeridas 'codigo' y 'cantidad' en el archivo.",
+    });
+    return { filas: [], errores };
+  }
+
   dataRows.forEach((row, i) => {
-    const numeroFila = headerIndex + i + 2; // +1 por encabezado, +1 por indice base 1
+    const numeroFila = headerIndex + i + 2;
     const codigo = String(row[idxCodigo] ?? "").trim();
-    const cantidadRaw = row[idxCantidad];
     const categoria =
       idxCategoria !== -1 && row[idxCategoria] != null
         ? String(row[idxCategoria]).trim() || null
         : null;
 
-    if (!codigo && (cantidadRaw === undefined || cantidadRaw === null || cantidadRaw === "")) {
-      return; // fila vacia, se ignora silenciosamente
-    }
-
+    if (esFilaVacia(row)) return; // fila vacia, se ignora silenciosamente
     if (!codigo) {
       errores.push({ fila: numeroFila, mensaje: "Falta el codigo." });
       return;
     }
 
-    const cantidad = typeof cantidadRaw === "number" ? cantidadRaw : Number(cantidadRaw);
-    if (!Number.isFinite(cantidad) || cantidad <= 0) {
-      errores.push({
-        fila: numeroFila,
-        mensaje: `Cantidad invalida para el codigo ${codigo}: "${cantidadRaw ?? ""}".`,
-      });
-      return;
-    }
+    for (const { idx, nombre: centro } of columnasCentro) {
+      const cantidadRaw = row[idx];
+      if (cantidadRaw === undefined || cantidadRaw === null || cantidadRaw === "") continue;
 
-    filas.push({ fila: numeroFila, codigo, cantidad, categoria });
+      const cantidad = typeof cantidadRaw === "number" ? cantidadRaw : Number(cantidadRaw);
+      if (!Number.isFinite(cantidad)) {
+        errores.push({
+          fila: numeroFila,
+          mensaje: `Cantidad invalida para el codigo ${codigo} en ${centro}: "${cantidadRaw}".`,
+        });
+        continue;
+      }
+      if (cantidad <= 0) continue; // 0 o negativo: no hay pedido de ese producto para ese centro
+
+      filas.push({ fila: numeroFila, codigo, cantidad, categoria, centro });
+    }
   });
 
   return { filas, errores };

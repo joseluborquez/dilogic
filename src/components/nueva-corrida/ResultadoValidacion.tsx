@@ -8,6 +8,7 @@ export function ResultadoValidacion({ estado }: { estado: EstadoOk }) {
   const { empresaCodigo, empresaNombre, nombreArchivo, fuenteCatalogo, filas, erroresArchivo, resumen } =
     estado;
   const puedeGenerar = resumen.errores === 0;
+  const tieneCentros = filas.some((f) => f.centro);
 
   return (
     <section className="flex flex-col gap-4">
@@ -59,12 +60,16 @@ export function ResultadoValidacion({ estado }: { estado: EstadoOk }) {
               <th className="px-3 py-2 font-medium">Producto</th>
               <th className="px-3 py-2 font-medium text-right">Cantidad</th>
               <th className="px-3 py-2 font-medium">Categoría</th>
+              {tieneCentros && <th className="px-3 py-2 font-medium">Centro</th>}
               <th className="px-3 py-2 font-medium">Estado</th>
             </tr>
           </thead>
           <tbody>
-            {filas.map((fila) => (
-              <tr key={fila.fila} className="border-b border-line last:border-0 odd:bg-surface even:bg-paper">
+            {filas.map((fila, i) => (
+              <tr
+                key={`${fila.fila}-${fila.centro ?? ""}-${i}`}
+                className="border-b border-line last:border-0 odd:bg-surface even:bg-paper"
+              >
                 <td className="px-3 py-2 font-mono text-ink-muted">{fila.fila}</td>
                 <td className="px-3 py-2 font-mono">{fila.codigo}</td>
                 <td className="px-3 py-2">
@@ -72,6 +77,9 @@ export function ResultadoValidacion({ estado }: { estado: EstadoOk }) {
                 </td>
                 <td className="px-3 py-2 text-right font-mono">{fila.cantidad}</td>
                 <td className="px-3 py-2">{fila.categoria ?? <span className="text-ink-muted">—</span>}</td>
+                {tieneCentros && (
+                  <td className="px-3 py-2">{fila.centro ?? <span className="text-ink-muted">—</span>}</td>
+                )}
                 <td className="px-3 py-2">
                   <div className="flex flex-col gap-1">
                     <EstadoStamp estado={fila.estado} />

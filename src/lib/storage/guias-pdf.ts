@@ -16,17 +16,18 @@ function slug(valor: string): string {
 
 /**
  * Descarga el PDF desde la URL firmada de Relbase (expira ~1h) y lo sube al
- * bucket privado guias-pdf, organizado por empresa/categoria/folio. Devuelve
- * la ruta dentro del bucket (no una URL firmada: esas se generan al vuelo al
- * mostrar el historial, ver src/app/historial/actions.ts).
+ * bucket privado guias-pdf, organizado por empresa/centro/categoria/folio.
+ * Devuelve la ruta dentro del bucket (no una URL firmada: esas se generan al
+ * vuelo al mostrar el historial, ver src/app/historial/actions.ts).
  */
 export async function guardarPdfGuia(params: {
   empresaCodigo: string;
   categoria: string | null;
+  centro: string | null;
   folio: string;
   pdfUrl: string;
 }): Promise<string> {
-  const { empresaCodigo, categoria, folio, pdfUrl } = params;
+  const { empresaCodigo, categoria, centro, folio, pdfUrl } = params;
 
   const res = await fetch(pdfUrl);
   if (!res.ok) {
@@ -34,7 +35,9 @@ export async function guardarPdfGuia(params: {
   }
   const bytes = await res.arrayBuffer();
 
-  const path = `${slug(empresaCodigo)}/${slug(categoria ?? "sin-categoria")}/${folio}.pdf`;
+  const path = centro
+    ? `${slug(empresaCodigo)}/${slug(centro)}/${slug(categoria ?? "sin-categoria")}/${folio}.pdf`
+    : `${slug(empresaCodigo)}/${slug(categoria ?? "sin-categoria")}/${folio}.pdf`;
 
   const supabase = getSupabaseServiceClient();
   const { error } = await supabase.storage.from(BUCKET).upload(path, bytes, {

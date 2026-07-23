@@ -78,6 +78,7 @@ export type GuiaGenerada = {
   product_id_relbase: number | null;
   cantidad: number;
   categoria: string | null;
+  centro: string | null;
   folio_relbase: string | null;
   estado: EstadoGuia;
   mensaje_error: string | null;

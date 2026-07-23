@@ -15,12 +15,14 @@ interface FilaAGenerar {
   codigo: string;
   cantidad: number;
   categoria: string | null;
+  centro: string | null;
   productIdRelbase: number;
   precio: number;
   descripcionUnidad: string | null;
 }
 
 export interface ResultadoGrupo {
+  centro: string;
   categoria: string | null;
   filas: number[];
   estado: "generada" | "error";
@@ -44,14 +46,29 @@ function fechaHoyDDMMYYYY(): string {
   return `${dd}-${mm}-${hoy.getFullYear()}`;
 }
 
-function agruparPorCategoria(filas: FilaAGenerar[]): Map<string | null, FilaAGenerar[]> {
-  const grupos = new Map<string | null, FilaAGenerar[]>();
+interface GrupoCentroCategoria {
+  centro: string;
+  categoria: string | null;
+  filas: FilaAGenerar[];
+}
+
+// Agrupa por centro (contacto de la guia) y luego por categoria: cada
+// combinacion se traduce en una o mas guias (ver MAX_PRODUCTOS_POR_DOCUMENTO).
+// En archivos formato matriz el centro viene del propio archivo (columna);
+// en formato largo viene del campo "contacto" ingresado a mano y es el mismo
+// para todas las filas.
+function agruparPorCentroYCategoria(
+  filas: FilaAGenerar[],
+  contactoManual: string
+): GrupoCentroCategoria[] {
+  const grupos = new Map<string, GrupoCentroCategoria>();
   for (const fila of filas) {
-    const clave = fila.categoria;
-    if (!grupos.has(clave)) grupos.set(clave, []);
-    grupos.get(clave)!.push(fila);
+    const centro = fila.centro ?? contactoManual;
+    const clave = `${centro}::${fila.categoria ?? ""}`;
+    if (!grupos.has(clave)) grupos.set(clave, { centro, categoria: fila.categoria, filas: [] });
+    grupos.get(clave)!.filas.push(fila);
   }
-  return grupos;
+  return [...grupos.values()];
 }
 
 // Relbase rechaza cualquier documento electronico con mas de 60 productos:
@@ -79,12 +96,6 @@ export async function generarGuiasAction(
   if (!empresaLocal) {
     return { status: "error", mensaje: "Empresa invalida." };
   }
-  if (!contacto) {
-    return {
-      status: "error",
-      mensaje: "Indica el centro de cultivo / contacto antes de generar.",
-    };
-  }
 
   let filas: FilaAGenerar[];
   try {
@@ -94,6 +105,15 @@ export async function generarGuiasAction(
   }
   if (filas.length === 0) {
     return { status: "error", mensaje: "No hay filas validas para generar." };
+  }
+
+  // El contacto manual solo hace falta para filas de formato largo (sin
+  // centro propio en el archivo); las de formato matriz ya traen su centro.
+  if (!contacto && filas.some((f) => !f.centro)) {
+    return {
+      status: "error",
+      mensaje: "Indica el centro de cultivo / contacto antes de generar.",
+    };
   }
 
   const supabase = getSupabaseServiceClient();
@@ -152,12 +172,12 @@ export async function generarGuiasAction(
   }
 
   const fecha = fechaHoyDDMMYYYY();
-  const grupos = agruparPorCategoria(filas);
+  const grupos = agruparPorCentroYCategoria(filas, contacto);
   const resultados: ResultadoGrupo[] = [];
   let totalExitosas = 0;
   let totalError = 0;
 
-  for (const [categoria, filasGrupo] of grupos) {
+  for (const { centro, categoria, filas: filasGrupo } of grupos) {
     const lotes = dividirEnLotes(filasGrupo, MAX_PRODUCTOS_POR_DOCUMENTO);
 
     for (const lote of lotes) {
@@ -172,7 +192,7 @@ export async function generarGuiasAction(
           address: empresa.dispatch_address ?? "",
           city_id: empresa.dispatch_city_id ?? 0,
           commune_id: empresa.dispatch_commune_id ?? 0,
-          contact: contacto,
+          contact: centro,
           products: lote.map((f) => ({
             product_id: f.productIdRelbase,
             price: f.precio,
@@ -193,6 +213,7 @@ export async function generarGuiasAction(
             pdfPath = await guardarPdfGuia({
               empresaCodigo,
               categoria,
+              centro,
               folio,
               pdfUrl: detalle.pdf_file.url,
             });
@@ -208,6 +229,7 @@ export async function generarGuiasAction(
             product_id_relbase: f.productIdRelbase,
             cantidad: f.cantidad,
             categoria: f.categoria,
+            centro,
             folio_relbase: folio,
             estado: "generada",
             fecha_generacion: new Date().toISOString(),
@@ -217,6 +239,7 @@ export async function generarGuiasAction(
 
         totalExitosas += lote.length;
         resultados.push({
+          centro,
           categoria,
           filas: lote.map((f) => f.fila),
           estado: "generada",
@@ -238,6 +261,7 @@ export async function generarGuiasAction(
             product_id_relbase: f.productIdRelbase,
             cantidad: f.cantidad,
             categoria: f.categoria,
+            centro,
             estado: "error",
             mensaje_error: mensaje,
           }))
@@ -245,6 +269,7 @@ export async function generarGuiasAction(
 
         totalError += lote.length;
         resultados.push({
+          centro,
           categoria,
           filas: lote.map((f) => f.fila),
           estado: "error",

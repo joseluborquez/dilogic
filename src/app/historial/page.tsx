@@ -55,6 +55,7 @@ export default async function HistorialPage() {
                   <thead>
                     <tr className="border-b border-line text-left text-xs tracking-wide text-ink-muted uppercase">
                       <th className="px-3 py-2 font-medium">Folio</th>
+                      <th className="px-3 py-2 font-medium">Centro</th>
                       <th className="px-3 py-2 font-medium">Fecha</th>
                       <th className="px-3 py-2 font-medium text-right">Productos</th>
                       <th className="px-3 py-2 font-medium">Estado</th>
@@ -65,6 +66,7 @@ export default async function HistorialPage() {
                     {cat.guias.map((guia, i) => (
                       <tr key={i} className="border-b border-line last:border-0 odd:bg-surface even:bg-paper">
                         <td className="px-3 py-2 font-mono">{guia.folio ?? "—"}</td>
+                        <td className="px-3 py-2">{guia.centro ?? <span className="text-ink-muted">—</span>}</td>
                         <td className="px-3 py-2 text-ink-muted">{formatearFecha(guia.fecha)}</td>
                         <td className="px-3 py-2 text-right font-mono">{guia.cantidadProductos}</td>
                         <td className="px-3 py-2">

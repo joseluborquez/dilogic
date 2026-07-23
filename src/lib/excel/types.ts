@@ -3,6 +3,10 @@ export interface FilaPedido {
   codigo: string;
   cantidad: number;
   categoria: string | null;
+  // Centro de cultivo / contacto, solo presente en archivos formato matriz
+  // (una columna por centro). Null en el formato largo (una sola columna
+  // "cantidad"), donde el contacto se ingresa manualmente al generar.
+  centro: string | null;
 }
 
 export interface ErrorParseo {

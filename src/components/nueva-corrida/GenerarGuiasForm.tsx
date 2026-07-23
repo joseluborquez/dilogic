@@ -16,11 +16,17 @@ export function GenerarGuiasForm({ empresaCodigo, nombreArchivo, filas }: Props)
   const [estado, formAction, pending] = useActionState(generarGuiasAction, ESTADO_INICIAL);
   const [contacto, setContacto] = useState("");
 
+  // Formato matriz: el centro ya viene por fila (columna del archivo), asi
+  // que no hace falta pedirlo a mano; se genera una guia por cada uno.
+  const centrosDetectados = [...new Set(filas.map((f) => f.centro).filter((c): c is string => !!c))];
+  const tieneCentros = centrosDetectados.length > 0;
+
   const filasParaGenerar = filas.map((f) => ({
     fila: f.fila,
     codigo: f.codigo,
     cantidad: f.cantidad,
     categoria: f.categoria,
+    centro: f.centro,
     productIdRelbase: f.productIdRelbase,
     precio: f.precio,
     descripcionUnidad: f.descripcionUnidad,
@@ -34,25 +40,32 @@ export function GenerarGuiasForm({ empresaCodigo, nombreArchivo, filas }: Props)
           <input type="hidden" name="nombreArchivo" value={nombreArchivo} />
           <input type="hidden" name="filas" value={JSON.stringify(filasParaGenerar)} />
 
-          <div className="flex flex-col gap-1">
-            <label htmlFor="contacto" className="text-xs tracking-wide text-ink-muted uppercase">
-              Centro de cultivo / Contacto
-            </label>
-            <input
-              id="contacto"
-              name="contacto"
-              type="text"
-              required
-              value={contacto}
-              onChange={(e) => setContacto(e.target.value)}
-              placeholder="Ej: BASE CHURRECUE"
-              className="rounded-sm border border-line bg-surface px-3 py-2 text-sm"
-            />
-          </div>
+          {tieneCentros ? (
+            <p className="text-sm text-ink-muted">
+              Se generara una guia por centro detectado en el archivo:{" "}
+              <span className="font-medium text-ink">{centrosDetectados.join(", ")}</span>
+            </p>
+          ) : (
+            <div className="flex flex-col gap-1">
+              <label htmlFor="contacto" className="text-xs tracking-wide text-ink-muted uppercase">
+                Centro de cultivo / Contacto
+              </label>
+              <input
+                id="contacto"
+                name="contacto"
+                type="text"
+                required
+                value={contacto}
+                onChange={(e) => setContacto(e.target.value)}
+                placeholder="Ej: BASE CHURRECUE"
+                className="rounded-sm border border-line bg-surface px-3 py-2 text-sm"
+              />
+            </div>
+          )}
 
           <button
             type="submit"
-            disabled={pending || !contacto.trim()}
+            disabled={pending || (!tieneCentros && !contacto.trim())}
             className="rounded-sm bg-teal px-5 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? "Generando…" : "Generar guías"}
@@ -77,6 +90,7 @@ export function GenerarGuiasForm({ empresaCodigo, nombreArchivo, filas }: Props)
                   g.estado === "generada" ? "bg-valido-bg text-valido" : "bg-error-bg text-error"
                 }`}
               >
+                {g.centro ? `${g.centro} · ` : ""}
                 {g.categoria ?? "Sin categoría"} (filas {g.filas.join(", ")}):{" "}
                 {g.estado === "generada" ? `folio ${g.folio}` : g.mensajeError}
               </li>
