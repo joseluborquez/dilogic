@@ -11,7 +11,26 @@ export interface GuiaAgrupada {
   cantidadTotal: number;
   fecha: string | null;
   mensajeError: string | null;
-  pdfUrl: string | null;
+  pdfUrl: string | null; // para ver inline en el navegador
+  pdfUrlDescarga: string | null; // fuerza descarga con nombre empresa-contacto-folio
+}
+
+// Nombre con el que se descarga el PDF, para identificar el documento sin
+// abrirlo (requisito: saber empresa / contacto al descargar). Ej:
+// "Multiexport - QUEMADA - 39684.pdf". El contacto (centro) puede faltar en
+// guias antiguas de formato largo, en cuyo caso se omite.
+function construirNombreDescargaPdf(
+  empresaNombre: string | undefined,
+  centro: string | null,
+  folio: string | null
+): string {
+  const base = [empresaNombre, centro, folio]
+    .filter((p): p is string => Boolean(p && p.trim()))
+    .join(" - ")
+    .replace(/[\\/:*?"<>|]+/g, " ") // caracteres invalidos en nombres de archivo
+    .replace(/\s+/g, " ")
+    .trim();
+  return `${base || "guia"}.pdf`;
 }
 
 export interface CategoriaAgrupada {
@@ -108,16 +127,26 @@ export async function obtenerHistorial(): Promise<EmpresaAgrupada[]> {
       const guias = await Promise.all(
         [...porGuia.values()]
           .sort((a, b) => (b.fecha ?? "").localeCompare(a.fecha ?? ""))
-          .map(async (g) => ({
-            folio: g.folio,
-            centro: g.centro,
-            estado: g.estado,
-            cantidadProductos: g.cantidadProductos,
-            cantidadTotal: g.cantidadTotal,
-            fecha: g.fecha,
-            mensajeError: g.mensajeError,
-            pdfUrl: g.pdfPath ? await obtenerUrlFirmadaPdf(g.pdfPath) : null,
-          }))
+          .map(async (g) => {
+            const nombreDescarga = construirNombreDescargaPdf(empresa?.nombre, g.centro, g.folio);
+            const [pdfUrl, pdfUrlDescarga] = g.pdfPath
+              ? await Promise.all([
+                  obtenerUrlFirmadaPdf(g.pdfPath),
+                  obtenerUrlFirmadaPdf(g.pdfPath, 3600, nombreDescarga),
+                ])
+              : [null, null];
+            return {
+              folio: g.folio,
+              centro: g.centro,
+              estado: g.estado,
+              cantidadProductos: g.cantidadProductos,
+              cantidadTotal: g.cantidadTotal,
+              fecha: g.fecha,
+              mensajeError: g.mensajeError,
+              pdfUrl,
+              pdfUrlDescarga,
+            };
+          })
       );
       categorias.push({ categoria, guias });
     }

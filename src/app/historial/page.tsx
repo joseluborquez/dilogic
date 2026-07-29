@@ -85,14 +85,24 @@ export default async function HistorialPage() {
                         </td>
                         <td className="px-3 py-2">
                           {guia.pdfUrl ? (
-                            <a
-                              href={guia.pdfUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-teal hover:underline"
-                            >
-                              Ver PDF ↗
-                            </a>
+                            <div className="flex gap-3">
+                              <a
+                                href={guia.pdfUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-teal hover:underline"
+                              >
+                                Ver ↗
+                              </a>
+                              {guia.pdfUrlDescarga && (
+                                <a
+                                  href={guia.pdfUrlDescarga}
+                                  className="text-teal hover:underline"
+                                >
+                                  Descargar ↓
+                                </a>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-ink-muted">—</span>
                           )}

@@ -49,9 +49,22 @@ export async function guardarPdfGuia(params: {
   return path;
 }
 
-export async function obtenerUrlFirmadaPdf(path: string, expiraEnSegundos = 3600): Promise<string | null> {
+export async function obtenerUrlFirmadaPdf(
+  path: string,
+  expiraEnSegundos = 3600,
+  // Si se entrega, la URL fuerza la descarga con este nombre de archivo
+  // (Content-Disposition), para que el PDF bajado identifique empresa/contacto
+  // en vez de llamarse solo por el folio. Sin esto, la URL se ve inline.
+  nombreDescarga?: string
+): Promise<string | null> {
   const supabase = getSupabaseServiceClient();
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, expiraEnSegundos);
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(
+      path,
+      expiraEnSegundos,
+      nombreDescarga ? { download: nombreDescarga } : undefined
+    );
   if (error) return null;
   return data.signedUrl;
 }
