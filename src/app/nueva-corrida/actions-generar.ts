@@ -2,7 +2,7 @@
 
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { decryptToken } from "@/lib/crypto/tokens";
-import { crearGuiaDespacho, obtenerDte, RelbaseApiError } from "@/lib/relbase/client";
+import { crearGuiaDespacho, obtenerPdfUrlDte, RelbaseApiError } from "@/lib/relbase/client";
 import {
   TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
   type RelbaseCredenciales,
@@ -206,16 +206,18 @@ export async function generarGuiasAction(
 
         // El PDF es secundario a la guia ya creada en Relbase: si falla su
         // descarga/guardado, la fila igual queda "generada" con su folio.
+        // Relbase genera el PDF de forma asincrona, asi que obtenerPdfUrlDte
+        // reintenta unas pocas veces hasta que este listo (ver su doc).
         let pdfPath: string | null = null;
         try {
-          const detalle = await obtenerDte(credenciales, respuesta.id);
-          if (detalle.pdf_file?.url) {
+          const pdfUrl = await obtenerPdfUrlDte(credenciales, respuesta.id);
+          if (pdfUrl) {
             pdfPath = await guardarPdfGuia({
               empresaCodigo,
               categoria,
               centro,
               folio,
-              pdfUrl: detalle.pdf_file.url,
+              pdfUrl,
             });
           }
         } catch {

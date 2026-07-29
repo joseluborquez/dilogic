@@ -134,4 +134,34 @@ export async function obtenerDte(
   return res.data;
 }
 
+/**
+ * Devuelve la URL del PDF de un DTE reintentando mientras Relbase aun no lo
+ * genera. Relbase timbra/genera el PDF de forma asincrona: justo despues de
+ * crear la guia, `GET /dtes/{id}` suele traer `pdf_file: null` porque el PDF
+ * todavia no esta listo. Sin estos reintentos casi ninguna guia alcanzaba a
+ * capturar su PDF (confirmado 29-jul-2026: solo 5 de las guias historicas
+ * tenian PDF, todas del primer test).
+ *
+ * El presupuesto de reintentos es deliberadamente corto: esto corre dentro
+ * del loop de generacion (una guia tras otra) y las funciones serverless de
+ * Vercel tienen un limite de ejecucion. Devuelve null si el PDF no aparece a
+ * tiempo; en ese caso la guia igual queda generada (el PDF se puede recuperar
+ * despues con un backfill).
+ */
+export async function obtenerPdfUrlDte(
+  credenciales: RelbaseCredenciales,
+  id: number,
+  opciones: { intentos?: number; esperaMs?: number } = {}
+): Promise<string | null> {
+  const { intentos = 3, esperaMs = 1200 } = opciones;
+  for (let intento = 0; intento < intentos; intento += 1) {
+    const detalle = await obtenerDte(credenciales, id);
+    if (detalle.pdf_file?.url) return detalle.pdf_file.url;
+    if (intento < intentos - 1) {
+      await new Promise((resolve) => setTimeout(resolve, esperaMs));
+    }
+  }
+  return null;
+}
+
 export { RelbaseApiError };
