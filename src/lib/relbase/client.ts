@@ -142,18 +142,22 @@ export async function obtenerDte(
  * capturar su PDF (confirmado 29-jul-2026: solo 5 de las guias historicas
  * tenian PDF, todas del primer test).
  *
- * El presupuesto de reintentos es deliberadamente corto: esto corre dentro
- * del loop de generacion (una guia tras otra) y las funciones serverless de
- * Vercel tienen un limite de ejecucion. Devuelve null si el PDF no aparece a
- * tiempo; en ese caso la guia igual queda generada (el PDF se puede recuperar
- * despues con un backfill).
+ * Presupuesto: 6 intentos x 1,5 s = hasta 7,5 s de espera por guia. El primer
+ * presupuesto (3 x 1,2 s = 2,4 s) quedo justo en el limite de lo que Relbase
+ * tarda: en la corrida del 30-jul-2026 (30 guias) las exitosas encontraban el
+ * PDF recien en el ultimo intento y 4 se pasaron por decimas. Se triplico la
+ * ventana. Sigue acotado a proposito porque esto corre dentro del loop de
+ * generacion (una guia tras otra) y la funcion tiene limite de ejecucion.
+ *
+ * Devuelve null si el PDF no aparece a tiempo; en ese caso la guia igual queda
+ * generada, y como se guarda el dte_id_relbase se puede recuperar despues.
  */
 export async function obtenerPdfUrlDte(
   credenciales: RelbaseCredenciales,
   id: number,
   opciones: { intentos?: number; esperaMs?: number } = {}
 ): Promise<string | null> {
-  const { intentos = 3, esperaMs = 1200 } = opciones;
+  const { intentos = 6, esperaMs = 1500 } = opciones;
   for (let intento = 0; intento < intentos; intento += 1) {
     const detalle = await obtenerDte(credenciales, id);
     if (detalle.pdf_file?.url) return detalle.pdf_file.url;

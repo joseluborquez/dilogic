@@ -75,6 +75,13 @@ function agruparPorCentroYCategoria(
 // un grupo (categoria) que exceda ese tamano debe partirse en varias guias.
 const MAX_PRODUCTOS_POR_DOCUMENTO = 60;
 
+// Pasado este tiempo de corrida, se deja de esperar a que Relbase timbre el
+// PDF (se hace un solo intento sin esperas). Crear las guias es la tarea
+// principal y no puede quedarse sin tiempo de ejecucion por culpa de la
+// secundaria: el PDF se puede recuperar despues con dte_id_relbase, una guia
+// a medio generar no.
+const PRESUPUESTO_ESPERA_PDF_MS = 180_000;
+
 function dividirEnLotes<T>(items: T[], tamano: number): T[][] {
   const lotes: T[][] = [];
   for (let i = 0; i < items.length; i += tamano) {
@@ -172,6 +179,7 @@ export async function generarGuiasAction(
   }
 
   const fecha = fechaHoyDDMMYYYY();
+  const inicioCorrida = Date.now();
   const grupos = agruparPorCentroYCategoria(filas, contacto);
   const resultados: ResultadoGrupo[] = [];
   let totalExitosas = 0;
@@ -210,7 +218,12 @@ export async function generarGuiasAction(
         // reintenta unas pocas veces hasta que este listo (ver su doc).
         let pdfPath: string | null = null;
         try {
-          const pdfUrl = await obtenerPdfUrlDte(credenciales, respuesta.id);
+          const quedaTiempo = Date.now() - inicioCorrida < PRESUPUESTO_ESPERA_PDF_MS;
+          const pdfUrl = await obtenerPdfUrlDte(
+            credenciales,
+            respuesta.id,
+            quedaTiempo ? {} : { intentos: 1 }
+          );
           if (pdfUrl) {
             pdfPath = await guardarPdfGuia({
               empresaCodigo,
@@ -233,6 +246,9 @@ export async function generarGuiasAction(
             categoria: f.categoria,
             centro,
             folio_relbase: folio,
+            // Se guarda aunque el PDF si se haya capturado: es lo que permite
+            // volver a pedirlo a Relbase mas adelante.
+            dte_id_relbase: respuesta.id,
             estado: "generada",
             fecha_generacion: new Date().toISOString(),
             pdf_path: pdfPath,

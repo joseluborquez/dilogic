@@ -80,6 +80,9 @@ export type GuiaGenerada = {
   categoria: string | null;
   centro: string | null;
   folio_relbase: string | null;
+  // Id del DTE en Relbase: lo pide GET /dtes/{id}, unica via para recuperar el
+  // PDF de una guia ya emitida. El folio no sirve para eso.
+  dte_id_relbase: number | null;
   estado: EstadoGuia;
   mensaje_error: string | null;
   fecha_generacion: string | null;
