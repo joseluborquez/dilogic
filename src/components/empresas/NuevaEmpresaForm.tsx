@@ -49,7 +49,7 @@ export function NuevaEmpresaForm({ valoresPorDefecto }: Props) {
     <form action={formAction} className="flex flex-col gap-5 rounded-sm border border-line bg-surface p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="font-display text-lg font-semibold">Nueva empresa cliente</h2>
+          <h2 className="font-display text-lg font-semibold">Nueva empresa</h2>
           <p className="mt-1 text-sm text-ink-muted">
             Usa las mismas credenciales de Relbase que las demás. Lo único propio de cada empresa es
             a quién se le despacha y su lista de códigos.

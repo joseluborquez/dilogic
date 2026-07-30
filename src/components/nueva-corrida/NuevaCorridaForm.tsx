@@ -33,7 +33,7 @@ export function NuevaCorridaForm({ empresas }: { empresas: EmpresaOpcion[] }) {
     <div className="flex flex-col gap-8">
       <form action={formAction} className="flex flex-col gap-5 rounded-sm border border-line bg-surface p-5">
         <div>
-          <p className="mb-2 text-xs tracking-wide text-ink-muted uppercase">Empresa cliente</p>
+          <p className="mb-2 text-xs tracking-wide text-ink-muted uppercase">Empresa</p>
           {empresas.length === 0 && (
             <p className="text-sm text-advertencia">
               No hay empresas activas.{" "}
@@ -43,7 +43,7 @@ export function NuevaCorridaForm({ empresas }: { empresas: EmpresaOpcion[] }) {
               antes de subir un pedido.
             </p>
           )}
-          <div role="radiogroup" aria-label="Empresa cliente" className="flex flex-wrap gap-2">
+          <div role="radiogroup" aria-label="Empresa" className="flex flex-wrap gap-2">
             {empresas.map((empresa) => {
               const activo = empresa.codigo === empresaCodigo;
               return (

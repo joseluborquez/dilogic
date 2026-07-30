@@ -16,7 +16,7 @@ export default async function EmpresasPage() {
       <header className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs tracking-widest text-ink-muted uppercase">Dilogic</p>
-          <h1 className="font-display text-2xl font-semibold">Empresas cliente</h1>
+          <h1 className="font-display text-2xl font-semibold">Empresas</h1>
           <p className="mt-1 text-sm text-ink-muted">
             Las empresas a las que se les generan guías. Agregar una nueva no requiere tocar el
             código: basta con su cliente en Relbase y su lista de códigos.
