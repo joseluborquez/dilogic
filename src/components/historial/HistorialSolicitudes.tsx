@@ -170,9 +170,10 @@ export function HistorialSolicitudes({ solicitudes }: Props) {
 
               <button
                 type="button"
-                onClick={() =>
-                  descargar(solicitud.corridaId, { corridaId: solicitud.corridaId })
-                }
+                // Se mandan las claves visibles y no el corridaId: con una
+                // busqueda activa la solicitud muestra solo las guias que
+                // coinciden, y lo que se baja debe ser lo que esta en pantalla.
+                onClick={() => descargar(solicitud.corridaId, { claves })}
                 disabled={descargando !== null || solicitud.totalConPdf === 0}
                 className="shrink-0 rounded-sm border border-teal px-3 py-1.5 text-sm font-medium text-teal transition-colors hover:bg-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
               >
