@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BotonVolver } from "@/components/ui/BotonVolver";
 import { listarEmpresas, obtenerValoresPorDefecto } from "@/lib/empresas/consultar";
 import { NuevaEmpresaForm } from "@/components/empresas/NuevaEmpresaForm";
 import { FilaEmpresa } from "@/components/empresas/FilaEmpresa";
@@ -22,9 +22,7 @@ export default async function EmpresasPage() {
             código: basta con su cliente en Relbase y su lista de códigos.
           </p>
         </div>
-        <Link href="/nueva-corrida" className="shrink-0 text-sm text-teal hover:underline">
-          ← Nueva corrida
-        </Link>
+        <BotonVolver href="/nueva-corrida">Nueva corrida</BotonVolver>
       </header>
 
       <NuevaEmpresaForm valoresPorDefecto={valoresPorDefecto} />

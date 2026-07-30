@@ -3,6 +3,8 @@
 import { useMemo, useState, useTransition } from "react";
 import type { GuiaAgrupada, SolicitudAgrupada } from "@/lib/historial/consultar";
 import { eliminarGuiasAction } from "@/app/historial/actions";
+import { AccionIconoBoton, AccionIconoEnlace } from "@/components/ui/AccionIcono";
+import { IconoDescargar, IconoEliminar, IconoVer } from "@/components/ui/iconos";
 import { descargarZipGuias } from "./descargar-zip";
 
 interface Props {
@@ -193,7 +195,7 @@ export function HistorialSolicitudes({ solicitudes }: Props) {
                     <th className="px-3 py-2 font-medium">Categoría</th>
                     <th className="px-3 py-2 text-right font-medium">Productos</th>
                     <th className="px-3 py-2 font-medium">Estado</th>
-                    <th className="px-3 py-2 font-medium">Documento</th>
+                    <th className="px-3 py-2 font-medium">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -320,31 +322,46 @@ function FilaGuia({
           </span>
         )}
       </td>
-      <td className="px-3 py-2">
-        <div className="flex flex-wrap gap-3 whitespace-nowrap">
+      <td className="px-3 py-1.5">
+        <div className="flex items-center gap-1">
           {guia.tienePdf && guia.folio ? (
             <>
-              <a
+              <AccionIconoEnlace
                 href={urlPdf(corridaId, guia.folio, "ver")}
-                target="_blank"
-                rel="noreferrer"
-                className="text-teal hover:underline"
+                nuevaPestana
+                etiqueta={`Ver el PDF de la guía ${guia.folio}`}
               >
-                Ver ↗
-              </a>
-              <a
+                <IconoVer />
+              </AccionIconoEnlace>
+              <AccionIconoEnlace
                 href={urlPdf(corridaId, guia.folio, "descargar")}
-                className="text-teal hover:underline"
+                etiqueta={`Descargar el PDF de la guía ${guia.folio}`}
               >
-                Descargar ↓
-              </a>
+                <IconoDescargar />
+              </AccionIconoEnlace>
             </>
           ) : (
-            <span className="text-ink-muted">Sin PDF</span>
+            // Deshabilitados en vez de ausentes: mantienen la grilla alineada
+            // y dejan claro que la accion existe pero no esta disponible.
+            <>
+              <AccionIconoBoton deshabilitado etiqueta="Esta guía no tiene PDF guardado">
+                <IconoVer />
+              </AccionIconoBoton>
+              <AccionIconoBoton deshabilitado etiqueta="Esta guía no tiene PDF guardado">
+                <IconoDescargar />
+              </AccionIconoBoton>
+            </>
           )}
-          <button type="button" onClick={onEliminar} className="text-error hover:underline">
-            Eliminar
-          </button>
+          <AccionIconoBoton
+            onClick={onEliminar}
+            tono="destructivo"
+            etiqueta={
+              guia.folio ? `Eliminar la guía ${guia.folio} del historial` : "Eliminar del historial"
+            }
+          >
+            <IconoEliminar />
+          </AccionIconoBoton>
+          {!guia.tienePdf && <span className="ml-1 text-xs text-ink-muted">sin PDF</span>}
         </div>
       </td>
     </tr>

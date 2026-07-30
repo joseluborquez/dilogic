@@ -6,6 +6,7 @@ import {
 } from "@/lib/historial/consultar";
 import { HistorialSolicitudes } from "@/components/historial/HistorialSolicitudes";
 import { BuscadorHistorial } from "@/components/historial/BuscadorHistorial";
+import { BotonVolver } from "@/components/ui/BotonVolver";
 
 // Depende de datos en vivo y de los filtros de la URL: nunca estatica.
 export const dynamic = "force-dynamic";
@@ -57,9 +58,7 @@ export default async function HistorialPage({
             Selecciona guías para descargarlas en un ZIP o sacarlas del historial.
           </p>
         </div>
-        <Link href="/nueva-corrida" className="shrink-0 text-sm text-teal hover:underline">
-          ← Nueva corrida
-        </Link>
+        <BotonVolver href="/nueva-corrida">Nueva corrida</BotonVolver>
       </header>
 
       <BuscadorHistorial
