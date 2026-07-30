@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { NuevaCorridaForm } from "@/components/nueva-corrida/NuevaCorridaForm";
+import { listarEmpresasActivas } from "@/lib/empresas/consultar";
 
-export default function NuevaCorridaPage() {
+// Las empresas se leen de la base en cada carga: agregar una nueva debe
+// reflejarse aca sin volver a desplegar.
+export const dynamic = "force-dynamic";
+
+export default async function NuevaCorridaPage() {
+  const empresas = await listarEmpresasActivas();
+
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-10">
       <header className="flex items-start justify-between gap-4">
@@ -19,10 +26,13 @@ export default function NuevaCorridaPage() {
           <Link href="/catalogo" className="text-teal hover:underline">
             Sincronizar catálogo →
           </Link>
+          <Link href="/empresas" className="text-teal hover:underline">
+            Empresas cliente →
+          </Link>
         </div>
       </header>
 
-      <NuevaCorridaForm />
+      <NuevaCorridaForm empresas={empresas} />
     </main>
   );
 }

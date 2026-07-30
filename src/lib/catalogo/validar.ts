@@ -68,15 +68,20 @@ export async function obtenerCatalogoEmpresa(codigoInterno: string): Promise<Cat
       throw new Error(`Empresa no encontrada: ${codigoInterno}`);
     }
 
-    const { data: productos, error: errorProductos } = await supabase
-      .from("productos_catalogo")
-      .select("sku, descripcion, descripcion_relbase, product_id_relbase, precio, familia")
-      .eq("empresa_id", empresa.id);
-
-    if (errorProductos) throw errorProductos;
+    // Paginado: PostgREST corta en max-rows, y un catalogo truncado marcaria
+    // como "codigo inexistente" productos que si estan cargados.
+    const { traerTodasLasFilas } = await import("@/lib/supabase/paginar");
+    const productos = await traerTodasLasFilas((desde, hasta) =>
+      supabase
+        .from("productos_catalogo")
+        .select("sku, descripcion, descripcion_relbase, product_id_relbase, precio, familia")
+        .eq("empresa_id", empresa.id)
+        .order("sku")
+        .range(desde, hasta)
+    );
 
     const mapa = new Map<string, ProductoCatalogoResumen>();
-    for (const p of productos ?? []) {
+    for (const p of productos) {
       mapa.set(p.sku, {
         descripcion: p.descripcion,
         descripcionUnidad: p.descripcion_relbase,

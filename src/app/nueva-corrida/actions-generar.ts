@@ -8,7 +8,6 @@ import {
   type RelbaseCredenciales,
 } from "@/lib/relbase/types";
 import { guardarPdfGuia } from "@/lib/storage/guias-pdf";
-import { EMPRESAS } from "./empresas";
 
 interface FilaAGenerar {
   fila: number;
@@ -99,11 +98,8 @@ export async function generarGuiasAction(
   const nombreArchivo = String(formData.get("nombreArchivo") ?? "pedido");
   const filasRaw = String(formData.get("filas") ?? "[]");
 
-  const empresaLocal = EMPRESAS.find((e) => e.codigo === empresaCodigo);
-  if (!empresaLocal) {
-    return { status: "error", mensaje: "Empresa invalida." };
-  }
-
+  // La empresa se valida contra la base mas abajo, al buscar sus datos de
+  // destino: no hay lista de empresas en el codigo.
   let filas: FilaAGenerar[];
   try {
     filas = JSON.parse(filasRaw);

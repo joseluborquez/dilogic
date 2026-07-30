@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
+import { traerTodasLasFilas } from "@/lib/supabase/paginar";
 import { decryptToken } from "@/lib/crypto/tokens";
 import {
   buscarProductoPorCodigo,
@@ -86,12 +87,11 @@ export async function sincronizarLotePaginas(
     }
   }
 
-  const { data: nuestroCatalogo, error } = await supabase
-    .from("productos_catalogo")
-    .select("id, sku");
-  if (error) throw error;
+  const nuestroCatalogo = await traerTodasLasFilas((desde, hasta) =>
+    supabase.from("productos_catalogo").select("id, sku").order("sku").range(desde, hasta)
+  );
 
-  const actualizaciones = (nuestroCatalogo ?? [])
+  const actualizaciones = nuestroCatalogo
     .map((row) => {
       const match = porCodigo.get(row.sku);
       return match
@@ -151,13 +151,19 @@ export async function sincronizarPendientesDirecto(): Promise<ResumenSincronizac
     .eq("activo", true);
   if (errEmpresas || !empresas) throw new Error("No hay empresas activas configuradas.");
 
-  const { data: nuestroCatalogo, error } = await supabase
-    .from("productos_catalogo")
-    .select("id, sku, empresa_id, product_id_relbase");
-  if (error) throw error;
+  // Paginado: PostgREST corta en max-rows. Con ~800 SKUs y tres empresas la
+  // consulta entera cabia, pero cada empresa nueva suma ~250 y los que
+  // quedaran fuera nunca se sincronizarian (ni se notaria).
+  const nuestroCatalogo = await traerTodasLasFilas((desde, hasta) =>
+    supabase
+      .from("productos_catalogo")
+      .select("id, sku, empresa_id, product_id_relbase")
+      .order("sku")
+      .range(desde, hasta)
+  );
 
   const codigoPorEmpresaId = new Map(empresas.map((e) => [e.id, e.codigo_interno]));
-  const pendientes = (nuestroCatalogo ?? []).filter((r) => r.product_id_relbase == null);
+  const pendientes = nuestroCatalogo.filter((r) => r.product_id_relbase == null);
   const sinMatchFinal: { sku: string; codigoEmpresa: string }[] = [];
 
   for (const p of pendientes) {
@@ -178,10 +184,12 @@ export async function sincronizarPendientesDirecto(): Promise<ResumenSincronizac
     }
   }
 
-  const { data: catalogoFinal } = await supabase.from("productos_catalogo").select("id, empresa_id");
+  const catalogoFinal = await traerTodasLasFilas((desde, hasta) =>
+    supabase.from("productos_catalogo").select("id, empresa_id").order("id").range(desde, hasta)
+  );
 
   const porEmpresa: ResumenEmpresa[] = empresas.map((e) => {
-    const filasEmpresa = (catalogoFinal ?? []).filter((r) => r.empresa_id === e.id);
+    const filasEmpresa = catalogoFinal.filter((r) => r.empresa_id === e.id);
     const sinMatch = sinMatchFinal.filter((s) => s.codigoEmpresa === e.codigo_interno).map((s) => s.sku);
     return {
       codigoInterno: e.codigo_interno,

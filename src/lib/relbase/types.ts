@@ -76,6 +76,16 @@ export interface RelbaseDteDetalle {
   [key: string]: unknown;
 }
 
+/**
+ * Registro de referencia de Relbase (cliente, bodega, ciudad, comuna). Solo se
+ * asume el `id`: el resto de los campos varia por endpoint y se lee de forma
+ * tolerante (ver etiquetaReferencia en lib/empresas/referencias.ts).
+ */
+export interface RelbaseReferencia {
+  id: number;
+  [key: string]: unknown;
+}
+
 export interface RelbaseTipoTraslado {
   id: number;
   name: string;

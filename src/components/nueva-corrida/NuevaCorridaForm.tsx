@@ -1,15 +1,16 @@
 "use client";
 
 import { useActionState, useRef, useState, type DragEvent } from "react";
+import Link from "next/link";
 import { previsualizarPedidoAction, type EstadoPrevisualizacion } from "@/app/nueva-corrida/actions";
-import { EMPRESAS } from "@/app/nueva-corrida/empresas";
+import type { EmpresaOpcion } from "@/lib/empresas/consultar";
 import { ResultadoValidacion } from "./ResultadoValidacion";
 
 const ESTADO_INICIAL: EstadoPrevisualizacion = { status: "inicial" };
 
-export function NuevaCorridaForm() {
+export function NuevaCorridaForm({ empresas }: { empresas: EmpresaOpcion[] }) {
   const [estado, formAction, pending] = useActionState(previsualizarPedidoAction, ESTADO_INICIAL);
-  const [empresaCodigo, setEmpresaCodigo] = useState(EMPRESAS[0].codigo);
+  const [empresaCodigo, setEmpresaCodigo] = useState(empresas[0]?.codigo ?? "");
   const [nombreArchivo, setNombreArchivo] = useState<string | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -33,8 +34,17 @@ export function NuevaCorridaForm() {
       <form action={formAction} className="flex flex-col gap-5 rounded-sm border border-line bg-surface p-5">
         <div>
           <p className="mb-2 text-xs tracking-wide text-ink-muted uppercase">Empresa cliente</p>
+          {empresas.length === 0 && (
+            <p className="text-sm text-advertencia">
+              No hay empresas activas.{" "}
+              <Link href="/empresas" className="text-teal hover:underline">
+                Agrega una empresa
+              </Link>{" "}
+              antes de subir un pedido.
+            </p>
+          )}
           <div role="radiogroup" aria-label="Empresa cliente" className="flex flex-wrap gap-2">
-            {EMPRESAS.map((empresa) => {
+            {empresas.map((empresa) => {
               const activo = empresa.codigo === empresaCodigo;
               return (
                 <label

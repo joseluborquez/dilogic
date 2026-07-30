@@ -3,7 +3,7 @@
 import { parseArchivoPedido } from "@/lib/excel/parse";
 import { obtenerCatalogoEmpresa, validarFilas, type FilaValidada } from "@/lib/catalogo/validar";
 import type { ErrorParseo } from "@/lib/excel/types";
-import { EMPRESAS } from "./empresas";
+import { listarEmpresasActivas } from "@/lib/empresas/consultar";
 
 export interface ResumenValidacion {
   total: number;
@@ -33,7 +33,7 @@ export async function previsualizarPedidoAction(
   const empresaCodigo = String(formData.get("empresa") ?? "");
   const archivo = formData.get("archivo");
 
-  const empresa = EMPRESAS.find((e) => e.codigo === empresaCodigo);
+  const empresa = (await listarEmpresasActivas()).find((e) => e.codigo === empresaCodigo);
   if (!empresa) {
     return { status: "error", mensaje: "Selecciona una empresa valida." };
   }

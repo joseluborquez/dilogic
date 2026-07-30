@@ -9,6 +9,7 @@ import {
   type RelbaseDteDetalle,
   type RelbaseProducto,
   type RelbaseProductosPage,
+  type RelbaseReferencia,
   type RelbaseTiposTrasladoResponse,
   type RelbaseTipoTraslado,
 } from "./types";
@@ -95,6 +96,61 @@ export async function buscarProductoPorCodigo(
     credenciales
   );
   return pagina.data.products.find((p) => p.code === codigo) ?? null;
+}
+
+/**
+ * Las respuestas de Relbase envuelven la lista en `data` bajo una clave que
+ * cambia por endpoint (`products`, `type_transfers`, ...). Como los nombres de
+ * las de referencia no estan documentados, se toma el primer array que venga
+ * dentro de `data` en vez de adivinar la clave.
+ */
+function extraerLista(json: unknown): RelbaseReferencia[] {
+  const data = (json as { data?: Record<string, unknown> } | null)?.data;
+  if (!data || typeof data !== "object") return [];
+  for (const valor of Object.values(data)) {
+    if (Array.isArray(valor)) return valor as RelbaseReferencia[];
+  }
+  return [];
+}
+
+/** Solo lectura: clientes de Relbase, para elegir el destinatario de las guias. */
+export async function buscarClientesRelbase(
+  credenciales: RelbaseCredenciales,
+  query: string
+): Promise<RelbaseReferencia[]> {
+  const json = await request<unknown>(
+    `/clientes?query=${encodeURIComponent(query)}`,
+    credenciales
+  );
+  return extraerLista(json);
+}
+
+export async function listarBodegasRelbase(
+  credenciales: RelbaseCredenciales
+): Promise<RelbaseReferencia[]> {
+  return extraerLista(await request<unknown>("/bodegas", credenciales));
+}
+
+export async function buscarCiudadesRelbase(
+  credenciales: RelbaseCredenciales,
+  query: string
+): Promise<RelbaseReferencia[]> {
+  const json = await request<unknown>(
+    `/ciudades?query=${encodeURIComponent(query)}`,
+    credenciales
+  );
+  return extraerLista(json);
+}
+
+export async function buscarComunasRelbase(
+  credenciales: RelbaseCredenciales,
+  query: string
+): Promise<RelbaseReferencia[]> {
+  const json = await request<unknown>(
+    `/comunas?query=${encodeURIComponent(query)}`,
+    credenciales
+  );
+  return extraerLista(json);
 }
 
 export async function obtenerTiposTraslado(
