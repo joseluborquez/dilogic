@@ -14,10 +14,24 @@ export type EstadoLogin =
   | { status: "error"; mensaje: string }
   | { status: "registrado"; mensaje: string };
 
+const DESTINO_POR_DEFECTO = "/nueva-corrida";
+
+/**
+ * Solo rutas internas: `?volver=` lo controla quien arma el enlace, y una URL
+ * externa ahi convertiria el login en un redirector para phishing (la victima
+ * ve el dominio real, se autentica y termina en otro sitio).
+ *
+ * No basta con descartar "//": los navegadores tratan la barra invertida como
+ * barra normal al resolver una URL, asi que "/\evil.com" termina siendo
+ * "//evil.com", es decir, un destino externo. Se rechaza cualquier ruta que no
+ * sea una sola barra seguida de caracteres corrientes.
+ */
 function rutaSegura(volver: string): string {
-  // Solo rutas internas: un "volver" con URL absoluta permitiria mandar al
-  // usuario a otro sitio despues de autenticarse.
-  return volver.startsWith("/") && !volver.startsWith("//") ? volver : "/nueva-corrida";
+  if (!volver.startsWith("/")) return DESTINO_POR_DEFECTO;
+  if (volver.startsWith("//") || volver.includes("\\")) return DESTINO_POR_DEFECTO;
+  // Los caracteres de control pueden usarse para partir la cabecera Location.
+  if (/[\u0000-\u001f\u007f]/.test(volver)) return DESTINO_POR_DEFECTO;
+  return volver;
 }
 
 export async function ingresarAction(

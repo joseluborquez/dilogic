@@ -40,6 +40,13 @@ export async function proxy(request: NextRequest) {
   const ruta = request.nextUrl.pathname;
   const esPublica = PUBLICAS.some((p) => ruta === p || ruta.startsWith(`${p}/`));
 
+  // Las rutas de API no se redirigen: un fetch seguiria el 302 y recibiria el
+  // HTML del login con estado 200, que el cliente intentaria abrir como ZIP.
+  // Cada route handler responde 401 por su cuenta.
+  if (!user && ruta.startsWith("/api/")) {
+    return NextResponse.json({ mensaje: "Sesion requerida." }, { status: 401 });
+  }
+
   if (!user && !esPublica) {
     const destino = new URL("/login", request.url);
     // Para volver a donde iba despues de entrar.
