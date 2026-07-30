@@ -2,8 +2,6 @@ import "server-only";
 
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { traerTodasLasFilas } from "@/lib/supabase/paginar";
-import { obtenerUrlFirmadaPdf } from "@/lib/storage/guias-pdf";
-import { construirNombreDescargaPdf } from "./nombre-pdf";
 import { claveGuia } from "./claves";
 
 export interface GuiaAgrupada {
@@ -17,8 +15,12 @@ export interface GuiaAgrupada {
   cantidadTotal: number;
   fecha: string | null;
   mensajeError: string | null;
-  pdfUrl: string | null; // para ver inline en el navegador
-  pdfUrlDescarga: string | null; // fuerza descarga con nombre empresa-contacto-folio
+  /**
+   * Si tiene PDF guardado. La URL no se firma aqui: firmar por adelantado
+   * costaba dos llamadas a Storage por guia en cada carga de pagina. Los
+   * enlaces apuntan a /api/guias/pdf, que firma al momento del click.
+   */
+  tienePdf: boolean;
 }
 
 /**
@@ -132,30 +134,18 @@ export async function obtenerHistorial(): Promise<SolicitudAgrupada[]> {
         (a.folio ?? "").localeCompare(b.folio ?? "")
     );
 
-    const guias = await Promise.all(
-      acumuladas.map(async (g) => {
-        const nombreDescarga = construirNombreDescargaPdf(empresa?.nombre, g.centro, g.folio);
-        const [pdfUrl, pdfUrlDescarga] = g.pdfPath
-          ? await Promise.all([
-              obtenerUrlFirmadaPdf(g.pdfPath),
-              obtenerUrlFirmadaPdf(g.pdfPath, 3600, nombreDescarga),
-            ])
-          : [null, null];
-        return {
-          clave: g.clave,
-          folio: g.folio,
-          centro: g.centro,
-          categoria: g.categoria,
-          estado: g.estado,
-          cantidadProductos: g.cantidadProductos,
-          cantidadTotal: g.cantidadTotal,
-          fecha: g.fecha,
-          mensajeError: g.mensajeError,
-          pdfUrl,
-          pdfUrlDescarga,
-        };
-      })
-    );
+    const guias: GuiaAgrupada[] = acumuladas.map((g) => ({
+      clave: g.clave,
+      folio: g.folio,
+      centro: g.centro,
+      categoria: g.categoria,
+      estado: g.estado,
+      cantidadProductos: g.cantidadProductos,
+      cantidadTotal: g.cantidadTotal,
+      fecha: g.fecha,
+      mensajeError: g.mensajeError,
+      tienePdf: Boolean(g.pdfPath),
+    }));
 
     solicitudes.push({
       corridaId,

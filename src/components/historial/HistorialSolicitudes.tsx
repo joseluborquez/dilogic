@@ -39,7 +39,7 @@ export function HistorialSolicitudes({ solicitudes }: Props) {
     let n = 0;
     for (const s of solicitudes) {
       for (const g of s.guias) {
-        if (seleccion.has(g.clave) && g.pdfUrl) n += 1;
+        if (seleccion.has(g.clave) && g.tienePdf) n += 1;
       }
     }
     return n;
@@ -200,6 +200,7 @@ export function HistorialSolicitudes({ solicitudes }: Props) {
                     <FilaGuia
                       key={guia.clave}
                       guia={guia}
+                      corridaId={solicitud.corridaId}
                       seleccionada={seleccion.has(guia.clave)}
                       onAlternar={() => alternar(guia.clave)}
                       onEliminar={() => setPorEliminar([guia.clave])}
@@ -264,13 +265,23 @@ export function HistorialSolicitudes({ solicitudes }: Props) {
   );
 }
 
+/**
+ * La URL firmada se pide al hacer click, no al renderizar la pagina: firmar
+ * por adelantado costaba dos llamadas a Storage por guia en cada carga.
+ */
+function urlPdf(corridaId: string, folio: string, modo: "ver" | "descargar"): string {
+  return `/api/guias/pdf?corrida=${corridaId}&folio=${encodeURIComponent(folio)}&modo=${modo}`;
+}
+
 function FilaGuia({
   guia,
+  corridaId,
   seleccionada,
   onAlternar,
   onEliminar,
 }: {
   guia: GuiaAgrupada;
+  corridaId: string;
   seleccionada: boolean;
   onAlternar: () => void;
   onEliminar: () => void;
@@ -310,16 +321,22 @@ function FilaGuia({
       </td>
       <td className="px-3 py-2">
         <div className="flex flex-wrap gap-3 whitespace-nowrap">
-          {guia.pdfUrl ? (
+          {guia.tienePdf && guia.folio ? (
             <>
-              <a href={guia.pdfUrl} target="_blank" rel="noreferrer" className="text-teal hover:underline">
+              <a
+                href={urlPdf(corridaId, guia.folio, "ver")}
+                target="_blank"
+                rel="noreferrer"
+                className="text-teal hover:underline"
+              >
                 Ver ↗
               </a>
-              {guia.pdfUrlDescarga && (
-                <a href={guia.pdfUrlDescarga} className="text-teal hover:underline">
-                  Descargar ↓
-                </a>
-              )}
+              <a
+                href={urlPdf(corridaId, guia.folio, "descargar")}
+                className="text-teal hover:underline"
+              >
+                Descargar ↓
+              </a>
             </>
           ) : (
             <span className="text-ink-muted">Sin PDF</span>
