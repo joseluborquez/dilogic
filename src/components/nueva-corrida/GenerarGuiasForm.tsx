@@ -12,9 +12,16 @@ interface Props {
   empresaCodigo: string;
   nombreArchivo: string;
   filas: FilaValidada[]; // solo validas/advertencia (sin errores)
+  /** Llave de esta validacion: evita emitir dos veces el mismo pedido. */
+  idempotencyKey: string;
 }
 
-export function GenerarGuiasForm({ empresaCodigo, nombreArchivo, filas }: Props) {
+export function GenerarGuiasForm({
+  empresaCodigo,
+  nombreArchivo,
+  filas,
+  idempotencyKey,
+}: Props) {
   const [estado, formAction, pending] = useActionState(generarGuiasAction, ESTADO_INICIAL);
   const [contacto, setContacto] = useState("");
   const [descargando, setDescargando] = useState(false);
@@ -44,15 +51,14 @@ export function GenerarGuiasForm({ empresaCodigo, nombreArchivo, filas }: Props)
   const centrosDetectados = [...new Set(filas.map((f) => f.centro).filter((c): c is string => !!c))];
   const tieneCentros = centrosDetectados.length > 0;
 
+  // Solo el pedido: el producto de Relbase, el precio y la categoria los
+  // resuelve el servidor contra el catalogo (son el contenido de un DTE, no
+  // pueden depender de lo que viaje por el navegador).
   const filasParaGenerar = filas.map((f) => ({
     fila: f.fila,
     codigo: f.codigo,
     cantidad: f.cantidad,
-    categoria: f.categoria,
     centro: f.centro,
-    productIdRelbase: f.productIdRelbase,
-    precio: f.precio,
-    descripcionUnidad: f.descripcionUnidad,
   }));
 
   return (
@@ -62,6 +68,7 @@ export function GenerarGuiasForm({ empresaCodigo, nombreArchivo, filas }: Props)
           <input type="hidden" name="empresa" value={empresaCodigo} />
           <input type="hidden" name="nombreArchivo" value={nombreArchivo} />
           <input type="hidden" name="filas" value={JSON.stringify(filasParaGenerar)} />
+          <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
 
           {tieneCentros ? (
             <p className="text-sm text-ink-muted">
@@ -105,6 +112,12 @@ export function GenerarGuiasForm({ empresaCodigo, nombreArchivo, filas }: Props)
       {estado.status === "ok" && (
         <div className="flex flex-col gap-2">
           <p className="font-display text-sm font-semibold">Resultado de la generación</p>
+          {estado.yaExistia && (
+            <p className="rounded-sm bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
+              Este pedido ya se había generado. Estas son las guías de esa vez: no se emitieron
+              nuevas.
+            </p>
+          )}
           <ul className="flex flex-col gap-2">
             {estado.grupos.map((g, i) => (
               <li
@@ -114,7 +127,10 @@ export function GenerarGuiasForm({ empresaCodigo, nombreArchivo, filas }: Props)
                 }`}
               >
                 {g.centro ? `${g.centro} · ` : ""}
-                {g.categoria ?? "Sin categoría"} (filas {g.filas.join(", ")}):{" "}
+                {g.categoria ?? "Sin categoría"}
+                {/* Al recuperar una corrida ya generada no se reconstruyen las
+                    filas del archivo original, solo las guias que quedaron. */}
+                {g.filas.length > 0 && ` (filas ${g.filas.join(", ")})`}:{" "}
                 {g.estado === "generada" ? `folio ${g.folio}` : g.mensajeError}
               </li>
             ))}

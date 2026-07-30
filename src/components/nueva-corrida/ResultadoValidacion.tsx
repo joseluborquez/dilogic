@@ -5,8 +5,16 @@ import type { EstadoPrevisualizacion } from "@/app/nueva-corrida/actions";
 type EstadoOk = Extract<EstadoPrevisualizacion, { status: "ok" }>;
 
 export function ResultadoValidacion({ estado }: { estado: EstadoOk }) {
-  const { empresaCodigo, empresaNombre, nombreArchivo, fuenteCatalogo, filas, erroresArchivo, resumen } =
-    estado;
+  const {
+    empresaCodigo,
+    empresaNombre,
+    nombreArchivo,
+    fuenteCatalogo,
+    filas,
+    erroresArchivo,
+    resumen,
+    idempotencyKey,
+  } = estado;
   const puedeGenerar = resumen.errores === 0;
   const tieneCentros = filas.some((f) => f.centro);
 
@@ -99,6 +107,7 @@ export function ResultadoValidacion({ estado }: { estado: EstadoOk }) {
           empresaCodigo={empresaCodigo}
           nombreArchivo={nombreArchivo}
           filas={filas}
+          idempotencyKey={idempotencyKey}
         />
       ) : (
         <p className="border-t border-line pt-4 text-right text-sm text-ink-muted">

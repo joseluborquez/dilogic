@@ -20,6 +20,13 @@ export type EstadoPrevisualizacion =
       empresaCodigo: string;
       empresaNombre: string;
       nombreArchivo: string;
+      /**
+       * Identifica ESTA validacion. Viaja al generar para que reenviar el
+       * formulario no emita un segundo juego de DTEs. Nace aca y no en el
+       * componente porque validar otro archivo debe dar una llave nueva, y
+       * React reutiliza la instancia del formulario entre validaciones.
+       */
+      idempotencyKey: string;
       fuenteCatalogo: "supabase" | "local";
       filas: FilaValidada[];
       erroresArchivo: ErrorParseo[];
@@ -73,6 +80,7 @@ export async function previsualizarPedidoAction(
     empresaCodigo: empresa.codigo,
     empresaNombre: empresa.nombre,
     nombreArchivo: archivo.name,
+    idempotencyKey: crypto.randomUUID(),
     fuenteCatalogo: fuente,
     filas: filasValidadas,
     erroresArchivo,

@@ -10,6 +10,13 @@ const TAMANO_PAGINA = 1000;
  *
  * Se recibe la consulta como callback para no perder el tipado que infiere el
  * cliente de Supabase desde el string del `select`.
+ *
+ * IMPORTANTE: la consulta debe ordenar por algo UNICO (o terminar en `id`).
+ * Cada pagina es una consulta aparte, y con un orden ambiguo Postgres no
+ * garantiza la misma secuencia entre una y otra: las filas empatadas se
+ * reordenan y terminan repetidas en una pagina y ausentes en la siguiente.
+ * No es hipotetico: las filas de una guia se insertan juntas y comparten el
+ * `created_at` exacto (hasta 191 filas con el mismo valor, 30-jul-2026).
  */
 export async function traerTodasLasFilas<T>(
   consulta: (desde: number, hasta: number) => PromiseLike<{ data: T[] | null }>,

@@ -42,6 +42,7 @@ export async function clavesDeCorrida(corridaId: string): Promise<string[]> {
       .eq("corrida_id", corridaId)
       .is("eliminado_en", null)
       .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
       .range(desde, hasta)
   );
 
@@ -65,6 +66,7 @@ async function resolverGuias(claves: string[]): Promise<GuiaParaZip[]> {
       .in("corrida_id", corridas)
       .is("eliminado_en", null)
       .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
       .range(desde, hasta)
   );
 

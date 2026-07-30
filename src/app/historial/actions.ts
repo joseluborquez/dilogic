@@ -50,6 +50,7 @@ export async function eliminarGuiasAction(claves: string[]): Promise<ResultadoEl
         .in("corrida_id", corridas)
         .is("eliminado_en", null)
         .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
         .range(desde, hasta)
     );
   } catch {

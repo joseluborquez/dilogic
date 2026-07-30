@@ -8,13 +8,25 @@ import {
   type RelbaseCredenciales,
 } from "@/lib/relbase/types";
 import { guardarPdfGuia } from "@/lib/storage/guias-pdf";
+import { obtenerCatalogoEmpresa } from "@/lib/catalogo/validar";
+import { traerTodasLasFilas } from "@/lib/supabase/paginar";
 
-interface FilaAGenerar {
+/**
+ * Lo que manda el navegador. Solo se le cree el pedido en si (que codigo, cuanta
+ * cantidad, para que centro): el producto de Relbase, su precio y su categoria
+ * los vuelve a resolver el servidor contra el catalogo, porque de ahi sale el
+ * contenido del DTE.
+ */
+interface FilaPedida {
   fila: number;
   codigo: string;
   cantidad: number;
-  categoria: string | null;
   centro: string | null;
+}
+
+/** Fila ya resuelta contra el catalogo, lista para el payload de Relbase. */
+interface FilaAGenerar extends FilaPedida {
+  categoria: string | null;
   productIdRelbase: number;
   precio: number;
   descripcionUnidad: string | null;
@@ -36,7 +48,74 @@ export type EstadoGeneracion =
       status: "ok";
       corridaId: string;
       grupos: ResultadoGrupo[];
+      /** El pedido ya se habia generado antes: esto es lo que quedo, no algo nuevo. */
+      yaExistia?: boolean;
     };
+
+/**
+ * Revalida el pedido contra el catalogo de la empresa. Las guias son DTEs del
+ * SII: su contenido no puede depender de un JSON que viajo al navegador y
+ * volvio, ni de una validacion hecha minutos antes (el catalogo pudo
+ * resincronizarse entremedio).
+ */
+async function resolverContraCatalogo(
+  empresaCodigo: string,
+  pedidas: FilaPedida[]
+): Promise<{ ok: true; filas: FilaAGenerar[] } | { ok: false; mensaje: string }> {
+  const { mapa: catalogo } = await obtenerCatalogoEmpresa(empresaCodigo);
+  const filas: FilaAGenerar[] = [];
+  const problemas: string[] = [];
+
+  for (const pedida of pedidas) {
+    const codigo = String(pedida.codigo ?? "").trim();
+    const cantidad = Number(pedida.cantidad);
+
+    if (!codigo) {
+      problemas.push(`fila ${pedida.fila}: sin código`);
+      continue;
+    }
+    if (!Number.isFinite(cantidad) || cantidad <= 0) {
+      problemas.push(`${codigo}: cantidad inválida`);
+      continue;
+    }
+
+    const producto = catalogo.get(codigo);
+    if (!producto) {
+      problemas.push(`${codigo}: ya no está en el catálogo`);
+      continue;
+    }
+    if (producto.productIdRelbase == null) {
+      problemas.push(`${codigo}: sin producto de Relbase (falta sincronizar)`);
+      continue;
+    }
+    if (producto.precio == null) {
+      problemas.push(`${codigo}: sin precio en el catálogo`);
+      continue;
+    }
+
+    filas.push({
+      fila: pedida.fila,
+      codigo,
+      cantidad,
+      centro: pedida.centro ?? null,
+      categoria: producto.familia,
+      productIdRelbase: producto.productIdRelbase,
+      precio: producto.precio,
+      descripcionUnidad: producto.descripcionUnidad,
+    });
+  }
+
+  if (problemas.length > 0) {
+    return {
+      ok: false,
+      mensaje: `El pedido cambió respecto a la validación y no se generó ninguna guía. Vuelve a validarlo. Detalle: ${problemas
+        .slice(0, 5)
+        .join("; ")}${problemas.length > 5 ? ` y ${problemas.length - 5} más` : ""}.`,
+    };
+  }
+
+  return { ok: true, filas };
+}
 
 function fechaHoyDDMMYYYY(): string {
   const hoy = new Date();
@@ -89,6 +168,53 @@ function dividirEnLotes<T>(items: T[], tamano: number): T[][] {
   return lotes;
 }
 
+/**
+ * Reconstruye el resultado de una corrida ya generada, para responder a un
+ * reenvio con lo que realmente quedo emitido.
+ */
+async function recuperarCorridaExistente(
+  idempotencyKey: string
+): Promise<EstadoGeneracion | null> {
+  const supabase = getSupabaseServiceClient();
+
+  const { data: corrida } = await supabase
+    .from("corridas")
+    .select("id")
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle();
+  if (!corrida) return null;
+
+  const filas = await traerTodasLasFilas((desde, hasta) =>
+    supabase
+      .from("guias_generadas")
+      .select("centro, categoria, folio_relbase, estado, mensaje_error")
+      .eq("corrida_id", corrida.id)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(desde, hasta)
+  );
+
+  const porGuia = new Map<string, ResultadoGrupo>();
+  for (const fila of filas) {
+    const clave =
+      fila.estado === "generada"
+        ? `g:${fila.folio_relbase}`
+        : `e:${fila.centro ?? ""}:${fila.categoria ?? ""}:${fila.mensaje_error ?? ""}`;
+    if (!porGuia.has(clave)) {
+      porGuia.set(clave, {
+        centro: fila.centro ?? "",
+        categoria: fila.categoria,
+        filas: [],
+        estado: fila.estado === "generada" ? "generada" : "error",
+        folio: fila.folio_relbase,
+        mensajeError: fila.mensaje_error,
+      });
+    }
+  }
+
+  return { status: "ok", corridaId: corrida.id, grupos: [...porGuia.values()], yaExistia: true };
+}
+
 export async function generarGuiasAction(
   _prevState: EstadoGeneracion,
   formData: FormData
@@ -98,21 +224,23 @@ export async function generarGuiasAction(
   const nombreArchivo = String(formData.get("nombreArchivo") ?? "pedido");
   const filasRaw = String(formData.get("filas") ?? "[]");
 
+  const idempotencyKey = String(formData.get("idempotencyKey") ?? "").trim();
+
   // La empresa se valida contra la base mas abajo, al buscar sus datos de
   // destino: no hay lista de empresas en el codigo.
-  let filas: FilaAGenerar[];
+  let pedidas: FilaPedida[];
   try {
-    filas = JSON.parse(filasRaw);
+    pedidas = JSON.parse(filasRaw);
   } catch {
     return { status: "error", mensaje: "No se pudieron leer las filas a generar." };
   }
-  if (filas.length === 0) {
+  if (!Array.isArray(pedidas) || pedidas.length === 0) {
     return { status: "error", mensaje: "No hay filas validas para generar." };
   }
 
   // El contacto manual solo hace falta para filas de formato largo (sin
   // centro propio en el archivo); las de formato matriz ya traen su centro.
-  if (!contacto && filas.some((f) => !f.centro)) {
+  if (!contacto && pedidas.some((f) => !f.centro)) {
     return {
       status: "error",
       mensaje: "Indica el centro de cultivo / contacto antes de generar.",
@@ -151,6 +279,13 @@ export async function generarGuiasAction(
     return { status: "error", mensaje: "No hay credenciales de Relbase para esta empresa." };
   }
 
+  // Ya confirmada la empresa, se resuelve el pedido contra su catalogo.
+  const resuelto = await resolverContraCatalogo(empresaCodigo, pedidas);
+  if (!resuelto.ok) {
+    return { status: "error", mensaje: resuelto.mensaje };
+  }
+  const filas = resuelto.filas;
+
   const credenciales: RelbaseCredenciales = {
     tokenEmpresa: decryptToken(cred.token_empresa),
     tokenUsuarioIntegrador: decryptToken(cred.token_usuario_integrador),
@@ -166,11 +301,19 @@ export async function generarGuiasAction(
       total_exitosas: 0,
       total_error: 0,
       estado: "generando",
+      idempotency_key: idempotencyKey || null,
     })
     .select("id")
     .single();
 
   if (errCorrida || !corrida) {
+    // 23505 = choque con idx_corridas_idempotency: este pedido ya se genero.
+    // Se devuelve lo que quedo la primera vez en vez de emitir un segundo
+    // juego de DTEs, que no habria forma de deshacer.
+    if (errCorrida?.code === "23505" && idempotencyKey) {
+      const anterior = await recuperarCorridaExistente(idempotencyKey);
+      if (anterior) return anterior;
+    }
     return { status: "error", mensaje: "No se pudo crear el registro de la corrida." };
   }
 

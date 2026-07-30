@@ -156,6 +156,7 @@ export async function obtenerHistorial(
       .in("corrida_id", idsCorridas)
       .is("eliminado_en", null)
       .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
       .range(inicio, fin)
   );
 

@@ -77,6 +77,7 @@ export async function obtenerCatalogoEmpresa(codigoInterno: string): Promise<Cat
         .select("sku, descripcion, descripcion_relbase, product_id_relbase, precio, familia")
         .eq("empresa_id", empresa.id)
         .order("sku")
+        .order("id", { ascending: true })
         .range(desde, hasta)
     );
 

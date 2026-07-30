@@ -88,7 +88,7 @@ export async function sincronizarLotePaginas(
   }
 
   const nuestroCatalogo = await traerTodasLasFilas((desde, hasta) =>
-    supabase.from("productos_catalogo").select("id, sku").order("sku").range(desde, hasta)
+    supabase.from("productos_catalogo").select("id, sku").order("sku").order("id", { ascending: true }).range(desde, hasta)
   );
 
   const actualizaciones = nuestroCatalogo
@@ -159,6 +159,7 @@ export async function sincronizarPendientesDirecto(): Promise<ResumenSincronizac
       .from("productos_catalogo")
       .select("id, sku, empresa_id, product_id_relbase")
       .order("sku")
+      .order("id", { ascending: true })
       .range(desde, hasta)
   );
 

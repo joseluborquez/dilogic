@@ -68,6 +68,9 @@ export type Corrida = {
   total_exitosas: number;
   total_error: number;
   estado: EstadoCorrida;
+  // Evita que reenviar el formulario emita un segundo juego de DTEs
+  // (ver supabase/migrations/0010_idempotencia_corridas.sql).
+  idempotency_key: string | null;
   created_at: string;
 };
 
