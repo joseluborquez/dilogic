@@ -13,6 +13,8 @@ export async function sincronizarLoteAction(startPage: number): Promise<Resultad
   return sincronizarLotePaginas(startPage, PAGINAS_POR_LOTE);
 }
 
-export async function sincronizarPendientesAction(): Promise<ResumenSincronizacion> {
-  return sincronizarPendientesDirecto();
+export async function sincronizarPendientesAction(
+  desdeIndice = 0
+): Promise<ResumenSincronizacion> {
+  return sincronizarPendientesDirecto(desdeIndice);
 }

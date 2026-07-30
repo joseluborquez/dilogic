@@ -33,10 +33,15 @@ export function GenerarGuiasForm({
     setAvisoDescarga(null);
     setDescargando(true);
     try {
-      const { faltantes } = await descargarZipGuias({ corridaId });
-      if (faltantes > 0) {
+      const { faltantes, archivos } = await descargarZipGuias({ corridaId });
+      const partes = archivos > 1 ? `Por el tamaño, se descargó en ${archivos} archivos. ` : "";
+      if (faltantes > 0 || archivos > 1) {
         setAvisoDescarga(
-          `${faltantes} guía(s) quedaron sin PDF: revisa el archivo _guias-sin-pdf.txt dentro del ZIP.`
+          `${partes}${
+            faltantes > 0
+              ? `${faltantes} guía(s) quedaron sin PDF: revisa el archivo _guias-sin-pdf.txt.`
+              : ""
+          }`.trim()
         );
       }
     } catch (err) {

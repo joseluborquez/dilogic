@@ -71,15 +71,16 @@ export function HistorialSolicitudes({ solicitudes }: Props) {
     setAviso(null);
     setDescargando(etiqueta);
     try {
-      const { faltantes } = await descargarZipGuias(payload);
-      setAviso(
-        faltantes > 0
-          ? {
-              tipo: "ok",
-              texto: `Descarga lista. ${plural(faltantes, "guía quedó", "guías quedaron")} sin PDF: revisa el archivo _guias-sin-pdf.txt dentro del ZIP.`,
-            }
-          : { tipo: "ok", texto: "Descarga lista." }
-      );
+      const { faltantes, archivos } = await descargarZipGuias(payload);
+      const partes =
+        archivos > 1 ? ` Por el tamaño, se descargó en ${archivos} archivos.` : "";
+      setAviso({
+        tipo: "ok",
+        texto:
+          faltantes > 0
+            ? `Descarga lista.${partes} ${plural(faltantes, "guía quedó", "guías quedaron")} sin PDF: revisa el archivo _guias-sin-pdf.txt.`
+            : `Descarga lista.${partes}`,
+      });
     } catch (err) {
       setAviso({
         tipo: "error",

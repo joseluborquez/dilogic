@@ -44,8 +44,13 @@ export function SincronizarCatalogoForm() {
         setEstado({ fase: "sincronizando", paginaActual: resultado.hastaPagina, totalPages, actualizados });
       } while (page <= totalPages);
 
+      // Los pendientes se resuelven de a lotes (cada uno es una consulta a
+      // Relbase por SKU): se repite recorriendo el catalogo hasta el final.
       setEstado({ fase: "buscando_pendientes" });
-      const resumen = await sincronizarPendientesAction();
+      let resumen = await sincronizarPendientesAction();
+      while (resumen.quedanMas) {
+        resumen = await sincronizarPendientesAction(resumen.siguienteIndice);
+      }
       setEstado({ fase: "ok", resumen, actualizados });
     } catch (err) {
       setEstado({

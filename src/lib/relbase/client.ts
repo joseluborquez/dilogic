@@ -53,7 +53,14 @@ async function request<T>(
 
         return res.json() as Promise<T>;
       },
-      { isRetryable: (err) => err instanceof RelbaseApiError && err.status === 403 }
+      {
+        // 403 es como Relbase señala el exceso de tasa. Se agregan 429 y los
+        // 5xx: antes un fallo transitorio del servidor abortaba la guia sin
+        // ningun reintento.
+        isRetryable: (err) =>
+          err instanceof RelbaseApiError &&
+          (err.status === 403 || err.status === 429 || err.status >= 500),
+      }
     )
   );
 }

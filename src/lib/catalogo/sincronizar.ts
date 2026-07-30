@@ -2,6 +2,7 @@ import "server-only";
 
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { traerTodasLasFilas } from "@/lib/supabase/paginar";
+import { enLotes } from "@/lib/util/lotes";
 import { decryptToken } from "@/lib/crypto/tokens";
 import {
   buscarProductoPorCodigo,
@@ -19,6 +20,9 @@ export interface ResumenEmpresa {
 export interface ResumenSincronizacion {
   totalProductosRelbase: number;
   porEmpresa: ResumenEmpresa[];
+  /** Indice del catalogo desde donde debe continuar la proxima llamada. */
+  siguienteIndice: number;
+  quedanMas: boolean;
 }
 
 export interface ResultadoLote {
@@ -83,7 +87,11 @@ export async function sincronizarLotePaginas(
     if (page > totalPages) break;
     for (const p of pagina.data.products) {
       if (!p.code) continue;
-      porCodigo.set(p.code, { id: p.id, precio: Number(p.price), descripcionRelbase: p.description ?? null });
+      // Sin Number.isFinite, un producto sin precio en Relbase daba NaN, que
+      // se serializa como null y borraba en silencio el precio guardado.
+      const precio = Number(p.price);
+      if (!Number.isFinite(precio)) continue;
+      porCodigo.set(p.code, { id: p.id, precio, descripcionRelbase: p.description ?? null });
     }
   }
 
@@ -114,19 +122,20 @@ export async function sincronizarLotePaginas(
       } => u !== null
     );
 
-  await Promise.all(
-    actualizaciones.map((u) =>
-      supabase
-        .from("productos_catalogo")
-        .update({
-          product_id_relbase: u.product_id_relbase,
-          precio: u.precio,
-          descripcion_relbase: u.descripcionRelbase,
-          ultima_sincronizacion: new Date().toISOString(),
-        })
-        .eq("id", u.id)
-    )
-  );
+  // De a 10: un Promise.all sobre la lista completa abriria cientos de
+  // conexiones simultaneas a Supabase desde un solo lambda, y la lista crece
+  // con cada empresa nueva.
+  await enLotes(actualizaciones, 10, async (u) => {
+    await supabase
+      .from("productos_catalogo")
+      .update({
+        product_id_relbase: u.product_id_relbase,
+        precio: u.precio,
+        descripcion_relbase: u.descripcionRelbase,
+        ultima_sincronizacion: new Date().toISOString(),
+      })
+      .eq("id", u.id);
+  });
 
   return {
     totalPages,
@@ -136,12 +145,19 @@ export async function sincronizarLotePaginas(
 }
 
 /**
- * Ultimo paso: para los SKUs que sigan sin product_id_relbase tras recorrer
- * todas las paginas (hueco de paginacion conocido en Relbase, 09-jul-2026),
- * busca cada uno directo por codigo. Son pocos (~10), asi que esto es rapido
- * y no necesita dividirse en lotes.
+ * Cuantos pendientes resuelve cada llamada. Cada uno es una consulta a Relbase
+ * en serie (~0,5 s), asi que el lote acota la duracion de la funcion.
+ *
+ * Antes se procesaban todos de una vez, apoyandose en que eran ~10: eso valia
+ * cuando las empresas se cargaban a mano y sus productos ya existian en
+ * Relbase. Una empresa creada desde la app puede llegar con 250 pendientes de
+ * golpe, y ahi la funcion se pasaba del tiempo maximo.
  */
-export async function sincronizarPendientesDirecto(): Promise<ResumenSincronizacion> {
+const PENDIENTES_POR_LOTE = 40;
+
+export async function sincronizarPendientesDirecto(
+  desdeIndice = 0
+): Promise<ResumenSincronizacion> {
   const credenciales = await obtenerCredencialesCompartidas();
   const supabase = getSupabaseServiceClient();
 
@@ -164,8 +180,19 @@ export async function sincronizarPendientesDirecto(): Promise<ResumenSincronizac
   );
 
   const codigoPorEmpresaId = new Map(empresas.map((e) => [e.id, e.codigo_interno]));
-  const pendientes = nuestroCatalogo.filter((r) => r.product_id_relbase == null);
   const sinMatchFinal: { sku: string; codigoEmpresa: string }[] = [];
+
+  // Se avanza por indice sobre el catalogo COMPLETO (orden estable), no sobre
+  // la lista filtrada de pendientes: un SKU que no existe en Relbase sigue
+  // pendiente despues de intentarlo, y recorrer "los primeros N pendientes"
+  // volveria a intentar los mismos para siempre.
+  const pendientes: typeof nuestroCatalogo = [];
+  let indice = Math.max(0, desdeIndice);
+  while (indice < nuestroCatalogo.length && pendientes.length < PENDIENTES_POR_LOTE) {
+    const fila = nuestroCatalogo[indice];
+    if (fila.product_id_relbase == null) pendientes.push(fila);
+    indice += 1;
+  }
 
   for (const p of pendientes) {
     const producto = await buscarProductoPorCodigo(credenciales, p.sku);
@@ -185,13 +212,20 @@ export async function sincronizarPendientesDirecto(): Promise<ResumenSincronizac
     }
   }
 
+  // El resumen se calcula desde el estado real de la base y no desde lo
+  // intentado en esta llamada: al procesar por lotes, `sinMatchFinal` solo
+  // conoce el ultimo lote y el total quedaria subestimado.
   const catalogoFinal = await traerTodasLasFilas((desde, hasta) =>
-    supabase.from("productos_catalogo").select("id, empresa_id").order("id").range(desde, hasta)
+    supabase
+      .from("productos_catalogo")
+      .select("id, empresa_id, sku, product_id_relbase")
+      .order("id")
+      .range(desde, hasta)
   );
 
   const porEmpresa: ResumenEmpresa[] = empresas.map((e) => {
     const filasEmpresa = catalogoFinal.filter((r) => r.empresa_id === e.id);
-    const sinMatch = sinMatchFinal.filter((s) => s.codigoEmpresa === e.codigo_interno).map((s) => s.sku);
+    const sinMatch = filasEmpresa.filter((r) => r.product_id_relbase == null).map((r) => r.sku);
     return {
       codigoInterno: e.codigo_interno,
       total: filasEmpresa.length,
@@ -203,5 +237,9 @@ export async function sincronizarPendientesDirecto(): Promise<ResumenSincronizac
   return {
     totalProductosRelbase: 0, // no aplica en este paso puntual
     porEmpresa,
+    // Desde donde sigue el proximo lote. Siempre avanza, asi que el ciclo del
+    // cliente termina aunque ningun SKU del lote se haya podido resolver.
+    siguienteIndice: indice,
+    quedanMas: indice < nuestroCatalogo.length,
   };
 }

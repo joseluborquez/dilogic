@@ -320,121 +320,37 @@ export async function generarGuiasAction(
   const fecha = fechaHoyDDMMYYYY();
   const inicioCorrida = Date.now();
   const grupos = agruparPorCentroYCategoria(filas, contacto);
+  // Ya validados arriba. Se copian a constantes porque TypeScript no conserva
+  // el estrechamiento de propiedades dentro de la funcion anidada de abajo.
+  const destino = {
+    corridaId: corrida.id,
+    customerId: empresa.relbase_customer_id,
+    wareHouseId: empresa.relbase_ware_house_id,
+    address: empresa.dispatch_address ?? "",
+    cityId: empresa.dispatch_city_id ?? 0,
+    communeId: empresa.dispatch_commune_id ?? 0,
+  };
   const resultados: ResultadoGrupo[] = [];
   let totalExitosas = 0;
   let totalError = 0;
 
-  for (const { centro, categoria, filas: filasGrupo } of grupos) {
-    const lotes = dividirEnLotes(filasGrupo, MAX_PRODUCTOS_POR_DOCUMENTO);
+  // Un fallo fuera del try por guia (la base, por ejemplo) dejaba la corrida
+  // en "generando" para siempre, sin nada que la reconciliara. Se marca antes
+  // de devolver el error.
+  try {
+    await generarCadaGuia();
+  } catch (err) {
+    await supabase
+      .from("corridas")
+      .update({ total_exitosas: totalExitosas, total_error: totalError, estado: "error" })
+      .eq("id", corrida.id);
 
-    for (const lote of lotes) {
-      try {
-        const respuesta = await crearGuiaDespacho(credenciales, {
-          type_document: 52,
-          start_date: fecha,
-          end_date: fecha,
-          customer_id: empresa.relbase_customer_id,
-          ware_house_id: empresa.relbase_ware_house_id,
-          type_transfer: TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
-          address: empresa.dispatch_address ?? "",
-          city_id: empresa.dispatch_city_id ?? 0,
-          commune_id: empresa.dispatch_commune_id ?? 0,
-          contact: centro,
-          products: lote.map((f) => ({
-            product_id: f.productIdRelbase,
-            price: f.precio,
-            quantity: f.cantidad,
-            tax_affected: true,
-            ...(f.descripcionUnidad ? { description: f.descripcionUnidad } : {}),
-          })),
-        });
-
-        const folio = String(respuesta.folio ?? respuesta.id);
-
-        // El PDF es secundario a la guia ya creada en Relbase: si falla su
-        // descarga/guardado, la fila igual queda "generada" con su folio.
-        // Relbase genera el PDF de forma asincrona, asi que obtenerPdfUrlDte
-        // reintenta unas pocas veces hasta que este listo (ver su doc).
-        let pdfPath: string | null = null;
-        try {
-          const quedaTiempo = Date.now() - inicioCorrida < PRESUPUESTO_ESPERA_PDF_MS;
-          const pdfUrl = await obtenerPdfUrlDte(
-            credenciales,
-            respuesta.id,
-            quedaTiempo ? {} : { intentos: 1 }
-          );
-          if (pdfUrl) {
-            pdfPath = await guardarPdfGuia({
-              empresaCodigo,
-              categoria,
-              centro,
-              folio,
-              pdfUrl,
-            });
-          }
-        } catch {
-          pdfPath = null;
-        }
-
-        await supabase.from("guias_generadas").insert(
-          lote.map((f) => ({
-            corrida_id: corrida.id,
-            sku: f.codigo,
-            product_id_relbase: f.productIdRelbase,
-            cantidad: f.cantidad,
-            categoria: f.categoria,
-            centro,
-            folio_relbase: folio,
-            // Se guarda aunque el PDF si se haya capturado: es lo que permite
-            // volver a pedirlo a Relbase mas adelante.
-            dte_id_relbase: respuesta.id,
-            estado: "generada",
-            fecha_generacion: new Date().toISOString(),
-            pdf_path: pdfPath,
-          }))
-        );
-
-        totalExitosas += lote.length;
-        resultados.push({
-          centro,
-          categoria,
-          filas: lote.map((f) => f.fila),
-          estado: "generada",
-          folio,
-          mensajeError: null,
-        });
-      } catch (err) {
-        const mensaje =
-          err instanceof RelbaseApiError
-            ? `Relbase respondio ${err.status}: ${JSON.stringify(err.body)}`
-            : err instanceof Error
-              ? err.message
-              : "Error desconocido";
-
-        await supabase.from("guias_generadas").insert(
-          lote.map((f) => ({
-            corrida_id: corrida.id,
-            sku: f.codigo,
-            product_id_relbase: f.productIdRelbase,
-            cantidad: f.cantidad,
-            categoria: f.categoria,
-            centro,
-            estado: "error",
-            mensaje_error: mensaje,
-          }))
-        );
-
-        totalError += lote.length;
-        resultados.push({
-          centro,
-          categoria,
-          filas: lote.map((f) => f.fila),
-          estado: "error",
-          folio: null,
-          mensajeError: mensaje,
-        });
-      }
-    }
+    return {
+      status: "error",
+      mensaje: `La generacion se interrumpio tras ${totalExitosas} guia(s). Revisa el historial antes de reintentar: las que alcanzaron a emitirse ya existen en Relbase. Detalle: ${
+        err instanceof Error ? err.message : "error desconocido"
+      }`,
+    };
   }
 
   await supabase
@@ -447,4 +363,119 @@ export async function generarGuiasAction(
     .eq("id", corrida.id);
 
   return { status: "ok", corridaId: corrida.id, grupos: resultados };
+
+  async function generarCadaGuia() {
+    for (const { centro, categoria, filas: filasGrupo } of grupos) {
+      const lotes = dividirEnLotes(filasGrupo, MAX_PRODUCTOS_POR_DOCUMENTO);
+
+      for (const lote of lotes) {
+        try {
+          const respuesta = await crearGuiaDespacho(credenciales, {
+            type_document: 52,
+            start_date: fecha,
+            end_date: fecha,
+            customer_id: destino.customerId,
+            ware_house_id: destino.wareHouseId,
+            type_transfer: TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
+            address: destino.address,
+            city_id: destino.cityId,
+            commune_id: destino.communeId,
+            contact: centro,
+            products: lote.map((f) => ({
+              product_id: f.productIdRelbase,
+              price: f.precio,
+              quantity: f.cantidad,
+              tax_affected: true,
+              ...(f.descripcionUnidad ? { description: f.descripcionUnidad } : {}),
+            })),
+          });
+
+          const folio = String(respuesta.folio ?? respuesta.id);
+
+          // El PDF es secundario a la guia ya creada en Relbase: si falla su
+          // descarga/guardado, la fila igual queda "generada" con su folio.
+          // Relbase genera el PDF de forma asincrona, asi que obtenerPdfUrlDte
+          // reintenta unas pocas veces hasta que este listo (ver su doc).
+          let pdfPath: string | null = null;
+          try {
+            const quedaTiempo = Date.now() - inicioCorrida < PRESUPUESTO_ESPERA_PDF_MS;
+            const pdfUrl = await obtenerPdfUrlDte(
+              credenciales,
+              respuesta.id,
+              quedaTiempo ? {} : { intentos: 1 }
+            );
+            if (pdfUrl) {
+              pdfPath = await guardarPdfGuia({
+                empresaCodigo,
+                categoria,
+                centro,
+                folio,
+                pdfUrl,
+              });
+            }
+          } catch {
+            pdfPath = null;
+          }
+
+          await supabase.from("guias_generadas").insert(
+            lote.map((f) => ({
+              corrida_id: destino.corridaId,
+              sku: f.codigo,
+              product_id_relbase: f.productIdRelbase,
+              cantidad: f.cantidad,
+              categoria: f.categoria,
+              centro,
+              folio_relbase: folio,
+              // Se guarda aunque el PDF si se haya capturado: es lo que permite
+              // volver a pedirlo a Relbase mas adelante.
+              dte_id_relbase: respuesta.id,
+              estado: "generada",
+              fecha_generacion: new Date().toISOString(),
+              pdf_path: pdfPath,
+            }))
+          );
+
+          totalExitosas += lote.length;
+          resultados.push({
+            centro,
+            categoria,
+            filas: lote.map((f) => f.fila),
+            estado: "generada",
+            folio,
+            mensajeError: null,
+          });
+        } catch (err) {
+          const mensaje =
+            err instanceof RelbaseApiError
+              ? `Relbase respondio ${err.status}: ${JSON.stringify(err.body)}`
+              : err instanceof Error
+                ? err.message
+                : "Error desconocido";
+
+          await supabase.from("guias_generadas").insert(
+            lote.map((f) => ({
+              corrida_id: destino.corridaId,
+              sku: f.codigo,
+              product_id_relbase: f.productIdRelbase,
+              cantidad: f.cantidad,
+              categoria: f.categoria,
+              centro,
+              estado: "error",
+              mensaje_error: mensaje,
+            }))
+          );
+
+          totalError += lote.length;
+          resultados.push({
+            centro,
+            categoria,
+            filas: lote.map((f) => f.fila),
+            estado: "error",
+            folio: null,
+            mensajeError: mensaje,
+          });
+        }
+      }
+    }
+  }
 }

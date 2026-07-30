@@ -8,6 +8,27 @@ const ALIAS_CODIGO = ["codigo", "código", "sku", "codigosku", "codigo sku"];
 const ALIAS_CANTIDAD = ["cantidad", "cant"];
 const ALIAS_CATEGORIA = ["categoria", "categoría", "familia"];
 
+// En formato matriz cada columna es un centro de cultivo. Estas son las que
+// aparecen en archivos reales sin serlo: tomarlas como centro generaria una
+// guia a nombre de "TOTAL" con la suma de todo el pedido.
+const COLUMNAS_NO_CENTRO = [
+  "total",
+  "totales",
+  "suma",
+  "subtotal",
+  "observacion",
+  "observaciones",
+  "comentario",
+  "comentarios",
+  "nota",
+  "notas",
+  "producto",
+  "descripcion",
+  "nombre",
+  "unidad",
+  "um",
+];
+
 function normalizarHeader(valor: unknown): string {
   return String(valor ?? "")
     .trim()
@@ -96,7 +117,13 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
   // cada celda es la cantidad pedida por ese centro para ese codigo.
   const columnasCentro = headers
     .map((nombre, idx) => ({ idx, nombre: nombre.trim() }))
-    .filter(({ idx, nombre }) => idx !== idxCodigo && idx !== idxCategoria && nombre !== "");
+    .filter(
+      ({ idx, nombre }) =>
+        idx !== idxCodigo &&
+        idx !== idxCategoria &&
+        nombre !== "" &&
+        !COLUMNAS_NO_CENTRO.includes(normalizarHeader(nombre))
+    );
 
   if (columnasCentro.length === 0) {
     errores.push({

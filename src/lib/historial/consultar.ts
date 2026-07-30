@@ -121,6 +121,10 @@ export async function obtenerHistorial(
   if (filtros.desde) consulta = consulta.gte("fecha_ejecucion", `${filtros.desde}T00:00:00`);
   if (filtros.hasta) consulta = consulta.lte("fecha_ejecucion", `${filtros.hasta}T23:59:59`);
 
+  const desde = (pagina - 1) * SOLICITUDES_POR_PAGINA;
+  let corridas: { id: string; empresa_id: string; archivo_original_nombre: string; fecha_ejecucion: string }[] = [];
+  let totalSolicitudes = 0;
+
   // La busqueda por folio/centro vive en las guias, pero la unidad que se
   // pagina es la solicitud: primero se resuelve que solicitudes la contienen.
   if (texto) {
@@ -130,20 +134,36 @@ export async function obtenerHistorial(
       .or(`folio_relbase.ilike.*${texto}*,centro.ilike.*${texto}*`)
       .is("eliminado_en", null)
       .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
       .limit(MAX_FILAS_BUSQUEDA);
 
     const ids = [...new Set((coincidencias ?? []).map((c) => c.corrida_id))];
     if (ids.length === 0) return vacio;
-    consulta = consulta.in("id", ids);
+
+    // Solo se consultan las de ESTA pagina. Mandar los cientos de ids que
+    // puede devolver una busqueda amplia haria una URL de decenas de KB, que
+    // PostgREST rechaza con 414. Ya vienen de la guia mas reciente hacia
+    // atras, que es el orden que se quiere mostrar.
+    totalSolicitudes = ids.length;
+    const idsPagina = ids.slice(desde, desde + SOLICITUDES_POR_PAGINA);
+    if (idsPagina.length === 0) {
+      return { ...vacio, totalSolicitudes, totalPaginas: Math.ceil(totalSolicitudes / SOLICITUDES_POR_PAGINA) };
+    }
+
+    const { data } = await consulta.in("id", idsPagina);
+    // Se respeta el orden por relevancia temporal de `ids`, no el que
+    // devuelva Postgres.
+    const porId = new Map((data ?? []).map((c) => [c.id, c]));
+    corridas = idsPagina.map((id) => porId.get(id)).filter((c) => c !== undefined);
+  } else {
+    const { data, count } = await consulta
+      .order("fecha_ejecucion", { ascending: false })
+      .range(desde, desde + SOLICITUDES_POR_PAGINA - 1);
+    corridas = data ?? [];
+    totalSolicitudes = count ?? 0;
   }
 
-  const desde = (pagina - 1) * SOLICITUDES_POR_PAGINA;
-  const { data: corridas, count } = await consulta
-    .order("fecha_ejecucion", { ascending: false })
-    .range(desde, desde + SOLICITUDES_POR_PAGINA - 1);
-
-  const totalSolicitudes = count ?? 0;
-  const idsCorridas = (corridas ?? []).map((c) => c.id);
+  const idsCorridas = corridas.map((c) => c.id);
   if (idsCorridas.length === 0) {
     return { ...vacio, totalSolicitudes, totalPaginas: Math.ceil(totalSolicitudes / SOLICITUDES_POR_PAGINA) };
   }

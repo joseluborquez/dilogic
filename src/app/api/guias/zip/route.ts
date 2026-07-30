@@ -11,8 +11,10 @@ export const maxDuration = 60;
 
 const Cuerpo = z
   .object({
-    claves: z.array(z.string()).max(500).optional(),
+    claves: z.array(z.string()).max(5000).optional(),
     corridaId: z.uuid().optional(),
+    /** Que parte de la seleccion se pide (1-based); ver X-Guias-Partes. */
+    parte: z.number().int().min(1).max(100).optional(),
   })
   .refine((c) => c.claves?.length || c.corridaId, {
     message: "Indica las guías a descargar.",
@@ -31,7 +33,10 @@ export async function POST(request: Request) {
       ? cuerpo.claves
       : await clavesDeCorrida(cuerpo.corridaId!);
 
-    const { bytes, nombreArchivo, incluidas, faltantes } = await construirZipGuias(claves);
+    const { bytes, nombreArchivo, incluidas, faltantes, partes } = await construirZipGuias(
+      claves,
+      cuerpo.parte ?? 1
+    );
 
     return new Response(new Blob([new Uint8Array(bytes)], { type: "application/zip" }), {
       headers: {
@@ -41,9 +46,11 @@ export async function POST(request: Request) {
           nombreArchivo
         )}`,
         "Cache-Control": "no-store",
-        // Los lee el cliente para avisar cuantas guias quedaron sin PDF.
+        // Los lee el cliente para avisar cuantas guias quedaron sin PDF y para
+        // saber si tiene que pedir mas partes.
         "X-Guias-Incluidas": String(incluidas),
         "X-Guias-Faltantes": String(faltantes),
+        "X-Guias-Partes": String(partes),
       },
     });
   } catch (err) {

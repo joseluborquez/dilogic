@@ -4,6 +4,7 @@ import { zipSync, strToU8 } from "fflate";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { traerTodasLasFilas } from "@/lib/supabase/paginar";
 import { descargarPdfGuia } from "@/lib/storage/guias-pdf";
+import { dividirEnLotes, enLotes } from "@/lib/util/lotes";
 import { claveGuia, corridasDeClaves } from "./claves";
 import { construirNombreDescargaPdf, construirNombreZipSolicitud } from "./nombre-pdf";
 
@@ -14,10 +15,13 @@ export interface ResultadoZip {
   nombreArchivo: string;
   incluidas: number;
   faltantes: number;
+  /** En cuantos archivos se parte la seleccion completa. */
+  partes: number;
 }
 
-// Topes para no reventar el limite de memoria/tiempo de una funcion serverless
-// en Vercel. Sobre esto, el operador tiene que dividir la seleccion.
+// Tope por archivo, para no reventar el limite de memoria/tiempo de una
+// funcion serverless en Vercel. Una seleccion mas grande no falla: se entrega
+// en varios ZIP, que el cliente pide uno tras otro.
 const MAX_GUIAS_POR_ZIP = 150;
 const MAX_BYTES_POR_ZIP = 40 * 1024 * 1024;
 const DESCARGAS_EN_PARALELO = 6;
@@ -95,18 +99,6 @@ async function resolverGuias(claves: string[]): Promise<GuiaParaZip[]> {
   return [...porClave.values()];
 }
 
-async function enLotes<T, R>(
-  items: T[],
-  tamano: number,
-  fn: (item: T) => Promise<R>
-): Promise<R[]> {
-  const salida: R[] = [];
-  for (let i = 0; i < items.length; i += tamano) {
-    salida.push(...(await Promise.all(items.slice(i, i + tamano).map(fn))));
-  }
-  return salida;
-}
-
 /** Evita que dos guias con el mismo nombre se pisen dentro del ZIP. */
 function nombreUnico(nombre: string, usados: Set<string>): string {
   if (!usados.has(nombre)) {
@@ -121,16 +113,27 @@ function nombreUnico(nombre: string, usados: Set<string>): string {
   return unico;
 }
 
-export async function construirZipGuias(claves: string[]): Promise<ResultadoZip> {
-  const guias = await resolverGuias(claves);
+export async function construirZipGuias(claves: string[], parte = 1): Promise<ResultadoZip> {
+  const todas = await resolverGuias(claves);
 
-  if (guias.length === 0) {
+  if (todas.length === 0) {
     throw new ErrorZip("No se encontraron guías para descargar.");
   }
-  if (guias.length > MAX_GUIAS_POR_ZIP) {
-    throw new ErrorZip(
-      `La selección tiene ${guias.length} guías y el máximo por descarga es ${MAX_GUIAS_POR_ZIP}. Selecciona menos guías y descarga en dos veces.`
-    );
+
+  // Orden estable (centro, categoria, folio) para que las partes sean siempre
+  // las mismas entre una llamada y la siguiente.
+  todas.sort(
+    (a, b) =>
+      (a.centro ?? "").localeCompare(b.centro ?? "") ||
+      (a.folio ?? "").localeCompare(b.folio ?? "") ||
+      a.clave.localeCompare(b.clave)
+  );
+
+  const trozos = dividirEnLotes(todas, MAX_GUIAS_POR_ZIP);
+  const partes = trozos.length;
+  const guias = trozos[parte - 1];
+  if (!guias) {
+    throw new ErrorZip("Esa parte de la descarga no existe.");
   }
 
   const supabase = getSupabaseServiceClient();
@@ -202,13 +205,18 @@ export async function construirZipGuias(claves: string[]): Promise<ResultadoZip>
   }
 
   const unicaCorrida = corridasIds.length === 1 ? corridaPorId.get(corridasIds[0]) : undefined;
-  const nombreArchivo = unicaCorrida
+  const nombreBase = unicaCorrida
     ? construirNombreZipSolicitud(
         empresaPorId.get(unicaCorrida.empresa_id),
         unicaCorrida.archivo_original_nombre,
         unicaCorrida.fecha_ejecucion
       )
     : `Guias Dilogic - ${new Date().toISOString().slice(0, 10)}.zip`;
+
+  const nombreArchivo =
+    partes > 1
+      ? nombreBase.replace(/\.zip$/i, ` (parte ${parte} de ${partes}).zip`)
+      : nombreBase;
 
   // level 0 (sin comprimir): los PDF ya vienen comprimidos, recomprimirlos solo
   // gasta CPU de la funcion serverless sin ganar espacio.
@@ -219,5 +227,6 @@ export async function construirZipGuias(claves: string[]): Promise<ResultadoZip>
     nombreArchivo,
     incluidas: Object.keys(archivos).length - (faltantes.length > 0 ? 1 : 0),
     faltantes: faltantes.length,
+    partes,
   };
 }
