@@ -110,6 +110,25 @@ export async function obtenerValoresPorDefecto(): Promise<{
 }
 
 /**
+ * Bodegas de Relbase para el selector. Si la consulta falla (sin credenciales,
+ * Relbase caido) se devuelve vacio: el formulario cae al valor por defecto en
+ * vez de quedar inutilizable.
+ */
+export async function listarBodegas(): Promise<{ id: number; etiqueta: string }[]> {
+  try {
+    const { obtenerCredencialesCompartidas } = await import("@/lib/relbase/credenciales");
+    const { listarBodegasRelbase } = await import("@/lib/relbase/client");
+    const { aOpcion } = await import("./referencias");
+
+    const credenciales = await obtenerCredencialesCompartidas();
+    const bodegas = await listarBodegasRelbase(credenciales);
+    return bodegas.map(aOpcion).map((b) => ({ id: b.id, etiqueta: b.etiqueta }));
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Credenciales de Relbase de cualquier empresa ya configurada, tal como estan
  * guardadas (cifradas). Todas las empresas comparten las credenciales de
  * Dilogic, asi que una empresa nueva copia el mismo par: se copia el texto

@@ -1,6 +1,6 @@
 import { BotonVolver } from "@/components/ui/BotonVolver";
 import { requerirAdmin } from "@/lib/auth/sesion";
-import { listarEmpresas, obtenerValoresPorDefecto } from "@/lib/empresas/consultar";
+import { listarBodegas, listarEmpresas, obtenerValoresPorDefecto } from "@/lib/empresas/consultar";
 import { NuevaEmpresaForm } from "@/components/empresas/NuevaEmpresaForm";
 import { FilaEmpresa } from "@/components/empresas/FilaEmpresa";
 
@@ -9,9 +9,10 @@ export const dynamic = "force-dynamic";
 export default async function EmpresasPage() {
   await requerirAdmin();
 
-  const [empresas, valoresPorDefecto] = await Promise.all([
+  const [empresas, valoresPorDefecto, bodegas] = await Promise.all([
     listarEmpresas(),
     obtenerValoresPorDefecto(),
+    listarBodegas(),
   ]);
 
   return (
@@ -28,7 +29,7 @@ export default async function EmpresasPage() {
         <BotonVolver href="/nueva-corrida">Nueva corrida</BotonVolver>
       </header>
 
-      <NuevaEmpresaForm valoresPorDefecto={valoresPorDefecto} />
+      <NuevaEmpresaForm valoresPorDefecto={valoresPorDefecto} bodegas={bodegas} />
 
       <ul className="flex flex-col gap-3">
         {empresas.map((empresa) => (

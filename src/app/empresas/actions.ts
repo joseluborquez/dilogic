@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { obtenerCredencialesCompartidas } from "@/lib/relbase/credenciales";
-import { buscarClientesRelbase, RelbaseApiError } from "@/lib/relbase/client";
+import {
+  buscarCiudadesRelbase,
+  buscarClientesRelbase,
+  buscarComunasRelbase,
+  RelbaseApiError,
+} from "@/lib/relbase/client";
 import { aOpcion, type OpcionReferencia } from "@/lib/empresas/referencias";
 import { obtenerCredencialesCifradasExistentes } from "@/lib/empresas/consultar";
 import { importarCatalogoDesdeExcel } from "@/lib/catalogo/importar";
@@ -31,6 +36,44 @@ export async function buscarClienteRelbaseAction(
       return { ok: false, mensaje: "Relbase no encontró clientes con ese RUT o nombre." };
     }
     return { ok: true, clientes: clientes.map(aOpcion) };
+  } catch (err) {
+    return {
+      ok: false,
+      mensaje:
+        err instanceof RelbaseApiError
+          ? `Relbase respondió ${err.status}.`
+          : err instanceof Error
+            ? err.message
+            : "No se pudo consultar Relbase.",
+    };
+  }
+}
+
+/**
+ * Busca ciudades o comunas en Relbase por nombre. Existe para que nadie tenga
+ * que averiguar un ID a mano: el operador escribe "Quellon" y elige.
+ */
+export async function buscarReferenciaRelbaseAction(
+  tipo: "ciudad" | "comuna",
+  query: string
+): Promise<{ ok: true; opciones: OpcionReferencia[] } | { ok: false; mensaje: string }> {
+  await requerirAdmin();
+  const texto = query.trim();
+  if (texto.length < 3) {
+    return { ok: false, mensaje: "Escribe al menos 3 letras." };
+  }
+
+  try {
+    const credenciales = await obtenerCredencialesCompartidas();
+    const registros =
+      tipo === "ciudad"
+        ? await buscarCiudadesRelbase(credenciales, texto)
+        : await buscarComunasRelbase(credenciales, texto);
+
+    if (registros.length === 0) {
+      return { ok: false, mensaje: `Relbase no encontró ninguna ${tipo} con ese nombre.` };
+    }
+    return { ok: true, opciones: registros.map(aOpcion) };
   } catch (err) {
     return {
       ok: false,

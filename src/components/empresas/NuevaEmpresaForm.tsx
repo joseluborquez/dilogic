@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { crearEmpresaAction, type EstadoEmpresa } from "@/app/empresas/actions";
 import type { OpcionReferencia } from "@/lib/empresas/referencias";
 import { BuscadorClienteRelbase } from "./BuscadorClienteRelbase";
+import { BuscadorReferencia } from "./BuscadorReferencia";
 
 const ESTADO_INICIAL: EstadoEmpresa = { status: "inicial" };
 
@@ -13,9 +14,11 @@ interface Props {
     cityId: number | null;
     communeId: number | null;
   };
+  /** Bodegas de Relbase, para elegir por nombre en vez de por numero. */
+  bodegas: { id: number; etiqueta: string }[];
 }
 
-export function NuevaEmpresaForm({ valoresPorDefecto }: Props) {
+export function NuevaEmpresaForm({ valoresPorDefecto, bodegas }: Props) {
   const [estado, formAction, pending] = useActionState(crearEmpresaAction, ESTADO_INICIAL);
   const [abierto, setAbierto] = useState(false);
   const [cliente, setCliente] = useState<OpcionReferencia | null>(null);
@@ -23,14 +26,22 @@ export function NuevaEmpresaForm({ valoresPorDefecto }: Props) {
   const [cityId, setCityId] = useState(String(valoresPorDefecto.cityId ?? ""));
   const [communeId, setCommuneId] = useState(String(valoresPorDefecto.communeId ?? ""));
   const [nombreCatalogo, setNombreCatalogo] = useState<string | null>(null);
+  const [nombreCiudad, setNombreCiudad] = useState<string | null>(null);
+  const [nombreComuna, setNombreComuna] = useState<string | null>(null);
 
   function elegirCliente(elegido: OpcionReferencia) {
     setCliente(elegido);
     // Relbase suele traer la direccion del cliente: se propone como direccion
     // de despacho, pero queda editable porque no siempre viene completa.
     if (elegido.direccion) setDireccion(elegido.direccion);
-    if (elegido.ciudadId) setCityId(String(elegido.ciudadId));
-    if (elegido.comunaId) setCommuneId(String(elegido.comunaId));
+    if (elegido.ciudadId) {
+      setCityId(String(elegido.ciudadId));
+      setNombreCiudad("Tomada del cliente");
+    }
+    if (elegido.comunaId) {
+      setCommuneId(String(elegido.comunaId));
+      setNombreComuna("Tomada del cliente");
+    }
   }
 
   if (!abierto) {
@@ -112,44 +123,53 @@ export function NuevaEmpresaForm({ valoresPorDefecto }: Props) {
             className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
           />
         </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="cityId" className="text-xs tracking-wide text-ink-muted uppercase">
-            ID de ciudad
-          </label>
-          <input
-            id="cityId"
-            name="cityId"
-            inputMode="numeric"
-            value={cityId}
-            onChange={(e) => setCityId(e.target.value)}
-            className="rounded-sm border border-line bg-paper px-3 py-2 font-mono text-sm"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="communeId" className="text-xs tracking-wide text-ink-muted uppercase">
-            ID de comuna
-          </label>
-          <input
-            id="communeId"
-            name="communeId"
-            inputMode="numeric"
-            value={communeId}
-            onChange={(e) => setCommuneId(e.target.value)}
-            className="rounded-sm border border-line bg-paper px-3 py-2 font-mono text-sm"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
+        <BuscadorReferencia
+          tipo="ciudad"
+          etiqueta="Ciudad"
+          nombreCampo="cityId"
+          valor={cityId}
+          nombreElegido={nombreCiudad}
+          onElegir={(o) => {
+            setCityId(o.id ? String(o.id) : "");
+            setNombreCiudad(o.id ? o.etiqueta : null);
+          }}
+        />
+        <BuscadorReferencia
+          tipo="comuna"
+          etiqueta="Comuna"
+          nombreCampo="communeId"
+          valor={communeId}
+          nombreElegido={nombreComuna}
+          onElegir={(o) => {
+            setCommuneId(o.id ? String(o.id) : "");
+            setNombreComuna(o.id ? o.etiqueta : null);
+          }}
+        />
+        <div className="flex flex-col gap-1 sm:col-span-2">
           <label htmlFor="wareHouseId" className="text-xs tracking-wide text-ink-muted uppercase">
             Bodega de salida
           </label>
-          <input
+          <select
             id="wareHouseId"
             name="wareHouseId"
-            inputMode="numeric"
             defaultValue={valoresPorDefecto.wareHouseId ?? ""}
-            className="rounded-sm border border-line bg-paper px-3 py-2 font-mono text-sm"
-          />
-          <p className="text-xs text-ink-muted">La bodega de Dilogic, igual para todos.</p>
+            className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+          >
+            {bodegas.length === 0 && (
+              <option value={valoresPorDefecto.wareHouseId ?? ""}>
+                Bodega actual (#{valoresPorDefecto.wareHouseId ?? "—"})
+              </option>
+            )}
+            {bodegas.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.etiqueta}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-ink-muted">
+            Desde dónde sale la mercadería. Es la bodega de Dilogic, la misma para todos los
+            clientes.
+          </p>
         </div>
       </div>
 
