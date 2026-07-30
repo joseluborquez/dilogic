@@ -85,6 +85,11 @@ export type GuiaGenerada = {
   fecha_generacion: string | null;
   created_at: string;
   pdf_path: string | null;
+  // Eliminacion logica: la guia deja de verse en el historial de la app, pero
+  // el DTE sigue emitido en Relbase/SII y la fila se conserva para trazabilidad
+  // (ver supabase/migrations/0007_eliminacion_guias.sql).
+  eliminado_en: string | null;
+  eliminado_por: string | null;
 };
 
 export interface Database {

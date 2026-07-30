@@ -49,6 +49,18 @@ export async function guardarPdfGuia(params: {
   return path;
 }
 
+/**
+ * Baja el PDF desde el bucket privado, para armarlo dentro de un ZIP. Devuelve
+ * null si el archivo ya no esta (no rompe la descarga masiva: la guia se
+ * reporta como faltante).
+ */
+export async function descargarPdfGuia(path: string): Promise<Uint8Array | null> {
+  const supabase = getSupabaseServiceClient();
+  const { data, error } = await supabase.storage.from(BUCKET).download(path);
+  if (error || !data) return null;
+  return new Uint8Array(await data.arrayBuffer());
+}
+
 export async function obtenerUrlFirmadaPdf(
   path: string,
   expiraEnSegundos = 3600,

@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { generarGuiasAction, type EstadoGeneracion } from "@/app/nueva-corrida/actions-generar";
 import type { FilaValidada } from "@/lib/catalogo/validar";
+import { descargarZipGuias } from "@/components/historial/descargar-zip";
 
 const ESTADO_INICIAL: EstadoGeneracion = { status: "inicial" };
 
@@ -15,6 +17,27 @@ interface Props {
 export function GenerarGuiasForm({ empresaCodigo, nombreArchivo, filas }: Props) {
   const [estado, formAction, pending] = useActionState(generarGuiasAction, ESTADO_INICIAL);
   const [contacto, setContacto] = useState("");
+  const [descargando, setDescargando] = useState(false);
+  const [avisoDescarga, setAvisoDescarga] = useState<string | null>(null);
+
+  // Recien generada la partida es cuando Hugo necesita los documentos: se
+  // descargan aqui mismo, sin pasar por el historial.
+  async function descargarTodas(corridaId: string) {
+    setAvisoDescarga(null);
+    setDescargando(true);
+    try {
+      const { faltantes } = await descargarZipGuias({ corridaId });
+      if (faltantes > 0) {
+        setAvisoDescarga(
+          `${faltantes} guía(s) quedaron sin PDF: revisa el archivo _guias-sin-pdf.txt dentro del ZIP.`
+        );
+      }
+    } catch (err) {
+      setAvisoDescarga(err instanceof Error ? err.message : "No se pudo armar la descarga.");
+    } finally {
+      setDescargando(false);
+    }
+  }
 
   // Formato matriz: el centro ya viene por fila (columna del archivo), asi
   // que no hace falta pedirlo a mano; se genera una guia por cada uno.
@@ -96,6 +119,28 @@ export function GenerarGuiasForm({ empresaCodigo, nombreArchivo, filas }: Props)
               </li>
             ))}
           </ul>
+
+          {estado.grupos.some((g) => g.estado === "generada") && (
+            <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-line pt-3">
+              <button
+                type="button"
+                onClick={() => descargarTodas(estado.corridaId)}
+                disabled={descargando}
+                className="rounded-sm bg-teal px-4 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {descargando ? "Preparando…" : "Descargar todas las guías (ZIP)"}
+              </button>
+              <Link href="/historial" className="text-sm text-teal hover:underline">
+                Ver en historial →
+              </Link>
+            </div>
+          )}
+
+          {avisoDescarga && (
+            <p role="status" className="rounded-sm bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
+              {avisoDescarga}
+            </p>
+          )}
         </div>
       )}
     </div>

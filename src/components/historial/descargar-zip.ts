@@ -1,0 +1,50 @@
+/**
+ * Pide el ZIP al servidor y dispara la descarga en el navegador. El endpoint
+ * es POST (la seleccion puede ser larga), asi que no basta con un <a href>:
+ * hay que convertir la respuesta en blob y simular el click.
+ */
+export interface ResultadoDescarga {
+  faltantes: number;
+}
+
+function nombreDesdeCabecera(cabecera: string | null): string | null {
+  if (!cabecera) return null;
+  const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(cabecera);
+  if (utf8) {
+    try {
+      return decodeURIComponent(utf8[1]);
+    } catch {
+      /* cae al nombre simple */
+    }
+  }
+  const simple = /filename="([^"]+)"/i.exec(cabecera);
+  return simple ? simple[1] : null;
+}
+
+export async function descargarZipGuias(payload: {
+  claves?: string[];
+  corridaId?: string;
+}): Promise<ResultadoDescarga> {
+  const res = await fetch("/api/guias/zip", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const cuerpo = (await res.json().catch(() => null)) as { mensaje?: string } | null;
+    throw new Error(cuerpo?.mensaje ?? "No se pudo armar la descarga.");
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const enlace = document.createElement("a");
+  enlace.href = url;
+  enlace.download = nombreDesdeCabecera(res.headers.get("Content-Disposition")) ?? "guias.zip";
+  document.body.appendChild(enlace);
+  enlace.click();
+  enlace.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+
+  return { faltantes: Number(res.headers.get("X-Guias-Faltantes") ?? 0) };
+}
