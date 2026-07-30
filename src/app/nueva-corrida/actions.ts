@@ -4,6 +4,7 @@ import { parseArchivoPedido } from "@/lib/excel/parse";
 import { obtenerCatalogoEmpresa, validarFilas, type FilaValidada } from "@/lib/catalogo/validar";
 import type { ErrorParseo } from "@/lib/excel/types";
 import { listarEmpresasActivas } from "@/lib/empresas/consultar";
+import { requerirUsuario } from "@/lib/auth/sesion";
 
 export interface ResumenValidacion {
   total: number;
@@ -37,6 +38,8 @@ export async function previsualizarPedidoAction(
   _prevState: EstadoPrevisualizacion,
   formData: FormData
 ): Promise<EstadoPrevisualizacion> {
+  await requerirUsuario();
+
   const empresaCodigo = String(formData.get("empresa") ?? "");
   const archivo = formData.get("archivo");
 

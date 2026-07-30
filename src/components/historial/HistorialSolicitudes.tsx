@@ -9,6 +9,8 @@ import { descargarZipGuias } from "./descargar-zip";
 
 interface Props {
   solicitudes: SolicitudAgrupada[];
+  /** Solo los administradores pueden sacar guias del historial. */
+  puedeEliminar: boolean;
 }
 
 type Aviso = { tipo: "ok" | "error"; texto: string } | null;
@@ -28,7 +30,7 @@ function plural(n: number, singular: string, plural_: string): string {
   return `${n} ${n === 1 ? singular : plural_}`;
 }
 
-export function HistorialSolicitudes({ solicitudes }: Props) {
+export function HistorialSolicitudes({ solicitudes, puedeEliminar }: Props) {
   const [seleccion, setSeleccion] = useState<ReadonlySet<string>>(new Set());
   const [porEliminar, setPorEliminar] = useState<string[] | null>(null);
   const [descargando, setDescargando] = useState<string | null>(null); // clave de la accion en curso
@@ -207,7 +209,9 @@ export function HistorialSolicitudes({ solicitudes }: Props) {
                       corridaId={solicitud.corridaId}
                       seleccionada={seleccion.has(guia.clave)}
                       onAlternar={() => alternar(guia.clave)}
-                      onEliminar={() => setPorEliminar([guia.clave])}
+                      onEliminar={
+                        puedeEliminar ? () => setPorEliminar([guia.clave]) : undefined
+                      }
                     />
                   ))}
                 </tbody>
@@ -236,14 +240,16 @@ export function HistorialSolicitudes({ solicitudes }: Props) {
               >
                 Limpiar selección
               </button>
-              <button
-                type="button"
-                onClick={() => setPorEliminar([...seleccion])}
-                disabled={eliminando || descargando !== null}
-                className="rounded-sm border border-error px-3 py-1.5 text-sm font-medium text-error transition-colors hover:bg-error hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Eliminar
-              </button>
+              {puedeEliminar && (
+                <button
+                  type="button"
+                  onClick={() => setPorEliminar([...seleccion])}
+                  disabled={eliminando || descargando !== null}
+                  className="rounded-sm border border-error px-3 py-1.5 text-sm font-medium text-error transition-colors hover:bg-error hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Eliminar
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => descargar("seleccion", { claves: [...seleccion] })}
@@ -288,7 +294,7 @@ function FilaGuia({
   corridaId: string;
   seleccionada: boolean;
   onAlternar: () => void;
-  onEliminar: () => void;
+  onEliminar?: () => void;
 }) {
   return (
     <tr
@@ -353,15 +359,19 @@ function FilaGuia({
               </AccionIconoBoton>
             </>
           )}
-          <AccionIconoBoton
-            onClick={onEliminar}
-            tono="destructivo"
-            etiqueta={
-              guia.folio ? `Eliminar la guía ${guia.folio} del historial` : "Eliminar del historial"
-            }
-          >
-            <IconoEliminar />
-          </AccionIconoBoton>
+          {onEliminar && (
+            <AccionIconoBoton
+              onClick={onEliminar}
+              tono="destructivo"
+              etiqueta={
+                guia.folio
+                  ? `Eliminar la guía ${guia.folio} del historial`
+                  : "Eliminar del historial"
+              }
+            >
+              <IconoEliminar />
+            </AccionIconoBoton>
+          )}
           {!guia.tienePdf && <span className="ml-1 text-xs text-ink-muted">sin PDF</span>}
         </div>
       </td>

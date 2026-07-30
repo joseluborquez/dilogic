@@ -1,16 +1,22 @@
 import { NuevaCorridaForm } from "@/components/nueva-corrida/NuevaCorridaForm";
 import { EnlaceSeccion } from "@/components/ui/EnlaceSeccion";
 import { listarEmpresasActivas } from "@/lib/empresas/consultar";
+import { requerirUsuario } from "@/lib/auth/sesion";
+import { BarraUsuario } from "@/components/ui/BarraUsuario";
 
 // Las empresas se leen de la base en cada carga: agregar una nueva debe
 // reflejarse aca sin volver a desplegar.
 export const dynamic = "force-dynamic";
 
 export default async function NuevaCorridaPage() {
+  const usuario = await requerirUsuario();
   const empresas = await listarEmpresasActivas();
+  const esAdmin = usuario.rol === "admin";
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-10">
+      <BarraUsuario nombre={usuario.nombre} email={usuario.email} rol={usuario.rol} />
+
       <header>
         <p className="text-xs tracking-widest text-ink-muted uppercase">Dilogic</p>
         <h1 className="font-display text-2xl font-semibold">Nueva corrida de guías de despacho</h1>
@@ -27,12 +33,25 @@ export default async function NuevaCorridaPage() {
           titulo="Historial"
           descripcion="Guías ya generadas, con sus PDF"
         />
-        <EnlaceSeccion
-          href="/catalogo"
-          titulo="Catálogo"
-          descripcion="Sincronizar códigos con Relbase"
-        />
-        <EnlaceSeccion href="/empresas" titulo="Empresas" descripcion="Clientes y sus códigos" />
+        {esAdmin && (
+          <>
+            <EnlaceSeccion
+              href="/catalogo"
+              titulo="Catálogo"
+              descripcion="Sincronizar códigos con Relbase"
+            />
+            <EnlaceSeccion
+              href="/empresas"
+              titulo="Empresas"
+              descripcion="Clientes y sus códigos"
+            />
+            <EnlaceSeccion
+              href="/usuarios"
+              titulo="Usuarios"
+              descripcion="Cuentas y lo que ha generado cada una"
+            />
+          </>
+        )}
       </nav>
 
       <NuevaCorridaForm empresas={empresas} />

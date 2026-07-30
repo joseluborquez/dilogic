@@ -1,4 +1,5 @@
 import { BotonVolver } from "@/components/ui/BotonVolver";
+import { requerirAdmin } from "@/lib/auth/sesion";
 import { listarEmpresas, obtenerValoresPorDefecto } from "@/lib/empresas/consultar";
 import { NuevaEmpresaForm } from "@/components/empresas/NuevaEmpresaForm";
 import { FilaEmpresa } from "@/components/empresas/FilaEmpresa";
@@ -6,6 +7,8 @@ import { FilaEmpresa } from "@/components/empresas/FilaEmpresa";
 export const dynamic = "force-dynamic";
 
 export default async function EmpresasPage() {
+  await requerirAdmin();
+
   const [empresas, valoresPorDefecto] = await Promise.all([
     listarEmpresas(),
     obtenerValoresPorDefecto(),

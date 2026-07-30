@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { obtenerUrlFirmadaPdf } from "@/lib/storage/guias-pdf";
 import { construirNombreDescargaPdf } from "@/lib/historial/nombre-pdf";
+import { obtenerUsuario } from "@/lib/auth/sesion";
 
 /**
  * Firma la URL del PDF de una guia en el momento del click y redirige a ella.
@@ -23,6 +24,11 @@ const Parametros = z.object({
 });
 
 export async function GET(request: Request) {
+  const usuario = await obtenerUsuario();
+  if (!usuario || usuario.estado !== "activo") {
+    return new Response("Sesion requerida.", { status: 401 });
+  }
+
   const url = new URL(request.url);
   const parseo = Parametros.safeParse({
     corrida: url.searchParams.get("corrida") ?? undefined,
@@ -36,6 +42,19 @@ export async function GET(request: Request) {
   const { corrida, folio, modo } = parseo.data;
 
   const supabase = getSupabaseServiceClient();
+
+  // Un operador solo puede abrir los PDF de sus propias corridas.
+  if (usuario.rol !== "admin") {
+    const { data: duena } = await supabase
+      .from("corridas")
+      .select("usuario_id")
+      .eq("id", corrida)
+      .maybeSingle();
+    if (!duena || duena.usuario_id !== usuario.id) {
+      return new Response("No tienes acceso a esa guia.", { status: 403 });
+    }
+  }
+
   const { data: guia } = await supabase
     .from("guias_generadas")
     .select("pdf_path, centro, corrida_id")

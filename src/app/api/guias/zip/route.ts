@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { clavesDeCorrida, construirZipGuias, ErrorZip } from "@/lib/historial/zip-guias";
+import { obtenerUsuario } from "@/lib/auth/sesion";
 
 // Descarga masiva: junta los PDF de una seleccion de guias (o de una solicitud
 // completa) en un solo ZIP. Solo lee: nada de esto toca Relbase.
@@ -21,6 +22,13 @@ const Cuerpo = z
   });
 
 export async function POST(request: Request) {
+  // Una route handler es publica: sin esto, cualquiera con la URL podria
+  // bajarse los PDF de documentos tributarios.
+  const usuario = await obtenerUsuario();
+  if (!usuario || usuario.estado !== "activo") {
+    return Response.json({ mensaje: "Sesion requerida." }, { status: 401 });
+  }
+
   let cuerpo: z.infer<typeof Cuerpo>;
   try {
     cuerpo = Cuerpo.parse(await request.json());
@@ -33,9 +41,13 @@ export async function POST(request: Request) {
       ? cuerpo.claves
       : await clavesDeCorrida(cuerpo.corridaId!);
 
+    // Un operador solo puede bajar lo que genero el mismo.
+    const propietario = usuario.rol === "admin" ? undefined : usuario.id;
+
     const { bytes, nombreArchivo, incluidas, faltantes, partes } = await construirZipGuias(
       claves,
-      cuerpo.parte ?? 1
+      cuerpo.parte ?? 1,
+      propietario
     );
 
     return new Response(new Blob([new Uint8Array(bytes)], { type: "application/zip" }), {

@@ -1,7 +1,12 @@
 import { SincronizarCatalogoForm } from "@/components/catalogo/SincronizarCatalogoForm";
 import { BotonVolver } from "@/components/ui/BotonVolver";
+import { requerirAdmin } from "@/lib/auth/sesion";
 
-export default function CatalogoPage() {
+export const dynamic = "force-dynamic";
+
+export default async function CatalogoPage() {
+  await requerirAdmin();
+
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-10">
       <header className="flex items-start justify-between gap-4">

@@ -58,11 +58,26 @@ export async function clavesDeCorrida(corridaId: string): Promise<string[]> {
  * que manda el cliente: recalcula las claves desde las filas reales y se queda
  * solo con las que coinciden.
  */
-async function resolverGuias(claves: string[]): Promise<GuiaParaZip[]> {
-  const corridas = corridasDeClaves(claves);
+async function resolverGuias(
+  claves: string[],
+  propietarioId?: string
+): Promise<GuiaParaZip[]> {
+  let corridas = corridasDeClaves(claves);
   if (corridas.length === 0) return [];
 
   const supabase = getSupabaseServiceClient();
+
+  // Un operador solo puede descargar sus propias guias: se recortan las
+  // corridas ajenas antes de tocar los PDF.
+  if (propietarioId) {
+    const { data: propias } = await supabase
+      .from("corridas")
+      .select("id")
+      .in("id", corridas)
+      .eq("usuario_id", propietarioId);
+    corridas = (propias ?? []).map((c) => c.id);
+    if (corridas.length === 0) return [];
+  }
   const filas = await traerTodasLasFilas((desde, hasta) =>
     supabase
       .from("guias_generadas")
@@ -113,8 +128,13 @@ function nombreUnico(nombre: string, usados: Set<string>): string {
   return unico;
 }
 
-export async function construirZipGuias(claves: string[], parte = 1): Promise<ResultadoZip> {
-  const todas = await resolverGuias(claves);
+export async function construirZipGuias(
+  claves: string[],
+  parte = 1,
+  /** Si se entrega, solo se incluyen guias de corridas de ese usuario. */
+  propietarioId?: string
+): Promise<ResultadoZip> {
+  const todas = await resolverGuias(claves, propietarioId);
 
   if (todas.length === 0) {
     throw new ErrorZip("No se encontraron guías para descargar.");

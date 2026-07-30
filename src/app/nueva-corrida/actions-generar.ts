@@ -10,6 +10,7 @@ import {
 import { guardarPdfGuia } from "@/lib/storage/guias-pdf";
 import { obtenerCatalogoEmpresa } from "@/lib/catalogo/validar";
 import { traerTodasLasFilas } from "@/lib/supabase/paginar";
+import { requerirUsuario } from "@/lib/auth/sesion";
 
 /**
  * Lo que manda el navegador. Solo se le cree el pedido en si (que codigo, cuanta
@@ -219,6 +220,10 @@ export async function generarGuiasAction(
   _prevState: EstadoGeneracion,
   formData: FormData
 ): Promise<EstadoGeneracion> {
+  // Una server action es un endpoint publico: la sesion se verifica aca, no
+  // basta con que la pagina que muestra el boton este protegida.
+  const usuario = await requerirUsuario();
+
   const empresaCodigo = String(formData.get("empresa") ?? "");
   const contacto = String(formData.get("contacto") ?? "").trim();
   const nombreArchivo = String(formData.get("nombreArchivo") ?? "pedido");
@@ -295,7 +300,8 @@ export async function generarGuiasAction(
     .from("corridas")
     .insert({
       empresa_id: empresa.id,
-      usuario: "Hugo Venegas",
+      usuario: usuario.nombre ?? usuario.email,
+      usuario_id: usuario.id,
       archivo_original_nombre: nombreArchivo,
       total_filas: filas.length,
       total_exitosas: 0,

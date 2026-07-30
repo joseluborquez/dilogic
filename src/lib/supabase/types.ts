@@ -62,6 +62,8 @@ export type Corrida = {
   id: string;
   empresa_id: string;
   usuario: string;
+  /** Null en las corridas anteriores a la autenticacion. */
+  usuario_id: string | null;
   archivo_original_nombre: string;
   fecha_ejecucion: string;
   total_filas: number;
@@ -98,9 +100,28 @@ export type GuiaGenerada = {
   eliminado_por: string | null;
 };
 
+export type RolPerfil = "admin" | "operador";
+export type EstadoPerfil = "pendiente" | "activo" | "bloqueado";
+
+export type Perfil = {
+  id: string;
+  email: string;
+  nombre: string | null;
+  rol: RolPerfil;
+  estado: EstadoPerfil;
+  created_at: string;
+  activado_en: string | null;
+};
+
 export interface Database {
   public: {
     Tables: {
+      perfiles: {
+        Row: Perfil;
+        Insert: Partial<Perfil>;
+        Update: Partial<Perfil>;
+        Relationships: [];
+      };
       empresas: {
         Row: Empresa;
         Insert: Partial<Empresa>;

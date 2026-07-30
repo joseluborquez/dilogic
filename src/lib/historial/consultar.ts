@@ -60,6 +60,11 @@ export interface FiltrosHistorial {
   desde?: string; // yyyy-mm-dd
   hasta?: string; // yyyy-mm-dd
   pagina?: number; // 1-based
+  /**
+   * Limita el historial a las corridas de un usuario. Lo usan los operadores:
+   * solo ven lo que ellos generaron. Los administradores lo omiten y ven todo.
+   */
+  usuarioId?: string;
 }
 
 export interface ResultadoHistorial {
@@ -120,6 +125,7 @@ export async function obtenerHistorial(
   }
   if (filtros.desde) consulta = consulta.gte("fecha_ejecucion", `${filtros.desde}T00:00:00`);
   if (filtros.hasta) consulta = consulta.lte("fecha_ejecucion", `${filtros.hasta}T23:59:59`);
+  if (filtros.usuarioId) consulta = consulta.eq("usuario_id", filtros.usuarioId);
 
   const desde = (pagina - 1) * SOLICITUDES_POR_PAGINA;
   let corridas: { id: string; empresa_id: string; archivo_original_nombre: string; fecha_ejecucion: string }[] = [];

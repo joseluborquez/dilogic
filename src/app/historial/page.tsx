@@ -7,6 +7,7 @@ import {
 import { HistorialSolicitudes } from "@/components/historial/HistorialSolicitudes";
 import { BuscadorHistorial } from "@/components/historial/BuscadorHistorial";
 import { BotonVolver } from "@/components/ui/BotonVolver";
+import { requerirUsuario } from "@/lib/auth/sesion";
 
 // Depende de datos en vivo y de los filtros de la URL: nunca estatica.
 export const dynamic = "force-dynamic";
@@ -27,8 +28,12 @@ export default async function HistorialPage({
   const hasta = primerValor(params.hasta);
   const pagina = Math.max(1, Number(primerValor(params.pagina)) || 1);
 
+  const usuario = await requerirUsuario();
+  // Un operador solo ve lo que genero el mismo; el administrador ve todo.
+  const usuarioId = usuario.rol === "admin" ? undefined : usuario.id;
+
   const [{ solicitudes, totalSolicitudes, totalPaginas, hayFiltros }, empresas] = await Promise.all([
-    obtenerHistorial({ texto, empresa, desde, hasta, pagina }),
+    obtenerHistorial({ texto, empresa, desde, hasta, pagina, usuarioId }),
     obtenerEmpresasConHistorial(),
   ]);
 
@@ -55,7 +60,9 @@ export default async function HistorialPage({
           <h1 className="font-display text-2xl font-semibold">Historial de guías</h1>
           <p className="mt-1 text-sm text-ink-muted">
             Cada bloque es una solicitud: el archivo que se subió y las guías que salieron de él.
-            Selecciona guías para descargarlas en un ZIP o sacarlas del historial.
+            {usuario.rol === "admin"
+              ? " Selecciona guías para descargarlas en un ZIP o sacarlas del historial."
+              : " Aquí ves las guías que has generado tú."}
           </p>
         </div>
         <BotonVolver href="/nueva-corrida">Nueva corrida</BotonVolver>
@@ -83,7 +90,7 @@ export default async function HistorialPage({
           </p>
         </div>
       ) : (
-        <HistorialSolicitudes solicitudes={solicitudes} />
+        <HistorialSolicitudes solicitudes={solicitudes} puedeEliminar={usuario.rol === "admin"} />
       )}
 
       {totalPaginas > 1 && (

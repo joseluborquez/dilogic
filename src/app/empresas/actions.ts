@@ -7,6 +7,7 @@ import { buscarClientesRelbase, RelbaseApiError } from "@/lib/relbase/client";
 import { aOpcion, type OpcionReferencia } from "@/lib/empresas/referencias";
 import { obtenerCredencialesCifradasExistentes } from "@/lib/empresas/consultar";
 import { importarCatalogoDesdeExcel } from "@/lib/catalogo/importar";
+import { requerirAdmin } from "@/lib/auth/sesion";
 
 export type EstadoEmpresa =
   | { status: "inicial" }
@@ -17,6 +18,7 @@ export type EstadoEmpresa =
 export async function buscarClienteRelbaseAction(
   query: string
 ): Promise<{ ok: true; clientes: OpcionReferencia[] } | { ok: false; mensaje: string }> {
+  await requerirAdmin();
   const texto = query.trim();
   if (texto.length < 3) {
     return { ok: false, mensaje: "Escribe al menos 3 caracteres (RUT o nombre)." };
@@ -58,6 +60,7 @@ export async function crearEmpresaAction(
   _prevState: EstadoEmpresa,
   formData: FormData
 ): Promise<EstadoEmpresa> {
+  await requerirAdmin();
   const nombre = String(formData.get("nombre") ?? "").trim();
   const codigo = String(formData.get("codigo") ?? "")
     .trim()
@@ -155,6 +158,7 @@ export async function actualizarEmpresaAction(
   _prevState: EstadoEmpresa,
   formData: FormData
 ): Promise<EstadoEmpresa> {
+  await requerirAdmin();
   const id = String(formData.get("id") ?? "");
   const nombre = String(formData.get("nombre") ?? "").trim();
   if (!id) return { status: "error", mensaje: "Empresa no encontrada." };
@@ -188,6 +192,7 @@ export async function alternarActivoEmpresaAction(
   id: string,
   activo: boolean
 ): Promise<{ ok: boolean; mensaje?: string }> {
+  await requerirAdmin();
   const supabase = getSupabaseServiceClient();
   const { error } = await supabase.from("empresas").update({ activo }).eq("id", id);
   if (error) return { ok: false, mensaje: "No se pudo cambiar el estado de la empresa." };

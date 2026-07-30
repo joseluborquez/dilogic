@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { traerTodasLasFilas } from "@/lib/supabase/paginar";
 import { claveGuia, corridasDeClaves, type FilaConClave } from "@/lib/historial/claves";
+import { requerirAdmin } from "@/lib/auth/sesion";
 
 export interface ResultadoEliminacion {
   ok: boolean;
@@ -12,8 +13,6 @@ export interface ResultadoEliminacion {
 }
 
 type FilaAEliminar = FilaConClave & { id: string };
-
-const USUARIO = "Hugo Venegas";
 
 /**
  * Eliminacion logica: saca las guias del historial de la app sin borrar las
@@ -26,6 +25,10 @@ const USUARIO = "Hugo Venegas";
  * eliminado_en null), asi que un doble click no rompe nada.
  */
 export async function eliminarGuiasAction(claves: string[]): Promise<ResultadoEliminacion> {
+  // Solo administradores: sacar una guia del historial es una decision sobre
+  // el registro de documentos ya emitidos.
+  const admin = await requerirAdmin();
+
   if (!Array.isArray(claves) || claves.length === 0) {
     return { ok: false, eliminadas: 0, mensaje: "No hay guías seleccionadas." };
   }
@@ -70,7 +73,7 @@ export async function eliminarGuiasAction(claves: string[]): Promise<ResultadoEl
   for (let i = 0; i < ids.length; i += 200) {
     const { error } = await supabase
       .from("guias_generadas")
-      .update({ eliminado_en: eliminadoEn, eliminado_por: USUARIO })
+      .update({ eliminado_en: eliminadoEn, eliminado_por: admin.email })
       .in("id", ids.slice(i, i + 200));
 
     if (error) {
