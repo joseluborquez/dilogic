@@ -9,8 +9,14 @@ type Estado =
   | { fase: "inicial" }
   | { fase: "sincronizando"; paginaActual: number; totalPages: number; actualizados: number }
   | { fase: "buscando_pendientes" }
-  | { fase: "error"; mensaje: string; reanudarDesde: number; actualizadosHastaAhora: number }
-  | { fase: "ok"; resumen: ResumenSincronizacion; actualizados: number };
+  | {
+      fase: "error";
+      mensaje: string;
+      reanudarDesde: number;
+      actualizadosHastaAhora: number;
+      insertadosHastaAhora: string[];
+    }
+  | { fase: "ok"; resumen: ResumenSincronizacion; actualizados: number; insertados: string[] };
 
 export function SincronizarCatalogoForm() {
   const [estado, setEstado] = useState<Estado>({ fase: "inicial" });
@@ -30,16 +36,22 @@ export function SincronizarCatalogoForm() {
     throw new Error("No se pudo completar el lote tras reintentos.");
   }
 
-  async function iniciarSincronizacion(desdePagina = 1, actualizadosPrevios = 0) {
+  async function iniciarSincronizacion(
+    desdePagina = 1,
+    actualizadosPrevios = 0,
+    insertadosPrevios: string[] = []
+  ) {
     let page = desdePagina;
     let totalPages = 1;
     let actualizados = actualizadosPrevios;
+    const insertados = [...insertadosPrevios];
 
     try {
       do {
         const resultado = await sincronizarLoteConReintentos(page);
         totalPages = resultado.totalPages;
         actualizados += resultado.actualizados;
+        insertados.push(...resultado.insertados);
         page = resultado.hastaPagina + 1;
         setEstado({ fase: "sincronizando", paginaActual: resultado.hastaPagina, totalPages, actualizados });
       } while (page <= totalPages);
@@ -51,13 +63,14 @@ export function SincronizarCatalogoForm() {
       while (resumen.quedanMas) {
         resumen = await sincronizarPendientesAction(resumen.siguienteIndice);
       }
-      setEstado({ fase: "ok", resumen, actualizados });
+      setEstado({ fase: "ok", resumen, actualizados, insertados: insertados.sort() });
     } catch (err) {
       setEstado({
         fase: "error",
         mensaje: err instanceof Error ? err.message : "Error desconocido durante la sincronizacion.",
         reanudarDesde: page,
         actualizadosHastaAhora: actualizados,
+        insertadosHastaAhora: insertados,
       });
     }
   }
@@ -106,7 +119,13 @@ export function SincronizarCatalogoForm() {
           <div>
             <button
               type="button"
-              onClick={() => iniciarSincronizacion(estado.reanudarDesde, estado.actualizadosHastaAhora)}
+              onClick={() =>
+                iniciarSincronizacion(
+                  estado.reanudarDesde,
+                  estado.actualizadosHastaAhora,
+                  estado.insertadosHastaAhora
+                )
+              }
               className="rounded-sm border border-error px-3 py-1 text-xs font-medium hover:bg-error hover:text-white"
             >
               Reanudar desde la página {estado.reanudarDesde}
@@ -118,6 +137,18 @@ export function SincronizarCatalogoForm() {
       {estado.fase === "ok" && (
         <div className="flex flex-col gap-3 rounded-sm border border-line bg-surface p-4">
           <p className="text-sm text-ink-muted">{estado.actualizados} productos actualizados en total.</p>
+
+          {estado.insertados.length > 0 && (
+            <div className="flex flex-col gap-1 rounded-sm border border-line bg-surface-muted px-3 py-2">
+              <p className="text-sm font-medium">
+                {estado.insertados.length} código(s) nuevo(s) agregados al catálogo
+              </p>
+              <p className="text-sm text-ink-muted">
+                Estaban en Relbase y faltaban acá. Ya se pueden usar en los pedidos.
+              </p>
+              <p className="font-mono text-xs text-ink-muted">{estado.insertados.join(", ")}</p>
+            </div>
+          )}
           <div className="overflow-x-auto rounded-sm border border-line">
             <table className="w-full border-collapse text-sm">
               <thead>

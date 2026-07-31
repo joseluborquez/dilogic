@@ -29,6 +29,26 @@ export interface ResultadoLote {
   totalPages: number;
   hastaPagina: number;
   actualizados: number;
+  /** SKUs que estaban en Relbase y no en productos_catalogo: se dieron de alta. */
+  insertados: string[];
+}
+
+/**
+ * Un codigo de Relbase se da de alta solo si sigue el patron
+ * EMPRESA_FAMILIA_NUMERO (ej. MTX_AB_234) y EMPRESA es el codigo_interno de una
+ * empresa registrada. Relbase tiene ~1150 productos de otros formatos que no
+ * son de Dilogic: sin este filtro entrarian todos al catalogo.
+ */
+function empresaYFamiliaDeSku(
+  sku: string,
+  empresaIdPorCodigo: Map<string, string>
+): { empresaId: string; familia: string } | null {
+  const partes = sku.split("_");
+  if (partes.length !== 3) return null;
+  const [codigoEmpresa, familia, numero] = partes;
+  if (!/^[A-Z]+$/.test(familia) || !/^\d+$/.test(numero)) return null;
+  const empresaId = empresaIdPorCodigo.get(codigoEmpresa);
+  return empresaId ? { empresaId, familia } : null;
 }
 
 /**
@@ -78,7 +98,10 @@ export async function sincronizarLotePaginas(
   const credenciales = await obtenerCredencialesCompartidas();
   const supabase = getSupabaseServiceClient();
 
-  const porCodigo = new Map<string, { id: number; precio: number; descripcionRelbase: string | null }>();
+  const porCodigo = new Map<
+    string,
+    { id: number; precio: number | null; nombre: string | null; descripcionRelbase: string | null }
+  >();
   let totalPages = startPage; // se corrige con la respuesta de la primera pagina del lote
 
   for (let page = startPage; page < startPage + cantidadPaginas; page++) {
@@ -88,15 +111,26 @@ export async function sincronizarLotePaginas(
     for (const p of pagina.data.products) {
       if (!p.code) continue;
       // Sin Number.isFinite, un producto sin precio en Relbase daba NaN, que
-      // se serializa como null y borraba en silencio el precio guardado.
+      // se serializa como null y borraba en silencio el precio guardado. Se
+      // guarda como null y mas abajo se omite del update, en vez de descartar
+      // el producto entero: asi igual se sincroniza su product_id.
       const precio = Number(p.price);
-      if (!Number.isFinite(precio)) continue;
-      porCodigo.set(p.code, { id: p.id, precio, descripcionRelbase: p.description ?? null });
+      porCodigo.set(p.code, {
+        id: p.id,
+        precio: Number.isFinite(precio) ? precio : null,
+        nombre: p.name ?? null,
+        descripcionRelbase: p.description ?? null,
+      });
     }
   }
 
   const nuestroCatalogo = await traerTodasLasFilas((desde, hasta) =>
-    supabase.from("productos_catalogo").select("id, sku").order("sku").order("id", { ascending: true }).range(desde, hasta)
+    supabase
+      .from("productos_catalogo")
+      .select("id, sku")
+      .order("sku")
+      .order("id", { ascending: true })
+      .range(desde, hasta)
   );
 
   const actualizaciones = nuestroCatalogo
@@ -117,7 +151,7 @@ export async function sincronizarLotePaginas(
       ): u is {
         id: string;
         product_id_relbase: number;
-        precio: number;
+        precio: number | null;
         descripcionRelbase: string | null;
       } => u !== null
     );
@@ -130,18 +164,87 @@ export async function sincronizarLotePaginas(
       .from("productos_catalogo")
       .update({
         product_id_relbase: u.product_id_relbase,
-        precio: u.precio,
+        // Solo si Relbase trae un precio valido: escribir null aca borraria el
+        // precio ya guardado.
+        ...(u.precio !== null ? { precio: u.precio } : {}),
         descripcion_relbase: u.descripcionRelbase,
         ultima_sincronizacion: new Date().toISOString(),
       })
       .eq("id", u.id);
   });
 
+  const insertados = await darDeAltaCodigosNuevos(porCodigo, new Set(nuestroCatalogo.map((r) => r.sku)));
+
   return {
     totalPages,
     hastaPagina: Math.min(startPage + cantidadPaginas - 1, totalPages),
     actualizados: actualizaciones.length,
+    insertados,
   };
+}
+
+/**
+ * Da de alta en productos_catalogo los codigos que Relbase ya tiene y nosotros
+ * no. Hasta el 31-jul-2026 la sincronizacion solo hacia UPDATE sobre filas
+ * existentes, asi que un producto creado en Relbase despues de cargar
+ * CODIGOS DILOGIC.xlsx fallaba para siempre con "El codigo no existe en el
+ * catalogo de esta empresa" y volver a sincronizar no lo arreglaba nunca
+ * (paso con MTX_AB_234, MTX_CC_165 y CERQ_FV_310).
+ */
+async function darDeAltaCodigosNuevos(
+  porCodigo: Map<
+    string,
+    { id: number; precio: number | null; nombre: string | null; descripcionRelbase: string | null }
+  >,
+  skusExistentes: Set<string>
+): Promise<string[]> {
+  const supabase = getSupabaseServiceClient();
+
+  const { data: empresas, error: errEmpresas } = await supabase
+    .from("empresas")
+    .select("id, codigo_interno");
+  if (errEmpresas || !empresas) return [];
+  const empresaIdPorCodigo = new Map(empresas.map((e) => [e.codigo_interno, e.id]));
+
+  const nuevos: {
+    empresa_id: string;
+    sku: string;
+    product_id_relbase: number;
+    descripcion: string | null;
+    descripcion_relbase: string | null;
+    precio: number | null;
+    familia: string;
+    activo: boolean;
+    ultima_sincronizacion: string;
+  }[] = [];
+
+  for (const [sku, p] of porCodigo) {
+    if (skusExistentes.has(sku)) continue;
+    const destino = empresaYFamiliaDeSku(sku, empresaIdPorCodigo);
+    if (!destino) continue;
+    nuevos.push({
+      empresa_id: destino.empresaId,
+      sku,
+      product_id_relbase: p.id,
+      descripcion: p.nombre,
+      descripcion_relbase: p.descripcionRelbase,
+      precio: p.precio,
+      familia: destino.familia,
+      activo: true,
+      ultima_sincronizacion: new Date().toISOString(),
+    });
+  }
+
+  if (nuevos.length === 0) return [];
+
+  // ignoreDuplicates contra unique (empresa_id, sku): si otro lote en curso ya
+  // lo inserto, no se pisa lo que haya.
+  const { error } = await supabase
+    .from("productos_catalogo")
+    .upsert(nuevos, { onConflict: "empresa_id,sku", ignoreDuplicates: true });
+  if (error) throw new Error(`No se pudieron dar de alta los códigos nuevos: ${error.message}`);
+
+  return nuevos.map((n) => n.sku).sort();
 }
 
 /**

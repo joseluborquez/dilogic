@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# Sin el punto inicial `.env*` no lo cubre, y ahi va la service_role key.
+env.local
 !.env.local.example
 
 # vercel
