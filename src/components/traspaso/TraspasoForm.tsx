@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useRef, useState } from "react";
 import {
   emitirTraspasoAction,
   revisarTraspasoAction,
@@ -37,10 +37,41 @@ export function TraspasoForm({
   const [centro, setCentro] = useState(centroInicial);
   // Huella de los archivos elegidos: la revision vale solo para esos archivos.
   const [archivos, setArchivos] = useState("");
+  const [nombres, setNombres] = useState<string[]>([]);
+  const [arrastrando, setArrastrando] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [archivosRevisados, setArchivosRevisados] = useState<string | null>(null);
   // Una clave por seleccion de archivos: reenviar el mismo traspaso no emite dos veces.
   const [idempotencyKey, setIdempotencyKey] = useState(nuevaClave);
   const [descargando, setDescargando] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Las acciones se lanzan a mano y no como action/formAction del <form>:
+  // React 19 resetea el formulario despues de una accion de formulario, y eso
+  // vaciaba el selector de archivos tras "Revisar", con lo que "Emitir" se
+  // enviaba sin facturas.
+  /** Deja en el input exactamente estos archivos (desde el selector o arrastrados). */
+  function asignarArchivos(lista: File[]) {
+    const pdfs = lista.filter((f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
+    if (inputRef.current) {
+      const dt = new DataTransfer();
+      pdfs.forEach((f) => dt.items.add(f));
+      inputRef.current.files = dt.files;
+    }
+    setArchivos(pdfs.map((f) => `${f.name}:${f.size}`).join("|"));
+    setNombres(pdfs.map((f) => f.name));
+    setIdempotencyKey(nuevaClave());
+    setAviso(
+      pdfs.length < lista.length ? `Se ignoraron ${lista.length - pdfs.length} archivo(s) que no son PDF.` : null
+    );
+  }
+
+  function lanzar(accion: (datos: FormData) => void) {
+    if (!formRef.current) return;
+    const datos = new FormData(formRef.current);
+    startTransition(() => accion(datos));
+  }
 
   const revisionVigente = revision.status === "ok" && archivosRevisados === archivos;
   const conErrores = revision.status === "ok" && revision.facturas.some((f) => f.estado === "error");
@@ -50,31 +81,68 @@ export function TraspasoForm({
 
   return (
     <div className="flex flex-col gap-6">
-      <form className="flex flex-col gap-5 rounded-sm border border-line bg-surface p-5">
+      <form
+        ref={formRef}
+        onSubmit={(e) => e.preventDefault()}
+        className="flex flex-col gap-5 rounded-sm border border-line bg-surface p-5"
+      >
         <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="facturas" className="text-xs tracking-wide text-ink-muted uppercase">
-            Facturas del proveedor (PDF)
-          </label>
-          <input
-            id="facturas"
-            name="facturas"
-            type="file"
-            accept="application/pdf,.pdf"
-            multiple
-            required
-            onChange={(e) => {
-              const lista = [...(e.target.files ?? [])];
-              setArchivos(lista.map((f) => `${f.name}:${f.size}`).join("|"));
-              setIdempotencyKey(nuevaClave());
+        <div className="flex flex-col gap-2">
+          <p className="text-xs tracking-wide text-ink-muted uppercase">Facturas del proveedor (PDF)</p>
+          <label
+            htmlFor="facturas"
+            onDragOver={(e) => {
+              e.preventDefault();
+              setArrastrando(true);
             }}
-            className="text-sm"
-          />
-          <p className="text-xs text-ink-muted">
-            Puedes elegir varias a la vez. Se leen completas y se comparan con la compra registrada
-            en Relbase antes de generar nada.
-          </p>
+            onDragLeave={() => setArrastrando(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setArrastrando(false);
+              asignarArchivos([...(e.dataTransfer.files ?? [])]);
+            }}
+            className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-sm border-2 border-dashed px-6 py-8 text-center transition-colors ${
+              arrastrando ? "border-teal bg-teal/5" : "border-line bg-paper"
+            }`}
+          >
+            <input
+              ref={inputRef}
+              id="facturas"
+              name="facturas"
+              type="file"
+              accept="application/pdf,.pdf"
+              multiple
+              className="sr-only"
+              onChange={(e) => asignarArchivos([...(e.target.files ?? [])])}
+            />
+            {nombres.length > 0 ? (
+              <>
+                <span className="font-display text-sm font-medium">{nombres.length} factura(s) elegida(s)</span>
+                <span className="text-xs text-ink-muted">Haz clic o arrastra otras para cambiarlas</span>
+              </>
+            ) : (
+              <>
+                <span className="font-display text-sm font-medium">
+                  Arrastra las facturas aca, o haz clic para elegirlas
+                </span>
+                <span className="text-xs text-ink-muted">
+                  PDF, varias a la vez. Se leen completas y se comparan con la compra registrada en
+                  Relbase antes de generar nada.
+                </span>
+              </>
+            )}
+          </label>
+          {nombres.length > 0 && (
+            <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted">
+              {nombres.map((n) => (
+                <li key={n} className="font-mono">
+                  {n}
+                </li>
+              ))}
+            </ul>
+          )}
+          {aviso && <p className="text-xs text-advertencia">{aviso}</p>}
         </div>
 
         <div className="flex flex-wrap gap-4">
@@ -113,18 +181,24 @@ export function TraspasoForm({
 
         <div className="flex flex-wrap gap-3">
           <button
-            formAction={(datos) => {
+            type="button"
+            onClick={() => {
+              if (!archivos) {
+                setAviso("Primero elige las facturas en PDF (clic en el recuadro o arrástralas).");
+                return;
+              }
               setArchivosRevisados(archivos);
-              return revisar(datos);
+              lanzar(revisar);
             }}
-            disabled={revisando || !archivos || emitido}
+            disabled={revisando || emitido}
             className="rounded-sm border border-teal px-5 py-2 font-display text-sm font-medium text-teal transition-colors hover:bg-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {revisando ? "Revisando…" : "Revisar facturas"}
           </button>
           {calculo && (
             <button
-              formAction={emitir}
+              type="button"
+              onClick={() => lanzar(emitir)}
               disabled={!puedeEmitir || emitido}
               className="rounded-sm bg-teal px-5 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
             >
