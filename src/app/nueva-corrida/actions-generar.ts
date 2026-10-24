@@ -1,5 +1,6 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { decryptToken } from "@/lib/crypto/tokens";
 import {
@@ -123,11 +124,36 @@ async function resolverContraCatalogo(
   return { ok: true, filas };
 }
 
+/**
+ * Fecha de hoy en Chile. Con getDate() se usaba la zona del servidor, que en
+ * Vercel es UTC: desde las 21:00 (20:00 en invierno) las guias salian con la
+ * fecha de manana.
+ */
 function fechaHoyDDMMYYYY(): string {
-  const hoy = new Date();
-  const dd = String(hoy.getDate()).padStart(2, "0");
-  const mm = String(hoy.getMonth() + 1).padStart(2, "0");
-  return `${dd}-${mm}-${hoy.getFullYear()}`;
+  const partes = new Intl.DateTimeFormat("es-CL", {
+    timeZone: "America/Santiago",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).formatToParts(new Date());
+  const valor = (tipo: string) => partes.find((p) => p.type === tipo)?.value ?? "";
+  return `${valor("day")}-${valor("month")}-${valor("year")}`;
+}
+
+/**
+ * Idempotency-Key de una guia: la misma corrida, centro, categoria y lote dan
+ * siempre la misma clave (Relbase la aisla por empresa, usuario y app).
+ */
+function claveIdempotenciaGuia(
+  corridaId: string,
+  centro: string,
+  categoria: string | null,
+  lote: number
+): string {
+  const huella = createHash("sha256")
+    .update(`${corridaId}|${centro}|${categoria ?? ""}|${lote}`)
+    .digest("hex");
+  return `dilogic-guia-${huella.slice(0, 40)}`;
 }
 
 interface GrupoCentroCategoria {
@@ -389,27 +415,31 @@ export async function generarGuiasAction(
     for (const { centro, categoria, filas: filasGrupo } of grupos) {
       const lotes = dividirEnLotes(filasGrupo, MAX_PRODUCTOS_POR_DOCUMENTO);
 
-      for (const lote of lotes) {
+      for (const [indiceLote, lote] of lotes.entries()) {
         try {
-          const respuesta = await crearGuiaDespacho(credenciales, {
-            type_document: 52,
-            start_date: fecha,
-            end_date: fecha,
-            customer_id: destino.customerId,
-            ware_house_id: destino.wareHouseId,
-            type_transfer: TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
-            address: destino.address,
-            city_id: destino.cityId,
-            commune_id: destino.communeId,
-            contact: centro,
-            products: lote.map((f) => ({
-              product_id: f.productIdRelbase,
-              price: f.precio,
-              quantity: f.cantidad,
-              tax_affected: true,
-              ...(f.descripcionUnidad ? { description: f.descripcionUnidad } : {}),
-            })),
-          });
+          const respuesta = await crearGuiaDespacho(
+            credenciales,
+            {
+              type_document: 52,
+              start_date: fecha,
+              end_date: fecha,
+              customer_id: destino.customerId,
+              ware_house_id: destino.wareHouseId,
+              type_transfer: TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
+              address: destino.address,
+              city_id: destino.cityId,
+              commune_id: destino.communeId,
+              contact: centro,
+              products: lote.map((f) => ({
+                product_id: f.productIdRelbase,
+                price: f.precio,
+                quantity: f.cantidad,
+                tax_affected: true,
+                ...(f.descripcionUnidad ? { description: f.descripcionUnidad } : {}),
+              })),
+            },
+            claveIdempotenciaGuia(destino.corridaId, centro, categoria, indiceLote)
+          );
 
           const folio = String(respuesta.folio ?? respuesta.id);
 

@@ -101,10 +101,24 @@ async function fetchV2(path: string, init: RequestInit) {
   return enviar(await obtenerAccessToken(token));
 }
 
+interface OpcionesRequest {
+  /** Reemplaza la regla de reintentos por defecto (ver crearGuiaDespacho). */
+  esReintentable?: (err: RelbaseApiError, version: VersionRelbase) => boolean;
+}
+
+function reintentablePorDefecto(err: RelbaseApiError, version: VersionRelbase): boolean {
+  // v1 señala el exceso de tasa con 403; v2 con 429, y en v2 el 403 es falta
+  // de permisos (scope), que no se arregla reintentando. Los 5xx se
+  // reintentan en ambas: antes un fallo transitorio del servidor abortaba la
+  // guia sin ningun reintento.
+  return (version === "v1" && err.status === 403) || err.status === 429 || err.status >= 500;
+}
+
 async function request<T>(
   path: string,
   credenciales: RelbaseCredenciales,
-  init: RequestInit = {}
+  init: RequestInit = {},
+  { esReintentable = reintentablePorDefecto }: OpcionesRequest = {}
 ): Promise<T> {
   const version = versionRelbase();
   return queues[version].schedule(() =>
@@ -116,13 +130,7 @@ async function request<T>(
         return res.json() as Promise<T>;
       },
       {
-        // v1 señala el exceso de tasa con 403; v2 con 429, y en v2 el 403 es
-        // falta de permisos (scope), que no se arregla reintentando. Los 5xx
-        // se reintentan en ambas: antes un fallo transitorio del servidor
-        // abortaba la guia sin ningun reintento.
-        isRetryable: (err) =>
-          err instanceof RelbaseApiError &&
-          ((version === "v1" && err.status === 403) || err.status === 429 || err.status >= 500),
+        isRetryable: (err) => err instanceof RelbaseApiError && esReintentable(err, version),
         delayMs: (err) => (err instanceof RelbaseApiError ? err.retryAfterMs : undefined),
       }
     )
@@ -258,7 +266,13 @@ export async function obtenerTiposTraslado(
  */
 export async function crearGuiaDespacho(
   credenciales: RelbaseCredenciales,
-  payload: RelbaseCrearDtePayload
+  payload: RelbaseCrearDtePayload,
+  /**
+   * v2: clave estable por guia. Si Relbase la respeta en /dtes, repetir el
+   * mismo POST devuelve la guia ya emitida en vez de otra nueva. La spec no
+   * marca /dtes como idempotente, asi que no se confia en ella para reintentar.
+   */
+  idempotencyKey?: string
 ): Promise<RelbaseCrearDteResponse> {
   if (emisionBloqueadaEnV2()) {
     throw new Error("La emision de guias con Relbase v2 aun no esta habilitada.");
@@ -266,10 +280,31 @@ export async function crearGuiaDespacho(
   // La respuesta viene envuelta en {data: {...}}, igual que el resto de la
   // API (confirmado 11-jul-2026: sin este unwrap, .folio/.id quedan
   // undefined aunque el documento se haya creado correctamente en Relbase).
-  const res = await request<{ data: RelbaseCrearDteResponse }>("/dtes", credenciales, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  const res = await request<{ data: RelbaseCrearDteResponse }>(
+    "/dtes",
+    credenciales,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+      ...(versionRelbase() === "v2" && idempotencyKey
+        ? { headers: { "Idempotency-Key": idempotencyKey } }
+        : {}),
+    },
+    {
+      // En v2 solo se reintenta el 429, que garantiza que Relbase no proceso
+      // el request. Un 5xx no lo garantiza: la guia pudo quedar emitida antes
+      // del error y reintentar emitiria otra (un DTE no se deshace).
+      esReintentable: (err, version) =>
+        version === "v2" ? err.status === 429 : reintentablePorDefecto(err, version),
+    }
+  );
+  if (!res?.data?.id) {
+    // Respondio 2xx sin id: la guia probablemente existe. No se trata como
+    // error comun porque quien vea "error" tenderia a reintentar.
+    throw new Error(
+      "Relbase confirmo la guia pero no devolvio su id. Revisa en Relbase si quedo emitida antes de reintentar."
+    );
+  }
   return res.data;
 }
 
