@@ -7,6 +7,9 @@ export interface FilaPedido {
   // (una columna por centro). Null en el formato largo (una sola columna
   // "cantidad"), donde el contacto se ingresa manualmente al generar.
   centro: string | null;
+  // Nombre del producto segun el archivo, si trae columna "producto",
+  // "descripcion" o "nombre". Sirve para advertir un codigo equivocado.
+  nombreArchivo?: string | null;
 }
 
 export interface ErrorParseo {

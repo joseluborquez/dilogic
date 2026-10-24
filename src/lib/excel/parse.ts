@@ -7,6 +7,7 @@ import type { ErrorParseo, FilaPedido, ResultadoParseo } from "./types";
 const ALIAS_CODIGO = ["codigo", "código", "sku", "codigosku", "codigo sku"];
 const ALIAS_CANTIDAD = ["cantidad", "cant"];
 const ALIAS_CATEGORIA = ["categoria", "categoría", "familia"];
+const ALIAS_NOMBRE = ["producto", "descripcion", "nombre", "detalle", "articulo"];
 
 // En formato matriz cada columna es un centro de cultivo. Estas son las que
 // aparecen en archivos reales sin serlo: tomarlas como centro generaria una
@@ -63,6 +64,9 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
   const idxCodigo = encontrarColumna(headers, ALIAS_CODIGO);
   const idxCantidad = encontrarColumna(headers, ALIAS_CANTIDAD);
   const idxCategoria = encontrarColumna(headers, ALIAS_CATEGORIA);
+  const idxNombre = encontrarColumna(headers, ALIAS_NOMBRE);
+  const nombreDe = (row: unknown[]): string | null =>
+    idxNombre !== -1 && row[idxNombre] != null ? String(row[idxNombre]).trim() || null : null;
 
   if (idxCodigo === -1) {
     errores.push({
@@ -106,7 +110,14 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
         return;
       }
 
-      filas.push({ fila: numeroFila, codigo, cantidad, categoria, centro: null });
+      filas.push({
+        fila: numeroFila,
+        codigo,
+        cantidad,
+        categoria,
+        centro: null,
+        nombreArchivo: nombreDe(row),
+      });
     });
 
     return { filas, errores };
@@ -121,6 +132,7 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
       ({ idx, nombre }) =>
         idx !== idxCodigo &&
         idx !== idxCategoria &&
+        idx !== idxNombre &&
         nombre !== "" &&
         !COLUMNAS_NO_CENTRO.includes(normalizarHeader(nombre))
     );
@@ -162,7 +174,7 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
       }
       if (cantidad <= 0) continue; // 0 o negativo: no hay pedido de ese producto para ese centro
 
-      filas.push({ fila: numeroFila, codigo, cantidad, categoria, centro });
+      filas.push({ fila: numeroFila, codigo, cantidad, categoria, centro, nombreArchivo: nombreDe(row) });
     }
   });
 

@@ -2,6 +2,7 @@ import "server-only";
 
 import type { FilaPedido } from "@/lib/excel/types";
 import catalogoLocal from "./catalogo-seed.json";
+import { nombresCoinciden } from "./nombres";
 
 export type EstadoFila = "valido" | "advertencia" | "error";
 
@@ -27,6 +28,9 @@ export interface ProductoCatalogoResumen {
    * puede pedir: ej. YDR_AS_011, cuyo producto de Relbase paso a ser otro.
    */
   activo: boolean;
+  motivoBloqueo: string | null;
+  /** Nombre en Relbase; `descripcion` es el del Excel de carga. */
+  nombreRelbase: string | null;
 }
 
 export interface CatalogoEmpresa {
@@ -79,7 +83,9 @@ export async function obtenerCatalogoEmpresa(codigoInterno: string): Promise<Cat
     const productos = await traerTodasLasFilas((desde, hasta) =>
       supabase
         .from("productos_catalogo")
-        .select("sku, descripcion, descripcion_relbase, product_id_relbase, precio, familia, activo")
+        .select(
+          "sku, descripcion, descripcion_relbase, product_id_relbase, precio, familia, activo, motivo_bloqueo, nombre_relbase"
+        )
         .eq("empresa_id", empresa.id)
         .order("sku")
         .order("id", { ascending: true })
@@ -95,6 +101,8 @@ export async function obtenerCatalogoEmpresa(codigoInterno: string): Promise<Cat
         precio: p.precio,
         familia: p.familia ?? derivarFamiliaDeSku(p.sku),
         activo: p.activo,
+        motivoBloqueo: p.motivo_bloqueo,
+        nombreRelbase: p.nombre_relbase,
       });
     }
     return { mapa, fuente: "supabase" };
@@ -112,6 +120,8 @@ export async function obtenerCatalogoEmpresa(codigoInterno: string): Promise<Cat
       precio: null,
       familia: derivarFamiliaDeSku(p.sku),
       activo: true,
+      motivoBloqueo: null,
+      nombreRelbase: null,
     });
   }
   return { mapa, fuente: "local" };
@@ -130,10 +140,32 @@ export function validarFilas(filas: FilaPedido[], catalogo: CatalogoEmpresa["map
       mensajes.push("El codigo no existe en el catalogo de esta empresa.");
     } else if (!producto.activo) {
       estado = "error";
-      mensajes.push("El codigo esta desactivado en el catalogo.");
+      mensajes.push(
+        producto.motivoBloqueo
+          ? `Codigo bloqueado: ${producto.motivoBloqueo}`
+          : "El codigo esta desactivado en el catalogo."
+      );
     } else if (producto.productIdRelbase == null) {
       estado = "error";
       mensajes.push("Producto sin product_id de Relbase (falta sincronizar).");
+    }
+
+    // El archivo trae nombre y no se parece al del producto: probable codigo
+    // equivocado (ambos existen, asi que nada mas lo detectaria). Coincidir
+    // con el nombre de Relbase o con el del Excel de carga basta.
+    if (
+      producto &&
+      estado !== "error" &&
+      fila.nombreArchivo &&
+      !nombresCoinciden(fila.nombreArchivo, producto.nombreRelbase) &&
+      !nombresCoinciden(fila.nombreArchivo, producto.descripcion)
+    ) {
+      estado = "advertencia";
+      mensajes.push(
+        `El archivo dice "${fila.nombreArchivo}", pero este codigo es "${
+          producto.nombreRelbase ?? producto.descripcion
+        }". Revisa que el codigo sea el correcto.`
+      );
     }
 
     // La clave incluye el centro: un mismo codigo pedido por varios centros

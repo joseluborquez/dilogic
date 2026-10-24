@@ -7,6 +7,8 @@ import {
   buscarProductoPorCodigo,
   listarProductosPagina,
 } from "@/lib/relbase/client";
+import type { OrigenSincronizacion } from "@/lib/supabase/types";
+import { PAGINAS_POR_LOTE } from "./constantes";
 
 export interface ResumenEmpresa {
   codigoInterno: string;
@@ -47,6 +49,47 @@ export interface CodigoCambiado {
   nombreRelbase: string | null;
 }
 
+/** Lo que la sincronizacion vio de un producto en Relbase. */
+interface ProductoVisto {
+  id: number;
+  precio: number | null;
+  nombre: string | null;
+  descripcionRelbase: string | null;
+  habilitado: boolean;
+}
+
+const MOTIVO_NO_EXISTE = "El código ya no existe en Relbase.";
+const MOTIVO_DESHABILITADO = "El producto está deshabilitado en Relbase.";
+
+/** Fechas como Date: Postgres devuelve "+00:00" y JS "Z", y como texto no se comparan bien. */
+function vistoDesde(ultimaSincronizacion: string | null, inicio: string): boolean {
+  return (
+    ultimaSincronizacion != null &&
+    new Date(ultimaSincronizacion).getTime() >= new Date(inicio).getTime()
+  );
+}
+
+/**
+ * Guarda lo visto en Relbase para una fila del catalogo. Que
+ * ultima_sincronizacion quede posterior al inicio de la sincronizacion es lo
+ * que marca la fila como "vista" (ver aplicarEstadoRelbase).
+ */
+async function registrarVisto(id: string, producto: ProductoVisto): Promise<void> {
+  await getSupabaseServiceClient()
+    .from("productos_catalogo")
+    .update({
+      product_id_relbase: producto.id,
+      // Solo si Relbase trae un precio valido: escribir null aca borraria el
+      // precio ya guardado.
+      ...(producto.precio !== null ? { precio: producto.precio } : {}),
+      descripcion_relbase: producto.descripcionRelbase,
+      nombre_relbase: producto.nombre,
+      habilitado_relbase: producto.habilitado,
+      ultima_sincronizacion: new Date().toISOString(),
+    })
+    .eq("id", id);
+}
+
 /**
  * Un codigo de Relbase se da de alta solo si sigue el patron
  * EMPRESA_FAMILIA_NUMERO (ej. MTX_AB_234) y EMPRESA es el codigo_interno de una
@@ -79,10 +122,7 @@ export async function sincronizarLotePaginas(
 ): Promise<ResultadoLote> {
   const supabase = getSupabaseServiceClient();
 
-  const porCodigo = new Map<
-    string,
-    { id: number; precio: number | null; nombre: string | null; descripcionRelbase: string | null }
-  >();
+  const porCodigo = new Map<string, ProductoVisto>();
   // Por id, para detectar codigos del catalogo cuyo producto se recodifico.
   const porId = new Map<number, { code: string | null; name: string | null }>();
   let totalPages = startPage; // se corrige con la respuesta de la primera pagina del lote
@@ -104,6 +144,9 @@ export async function sincronizarLotePaginas(
         precio: Number.isFinite(precio) ? precio : null,
         nombre: p.name ?? null,
         descripcionRelbase: p.description ?? null,
+        // Relbase manda `enabled: false` para productos deshabilitados; si no
+        // viniera el campo se asume habilitado.
+        habilitado: p.enabled !== false,
       });
     }
   }
@@ -117,45 +160,15 @@ export async function sincronizarLotePaginas(
       .range(desde, hasta)
   );
 
-  const actualizaciones = nuestroCatalogo
-    .map((row) => {
-      const match = porCodigo.get(row.sku);
-      return match
-        ? {
-            id: row.id,
-            product_id_relbase: match.id,
-            precio: match.precio,
-            descripcionRelbase: match.descripcionRelbase,
-          }
-        : null;
-    })
-    .filter(
-      (
-        u
-      ): u is {
-        id: string;
-        product_id_relbase: number;
-        precio: number | null;
-        descripcionRelbase: string | null;
-      } => u !== null
-    );
+  const actualizaciones = nuestroCatalogo.flatMap((row) => {
+    const match = porCodigo.get(row.sku);
+    return match ? [{ id: row.id, producto: match }] : [];
+  });
 
   // De a 10: un Promise.all sobre la lista completa abriria cientos de
   // conexiones simultaneas a Supabase desde un solo lambda, y la lista crece
   // con cada empresa nueva.
-  await enLotes(actualizaciones, 10, async (u) => {
-    await supabase
-      .from("productos_catalogo")
-      .update({
-        product_id_relbase: u.product_id_relbase,
-        // Solo si Relbase trae un precio valido: escribir null aca borraria el
-        // precio ya guardado.
-        ...(u.precio !== null ? { precio: u.precio } : {}),
-        descripcion_relbase: u.descripcionRelbase,
-        ultima_sincronizacion: new Date().toISOString(),
-      })
-      .eq("id", u.id);
-  });
+  await enLotes(actualizaciones, 10, (u) => registrarVisto(u.id, u.producto));
 
   const insertados = await darDeAltaCodigosNuevos(porCodigo, new Set(nuestroCatalogo.map((r) => r.sku)));
 
@@ -193,10 +206,7 @@ export async function sincronizarLotePaginas(
  * (paso con MTX_AB_234, MTX_CC_165 y CERQ_FV_310).
  */
 async function darDeAltaCodigosNuevos(
-  porCodigo: Map<
-    string,
-    { id: number; precio: number | null; nombre: string | null; descripcionRelbase: string | null }
-  >,
+  porCodigo: Map<string, ProductoVisto>,
   skusExistentes: Set<string>
 ): Promise<string[]> {
   const supabase = getSupabaseServiceClient();
@@ -216,6 +226,10 @@ async function darDeAltaCodigosNuevos(
     precio: number | null;
     familia: string;
     activo: boolean;
+    nombre_relbase: string | null;
+    habilitado_relbase: boolean;
+    motivo_bloqueo: string | null;
+    bloqueado_por: "relbase" | null;
     ultima_sincronizacion: string;
   }[] = [];
 
@@ -231,7 +245,13 @@ async function darDeAltaCodigosNuevos(
       descripcion_relbase: p.descripcionRelbase,
       precio: p.precio,
       familia: destino.familia,
-      activo: true,
+      // Uno deshabilitado en Relbase entra ya bloqueado: se vera en la
+      // sincronizacion si vuelve a habilitarse.
+      activo: p.habilitado,
+      nombre_relbase: p.nombre,
+      habilitado_relbase: p.habilitado,
+      motivo_bloqueo: p.habilitado ? null : MOTIVO_DESHABILITADO,
+      bloqueado_por: p.habilitado ? null : "relbase",
       ultima_sincronizacion: new Date().toISOString(),
     });
   }
@@ -260,7 +280,14 @@ async function darDeAltaCodigosNuevos(
 const PENDIENTES_POR_LOTE = 40;
 
 export async function sincronizarPendientesDirecto(
-  desdeIndice = 0
+  desdeIndice = 0,
+  /**
+   * Inicio de la sincronizacion en curso. Tambien se buscan por codigo los que
+   * el listado paginado no mostro desde entonces: la paginacion de Relbase
+   * tiene huecos, y sin esta busqueda un codigo valido se bloquearia como
+   * "no existe en Relbase".
+   */
+  inicio?: string
 ): Promise<ResumenSincronizacion> {
   const supabase = getSupabaseServiceClient();
 
@@ -276,7 +303,7 @@ export async function sincronizarPendientesDirecto(
   const nuestroCatalogo = await traerTodasLasFilas((desde, hasta) =>
     supabase
       .from("productos_catalogo")
-      .select("id, sku, empresa_id, product_id_relbase")
+      .select("id, sku, empresa_id, product_id_relbase, ultima_sincronizacion")
       .order("sku")
       .order("id", { ascending: true })
       .range(desde, hasta)
@@ -293,7 +320,8 @@ export async function sincronizarPendientesDirecto(
   let indice = Math.max(0, desdeIndice);
   while (indice < nuestroCatalogo.length && pendientes.length < PENDIENTES_POR_LOTE) {
     const fila = nuestroCatalogo[indice];
-    if (fila.product_id_relbase == null) pendientes.push(fila);
+    const noVisto = inicio != null && !vistoDesde(fila.ultima_sincronizacion, inicio);
+    if (fila.product_id_relbase == null || noVisto) pendientes.push(fila);
     indice += 1;
   }
 
@@ -301,15 +329,14 @@ export async function sincronizarPendientesDirecto(
     const producto = await buscarProductoPorCodigo(p.sku);
     const codigoEmpresa = codigoPorEmpresaId.get(p.empresa_id) ?? "?";
     if (producto) {
-      await supabase
-        .from("productos_catalogo")
-        .update({
-          product_id_relbase: producto.id,
-          precio: Number(producto.price),
-          descripcion_relbase: producto.description ?? null,
-          ultima_sincronizacion: new Date().toISOString(),
-        })
-        .eq("id", p.id);
+      const precio = Number(producto.price);
+      await registrarVisto(p.id, {
+        id: producto.id,
+        precio: Number.isFinite(precio) ? precio : null,
+        nombre: producto.name ?? null,
+        descripcionRelbase: producto.description ?? null,
+        habilitado: producto.enabled !== false,
+      });
     } else {
       sinMatchFinal.push({ sku: p.sku, codigoEmpresa });
     }
@@ -345,4 +372,206 @@ export async function sincronizarPendientesDirecto(
     siguienteIndice: indice,
     quedanMas: indice < nuestroCatalogo.length,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Aplicar el estado de Relbase y orquestar una sincronizacion completa
+// ---------------------------------------------------------------------------
+
+export interface CambioEstado {
+  sku: string;
+  descripcion: string | null;
+  motivo: string;
+}
+
+export interface ResultadoEstado {
+  bloqueados: CambioEstado[];
+  reactivados: CambioEstado[];
+}
+
+/**
+ * Si una sincronizacion fuera a bloquear mas que esto, algo anda mal del lado
+ * de Relbase (una respuesta truncada, un listado vacio) y no del catalogo: se
+ * aborta sin tocar nada. Hoy un cambio real son 5 codigos de 823.
+ */
+const MAX_BLOQUEOS_SIN_REVISAR = (total: number) => Math.max(15, Math.ceil(total * 0.05));
+
+/**
+ * Al terminar una sincronizacion completa (listado + busqueda directa de los
+ * no vistos), alinea `activo` con Relbase:
+ * - bloquea los activos que no se vieron (su codigo ya no existe alla) o que
+ *   Relbase tiene deshabilitados;
+ * - reactiva los que la propia sincronizacion habia bloqueado y volvieron.
+ * Los bloqueos manuales (bloqueado_por = 'manual') no se tocan.
+ */
+export async function aplicarEstadoRelbase(
+  inicio: string,
+  /** sku -> codigo actual en Relbase, para explicar mejor el bloqueo. */
+  recodificados: Map<string, string | null> = new Map()
+): Promise<ResultadoEstado> {
+  const supabase = getSupabaseServiceClient();
+  const filas = await traerTodasLasFilas((desde, hasta) =>
+    supabase
+      .from("productos_catalogo")
+      .select("id, sku, descripcion, activo, bloqueado_por, habilitado_relbase, ultima_sincronizacion")
+      .order("sku")
+      .order("id", { ascending: true })
+      .range(desde, hasta)
+  );
+
+  const aBloquear: { id: string; cambio: CambioEstado }[] = [];
+  const aReactivar: { id: string; cambio: CambioEstado }[] = [];
+
+  for (const f of filas) {
+    const visto = vistoDesde(f.ultima_sincronizacion, inicio);
+    const habilitado = f.habilitado_relbase !== false;
+    if (f.activo && (!visto || !habilitado)) {
+      const nuevoCodigo = recodificados.get(f.sku);
+      const motivo = !visto
+        ? nuevoCodigo
+          ? `${MOTIVO_NO_EXISTE} Relbase le cambió el código a ${nuevoCodigo}.`
+          : MOTIVO_NO_EXISTE
+        : MOTIVO_DESHABILITADO;
+      aBloquear.push({ id: f.id, cambio: { sku: f.sku, descripcion: f.descripcion, motivo } });
+    } else if (!f.activo && f.bloqueado_por === "relbase" && visto && habilitado) {
+      aReactivar.push({
+        id: f.id,
+        cambio: { sku: f.sku, descripcion: f.descripcion, motivo: "Volvió a estar disponible en Relbase." },
+      });
+    }
+  }
+
+  const tope = MAX_BLOQUEOS_SIN_REVISAR(filas.length);
+  if (aBloquear.length > tope) {
+    throw new Error(
+      `La sincronización iba a bloquear ${aBloquear.length} códigos (el máximo sin revisión es ${tope}). No se bloqueó nada: puede ser una respuesta incompleta de Relbase. Ejemplos: ${aBloquear
+        .slice(0, 5)
+        .map((b) => b.cambio.sku)
+        .join(", ")}.`
+    );
+  }
+
+  await enLotes(aBloquear, 10, async ({ id, cambio }) => {
+    await supabase
+      .from("productos_catalogo")
+      .update({ activo: false, bloqueado_por: "relbase", motivo_bloqueo: cambio.motivo })
+      .eq("id", id);
+  });
+  await enLotes(aReactivar, 10, async ({ id }) => {
+    await supabase
+      .from("productos_catalogo")
+      .update({ activo: true, bloqueado_por: null, motivo_bloqueo: null })
+      .eq("id", id);
+  });
+
+  return {
+    bloqueados: aBloquear.map((b) => b.cambio),
+    reactivados: aReactivar.map((r) => r.cambio),
+  };
+}
+
+export interface ResumenSincronizacionCompleta extends ResultadoEstado {
+  actualizados: number;
+  insertados: string[];
+  codigosCambiados: CodigoCambiado[];
+}
+
+/** Abre el registro de una sincronizacion. `inicio` marca que filas se "vieron". */
+export async function iniciarRegistroSincronizacion(
+  origen: OrigenSincronizacion
+): Promise<{ id: string; inicio: string }> {
+  const inicio = new Date().toISOString();
+  const { data, error } = await getSupabaseServiceClient()
+    .from("sincronizaciones_catalogo")
+    .insert({ origen, iniciada_en: inicio, estado: "en_curso" })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error("No se pudo registrar el inicio de la sincronización.");
+  return { id: data.id, inicio };
+}
+
+export async function cerrarRegistroSincronizacion(
+  id: string,
+  resultado: { resumen: ResumenSincronizacionCompleta } | { error: string }
+): Promise<void> {
+  await getSupabaseServiceClient()
+    .from("sincronizaciones_catalogo")
+    .update({
+      terminada_en: new Date().toISOString(),
+      ...("error" in resultado
+        ? { estado: "error", error: resultado.error }
+        : { estado: "ok", resumen: resultado.resumen }),
+    })
+    .eq("id", id);
+}
+
+export interface UltimaSincronizacion {
+  origen: OrigenSincronizacion;
+  iniciadaEn: string;
+  terminadaEn: string | null;
+  estado: "en_curso" | "ok" | "error";
+  error: string | null;
+  resumen: ResumenSincronizacionCompleta | null;
+}
+
+export async function obtenerUltimaSincronizacion(): Promise<UltimaSincronizacion | null> {
+  const { data } = await getSupabaseServiceClient()
+    .from("sincronizaciones_catalogo")
+    .select("origen, iniciada_en, terminada_en, estado, error, resumen")
+    .order("iniciada_en", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    origen: data.origen,
+    iniciadaEn: data.iniciada_en,
+    terminadaEn: data.terminada_en,
+    estado: data.estado,
+    error: data.error,
+    resumen: (data.resumen as ResumenSincronizacionCompleta | null) ?? null,
+  };
+}
+
+/**
+ * Sincronizacion completa en una sola invocacion, para la tarea automatica
+ * diaria (maxDuration 300 s; hoy tarda ~2 min). El boton de Catalogo hace lo
+ * mismo en pasos desde el navegador.
+ */
+export async function sincronizarCatalogoCompleto(
+  origen: OrigenSincronizacion
+): Promise<ResumenSincronizacionCompleta> {
+  const { id, inicio } = await iniciarRegistroSincronizacion(origen);
+  try {
+    let page = 1;
+    let totalPages = 1;
+    let actualizados = 0;
+    const insertados: string[] = [];
+    const codigosCambiados: CodigoCambiado[] = [];
+    do {
+      const lote = await sincronizarLotePaginas(page, PAGINAS_POR_LOTE);
+      totalPages = lote.totalPages;
+      actualizados += lote.actualizados;
+      insertados.push(...lote.insertados);
+      codigosCambiados.push(...lote.codigosCambiados);
+      page = lote.hastaPagina + 1;
+    } while (page <= totalPages);
+
+    let pendientes = await sincronizarPendientesDirecto(0, inicio);
+    while (pendientes.quedanMas) {
+      pendientes = await sincronizarPendientesDirecto(pendientes.siguienteIndice, inicio);
+    }
+
+    const estado = await aplicarEstadoRelbase(
+      inicio,
+      new Map(codigosCambiados.map((c) => [c.sku, c.codigoRelbase]))
+    );
+    const resumen = { actualizados, insertados: insertados.sort(), codigosCambiados, ...estado };
+    await cerrarRegistroSincronizacion(id, { resumen });
+    return resumen;
+  } catch (err) {
+    await cerrarRegistroSincronizacion(id, {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  }
 }

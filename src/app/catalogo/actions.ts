@@ -1,15 +1,29 @@
 "use server";
 
 import {
+  aplicarEstadoRelbase,
+  cerrarRegistroSincronizacion,
+  iniciarRegistroSincronizacion,
   sincronizarLotePaginas,
   sincronizarPendientesDirecto,
+  type CodigoCambiado,
+  type ResultadoEstado,
   type ResultadoLote,
   type ResumenSincronizacion,
 } from "@/lib/catalogo/sincronizar";
 
 import { PAGINAS_POR_LOTE } from "@/lib/catalogo/constantes";
 import { requerirAdmin } from "@/lib/auth/sesion";
-import { getSupabaseServiceClient } from "@/lib/supabase/server";
+
+/**
+ * El boton de Catalogo hace la sincronizacion en pasos (cada uno cabe holgado
+ * en el limite de una funcion): iniciar, lotes de paginas, busqueda directa de
+ * los no vistos, y finalizar, que aplica el estado de Relbase.
+ */
+export async function iniciarSincronizacionAction(): Promise<{ id: string; inicio: string }> {
+  await requerirAdmin();
+  return iniciarRegistroSincronizacion("manual");
+}
 
 export async function sincronizarLoteAction(startPage: number): Promise<ResultadoLote> {
   await requerirAdmin();
@@ -17,26 +31,35 @@ export async function sincronizarLoteAction(startPage: number): Promise<Resultad
 }
 
 export async function sincronizarPendientesAction(
-  desdeIndice = 0
+  desdeIndice: number,
+  inicio: string
 ): Promise<ResumenSincronizacion> {
   await requerirAdmin();
-  return sincronizarPendientesDirecto(desdeIndice);
+  return sincronizarPendientesDirecto(desdeIndice, inicio);
 }
 
-/**
- * Saca un codigo de los pedidos sin borrarlo (el historial lo sigue
- * referenciando). La validacion y la generacion rechazan codigos inactivos.
- */
-export async function desactivarCodigoAction(
-  sku: string
-): Promise<{ ok: true } | { ok: false; mensaje: string }> {
+export async function finalizarSincronizacionAction(
+  id: string,
+  inicio: string,
+  acumulado: { actualizados: number; insertados: string[]; codigosCambiados: CodigoCambiado[] }
+): Promise<ResultadoEstado> {
   await requerirAdmin();
-  const { data, error } = await getSupabaseServiceClient()
-    .from("productos_catalogo")
-    .update({ activo: false })
-    .eq("sku", sku)
-    .select("id");
-  if (error) return { ok: false, mensaje: "No se pudo desactivar el código." };
-  if (!data || data.length === 0) return { ok: false, mensaje: "Ese código ya no está en el catálogo." };
-  return { ok: true };
+  try {
+    const estado = await aplicarEstadoRelbase(
+      inicio,
+      new Map(acumulado.codigosCambiados.map((c) => [c.sku, c.codigoRelbase]))
+    );
+    await cerrarRegistroSincronizacion(id, { resumen: { ...acumulado, ...estado } });
+    return estado;
+  } catch (err) {
+    await cerrarRegistroSincronizacion(id, {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  }
+}
+
+export async function registrarErrorSincronizacionAction(id: string, mensaje: string): Promise<void> {
+  await requerirAdmin();
+  await cerrarRegistroSincronizacion(id, { error: mensaje });
 }

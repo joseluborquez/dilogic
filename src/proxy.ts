@@ -13,7 +13,9 @@ import { createServerClient } from "@supabase/ssr";
  * Tambien refresca el token: sin esto la sesion expira aunque el usuario este
  * trabajando.
  */
-const PUBLICAS = ["/login", "/auth"];
+// /api/cron: la llama Vercel sin sesion; se autentica con CRON_SECRET en la
+// propia ruta.
+const PUBLICAS = ["/login", "/auth", "/api/cron"];
 
 export async function proxy(request: NextRequest) {
   const respuesta = NextResponse.next({ request });
@@ -43,7 +45,7 @@ export async function proxy(request: NextRequest) {
   // Las rutas de API no se redirigen: un fetch seguiria el 302 y recibiria el
   // HTML del login con estado 200, que el cliente intentaria abrir como ZIP.
   // Cada route handler responde 401 por su cuenta.
-  if (!user && ruta.startsWith("/api/")) {
+  if (!user && !esPublica && ruta.startsWith("/api/")) {
     return NextResponse.json({ mensaje: "Sesion requerida." }, { status: 401 });
   }
 

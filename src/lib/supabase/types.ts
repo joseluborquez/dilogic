@@ -62,6 +62,25 @@ export type ProductoCatalogo = {
   familia: string | null;
   activo: boolean;
   ultima_sincronizacion: string | null;
+  // Estado del codigo en Relbase (0014): la sincronizacion bloquea y
+  // reactiva segun lo que ve alla.
+  nombre_relbase: string | null;
+  habilitado_relbase: boolean | null;
+  motivo_bloqueo: string | null;
+  bloqueado_por: "relbase" | "manual" | null;
+  created_at: string;
+};
+
+export type OrigenSincronizacion = "manual" | "automatica";
+
+export type SincronizacionCatalogo = {
+  id: string;
+  origen: OrigenSincronizacion;
+  iniciada_en: string;
+  terminada_en: string | null;
+  estado: "en_curso" | "ok" | "error";
+  resumen: unknown;
+  error: string | null;
   created_at: string;
 };
 
@@ -145,6 +164,12 @@ export interface Database {
         Row: ProductoCatalogo;
         Insert: Partial<ProductoCatalogo>;
         Update: Partial<ProductoCatalogo>;
+        Relationships: [];
+      };
+      sincronizaciones_catalogo: {
+        Row: SincronizacionCatalogo;
+        Insert: Partial<SincronizacionCatalogo>;
+        Update: Partial<SincronizacionCatalogo>;
         Relationships: [];
       };
       corridas: {

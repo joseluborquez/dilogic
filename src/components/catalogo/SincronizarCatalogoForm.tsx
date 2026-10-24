@@ -1,44 +1,48 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  desactivarCodigoAction,
+  finalizarSincronizacionAction,
+  iniciarSincronizacionAction,
+  registrarErrorSincronizacionAction,
   sincronizarLoteAction,
   sincronizarPendientesAction,
 } from "@/app/catalogo/actions";
 import { PAGINAS_POR_LOTE } from "@/lib/catalogo/constantes";
-import type { CodigoCambiado, ResumenSincronizacion } from "@/lib/catalogo/sincronizar";
+import type {
+  CodigoCambiado,
+  ResultadoEstado,
+  ResumenSincronizacion,
+} from "@/lib/catalogo/sincronizar";
+import { CambiosSincronizacion } from "./CambiosSincronizacion";
+
+interface Progreso {
+  id: string;
+  inicio: string;
+  siguientePagina: number;
+  actualizados: number;
+  insertados: string[];
+  codigosCambiados: CodigoCambiado[];
+}
 
 type Estado =
   | { fase: "inicial" }
   | { fase: "sincronizando"; paginaActual: number; totalPages: number; actualizados: number }
   | { fase: "buscando_pendientes" }
-  | {
-      fase: "error";
-      mensaje: string;
-      reanudarDesde: number;
-      actualizadosHastaAhora: number;
-      insertadosHastaAhora: string[];
-      cambiadosHastaAhora: CodigoCambiado[];
-    }
+  | { fase: "aplicando" }
+  | { fase: "error"; mensaje: string; progreso: Progreso | null }
   | {
       fase: "ok";
       resumen: ResumenSincronizacion;
       actualizados: number;
       insertados: string[];
-      cambiados: CodigoCambiado[];
+      estado: ResultadoEstado;
     };
 
 export function SincronizarCatalogoForm() {
+  const router = useRouter();
   const [estado, setEstado] = useState<Estado>({ fase: "inicial" });
-  // Por SKU: "…" mientras se desactiva, "Desactivado" o el mensaje de error.
-  const [desactivados, setDesactivados] = useState<Record<string, string>>({});
-
-  async function desactivar(sku: string) {
-    setDesactivados((d) => ({ ...d, [sku]: "…" }));
-    const res = await desactivarCodigoAction(sku);
-    setDesactivados((d) => ({ ...d, [sku]: res.ok ? "Desactivado" : res.mensaje }));
-  }
 
   async function sincronizarLoteConReintentos(page: number) {
     const INTENTOS = 3;
@@ -55,67 +59,80 @@ export function SincronizarCatalogoForm() {
     throw new Error("No se pudo completar el lote tras reintentos.");
   }
 
-  async function iniciarSincronizacion(
-    desdePagina = 1,
-    actualizadosPrevios = 0,
-    insertadosPrevios: string[] = [],
-    cambiadosPrevios: CodigoCambiado[] = []
-  ) {
-    let page = desdePagina;
-    let totalPages = 1;
-    let actualizados = actualizadosPrevios;
-    const insertados = [...insertadosPrevios];
-    const cambiados = [...cambiadosPrevios];
-
+  /**
+   * Sin `previo` empieza una sincronizacion nueva; con `previo` la reanuda
+   * conservando su inicio, que es lo que define que codigos se "vieron".
+   */
+  async function sincronizar(previo: Progreso | null = null) {
+    let progreso: Progreso | null = previo;
     try {
-      do {
-        const resultado = await sincronizarLoteConReintentos(page);
-        totalPages = resultado.totalPages;
-        actualizados += resultado.actualizados;
-        insertados.push(...resultado.insertados);
-        cambiados.push(...resultado.codigosCambiados);
-        page = resultado.hastaPagina + 1;
-        setEstado({ fase: "sincronizando", paginaActual: resultado.hastaPagina, totalPages, actualizados });
-      } while (page <= totalPages);
-
-      // Los pendientes se resuelven de a lotes (cada uno es una consulta a
-      // Relbase por SKU): se repite recorriendo el catalogo hasta el final.
-      setEstado({ fase: "buscando_pendientes" });
-      let resumen = await sincronizarPendientesAction();
-      while (resumen.quedanMas) {
-        resumen = await sincronizarPendientesAction(resumen.siguienteIndice);
+      if (!progreso) {
+        const { id, inicio } = await iniciarSincronizacionAction();
+        progreso = { id, inicio, siguientePagina: 1, actualizados: 0, insertados: [], codigosCambiados: [] };
       }
+
+      let totalPages = progreso.siguientePagina;
+      do {
+        const resultado = await sincronizarLoteConReintentos(progreso.siguientePagina);
+        totalPages = resultado.totalPages;
+        progreso = {
+          ...progreso,
+          siguientePagina: resultado.hastaPagina + 1,
+          actualizados: progreso.actualizados + resultado.actualizados,
+          insertados: [...progreso.insertados, ...resultado.insertados],
+          codigosCambiados: [...progreso.codigosCambiados, ...resultado.codigosCambiados],
+        };
+        setEstado({
+          fase: "sincronizando",
+          paginaActual: resultado.hastaPagina,
+          totalPages,
+          actualizados: progreso.actualizados,
+        });
+      } while (progreso.siguientePagina <= totalPages);
+
+      // Los pendientes (sin producto, o que el listado no mostro) se buscan
+      // por codigo de a lotes, recorriendo el catalogo hasta el final.
+      setEstado({ fase: "buscando_pendientes" });
+      let resumen = await sincronizarPendientesAction(0, progreso.inicio);
+      while (resumen.quedanMas) {
+        resumen = await sincronizarPendientesAction(resumen.siguienteIndice, progreso.inicio);
+      }
+
+      setEstado({ fase: "aplicando" });
+      const resultadoEstado = await finalizarSincronizacionAction(progreso.id, progreso.inicio, {
+        actualizados: progreso.actualizados,
+        insertados: progreso.insertados,
+        codigosCambiados: progreso.codigosCambiados,
+      });
       setEstado({
         fase: "ok",
         resumen,
-        actualizados,
-        insertados: insertados.sort(),
-        cambiados: cambiados.sort((a, b) => a.sku.localeCompare(b.sku)),
+        actualizados: progreso.actualizados,
+        insertados: [...progreso.insertados].sort(),
+        estado: resultadoEstado,
       });
+      // Refresca "Ultima sincronizacion" en la pagina.
+      router.refresh();
     } catch (err) {
-      setEstado({
-        fase: "error",
-        mensaje: err instanceof Error ? err.message : "Error desconocido durante la sincronizacion.",
-        reanudarDesde: page,
-        actualizadosHastaAhora: actualizados,
-        insertadosHastaAhora: insertados,
-        cambiadosHastaAhora: cambiados,
-      });
+      const mensaje = err instanceof Error ? err.message : "Error desconocido durante la sincronizacion.";
+      if (progreso) await registrarErrorSincronizacionAction(progreso.id, mensaje).catch(() => undefined);
+      setEstado({ fase: "error", mensaje, progreso });
     }
   }
 
-  const enCurso = estado.fase === "sincronizando" || estado.fase === "buscando_pendientes";
+  const enCurso =
+    estado.fase === "sincronizando" || estado.fase === "buscando_pendientes" || estado.fase === "aplicando";
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={() => iniciarSincronizacion()}
+          onClick={() => sincronizar()}
           disabled={enCurso}
           className="rounded-sm bg-teal px-5 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {enCurso ? "Sincronizando…" : "Sincronizar catálogo con Relbase"}
+          {enCurso ? "Sincronizando…" : "Sincronizar ahora"}
         </button>
         <p className="text-sm text-ink-muted">
           Solo lectura hacia Relbase, en lotes de {PAGINAS_POR_LOTE} páginas para no exceder el
@@ -139,28 +156,27 @@ export function SincronizarCatalogoForm() {
       )}
 
       {estado.fase === "buscando_pendientes" && (
-        <p className="text-sm text-ink-muted">Buscando los SKUs pendientes por código directo…</p>
+        <p className="text-sm text-ink-muted">Buscando por código los que el listado no mostró…</p>
+      )}
+
+      {estado.fase === "aplicando" && (
+        <p className="text-sm text-ink-muted">Aplicando lo que dice Relbase al catálogo…</p>
       )}
 
       {estado.fase === "error" && (
         <div className="flex flex-col gap-2 rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
           <p role="alert">{estado.mensaje}</p>
-          <div>
-            <button
-              type="button"
-              onClick={() =>
-                iniciarSincronizacion(
-                  estado.reanudarDesde,
-                  estado.actualizadosHastaAhora,
-                  estado.insertadosHastaAhora,
-                  estado.cambiadosHastaAhora
-                )
-              }
-              className="rounded-sm border border-error px-3 py-1 text-xs font-medium hover:bg-error hover:text-white"
-            >
-              Reanudar desde la página {estado.reanudarDesde}
-            </button>
-          </div>
+          {estado.progreso && estado.progreso.siguientePagina > 1 && (
+            <div>
+              <button
+                type="button"
+                onClick={() => sincronizar(estado.progreso)}
+                className="rounded-sm border border-error px-3 py-1 text-xs font-medium hover:bg-error hover:text-white"
+              >
+                Reanudar desde la página {estado.progreso.siguientePagina}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -168,53 +184,12 @@ export function SincronizarCatalogoForm() {
         <div className="flex flex-col gap-3 rounded-sm border border-line bg-surface p-4">
           <p className="text-sm text-ink-muted">{estado.actualizados} productos actualizados en total.</p>
 
-          {estado.insertados.length > 0 && (
-            <div className="flex flex-col gap-1 rounded-sm border border-line bg-surface-muted px-3 py-2">
-              <p className="text-sm font-medium">
-                {estado.insertados.length} código(s) nuevo(s) agregados al catálogo
-              </p>
-              <p className="text-sm text-ink-muted">
-                Estaban en Relbase y faltaban acá. Ya se pueden usar en los pedidos.
-              </p>
-              <p className="font-mono text-xs text-ink-muted">{estado.insertados.join(", ")}</p>
-            </div>
-          )}
+          <CambiosSincronizacion
+            insertados={estado.insertados}
+            bloqueados={estado.estado.bloqueados}
+            reactivados={estado.estado.reactivados}
+          />
 
-          {estado.cambiados.length > 0 && (
-            <div className="flex flex-col gap-2 rounded-sm bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
-              <p className="font-medium">
-                {estado.cambiados.length} código(s) del catálogo cambiaron en Relbase
-              </p>
-              <p>
-                Alguien le cambió el código al producto en Relbase. Las guías con el código de la
-                izquierda salen con el producto de la derecha: revisa que sea el mismo. Si no lo es,
-                desactiva el código del catálogo.
-              </p>
-              <ul className="flex flex-col gap-1">
-                {estado.cambiados.map((c) => (
-                  <li key={c.sku} className="flex flex-wrap items-center justify-between gap-2 text-ink">
-                    <span>
-                      <span className="font-mono text-xs">{c.sku}</span> {c.descripcion ?? ""}{" "}
-                      <span className="text-ink-muted">→</span>{" "}
-                      <span className="font-mono text-xs">{c.codigoRelbase ?? "(sin código)"}</span>{" "}
-                      {c.nombreRelbase ?? ""}
-                    </span>
-                    {desactivados[c.sku] ? (
-                      <span className="text-xs text-ink-muted">{desactivados[c.sku]}</span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => desactivar(c.sku)}
-                        className="rounded-sm border border-advertencia px-2 py-0.5 text-xs font-medium text-advertencia hover:bg-advertencia hover:text-white"
-                      >
-                        Desactivar
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
           <div className="overflow-x-auto rounded-sm border border-line">
             <table className="w-full border-collapse text-sm">
               <thead>
