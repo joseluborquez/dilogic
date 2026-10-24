@@ -3,16 +3,28 @@ import { requerirAdmin } from "@/lib/auth/sesion";
 import { listarBodegas, listarEmpresas, obtenerValoresPorDefecto } from "@/lib/empresas/consultar";
 import { NuevaEmpresaForm } from "@/components/empresas/NuevaEmpresaForm";
 import { FilaEmpresa } from "@/components/empresas/FilaEmpresa";
+import { ConexionRelbase } from "@/components/empresas/ConexionRelbase";
+import { obtenerEstadoConexion } from "@/lib/relbase/oauth";
 
 export const dynamic = "force-dynamic";
 
-export default async function EmpresasPage() {
-  await requerirAdmin();
+function primerValor(valor: string | string[] | undefined): string | undefined {
+  return Array.isArray(valor) ? valor[0] : valor;
+}
 
-  const [empresas, valoresPorDefecto, bodegas] = await Promise.all([
+export default async function EmpresasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  await requerirAdmin();
+  const params = await searchParams;
+
+  const [empresas, valoresPorDefecto, bodegas, conexion] = await Promise.all([
     listarEmpresas(),
     obtenerValoresPorDefecto(),
     listarBodegas(),
+    obtenerEstadoConexion(),
   ]);
 
   return (
@@ -28,6 +40,12 @@ export default async function EmpresasPage() {
         </div>
         <BotonVolver href="/nueva-corrida">Nueva corrida</BotonVolver>
       </header>
+
+      <ConexionRelbase
+        conexion={conexion}
+        resultado={primerValor(params.relbase)}
+        motivo={primerValor(params.motivo)}
+      />
 
       <NuevaEmpresaForm valoresPorDefecto={valoresPorDefecto} bodegas={bodegas} />
 

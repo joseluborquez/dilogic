@@ -42,6 +42,25 @@ export type CredencialRelbase = {
   updated_at: string;
 };
 
+export type EstadoConexionRelbase = "conectada" | "revocada";
+
+// Conexion OAuth2 con Relbase v2 (0013). Fila unica; tokens cifrados.
+export type ConexionRelbase = {
+  id: boolean;
+  access_token: string;
+  refresh_token: string;
+  access_token_expira_en: string;
+  scope: string;
+  estado: EstadoConexionRelbase;
+  ultimo_error: string | null;
+  conectado_por: string | null;
+  conectado_en: string;
+  renovado_en: string | null;
+  renovacion_bloqueada_hasta: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProductoCatalogo = {
   id: string;
   empresa_id: string;
@@ -134,6 +153,12 @@ export interface Database {
         Update: Partial<CredencialRelbase>;
         Relationships: [];
       };
+      relbase_conexion: {
+        Row: ConexionRelbase;
+        Insert: Partial<ConexionRelbase>;
+        Update: Partial<ConexionRelbase>;
+        Relationships: [];
+      };
       productos_catalogo: {
         Row: ProductoCatalogo;
         Insert: Partial<ProductoCatalogo>;
@@ -154,7 +179,12 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      tomar_renovacion_relbase: {
+        Args: { p_segundos?: number };
+        Returns: boolean;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
