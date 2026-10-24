@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import { generarGuiasAction, type EstadoGeneracion } from "@/app/nueva-corrida/actions-generar";
 import type { FilaValidada } from "@/lib/catalogo/validar";
 import { descargarZipGuias } from "@/components/historial/descargar-zip";
+import { armarGuias } from "@/lib/guias/armar";
 
 const ESTADO_INICIAL: EstadoGeneracion = { status: "inicial" };
 
@@ -24,6 +25,7 @@ export function GenerarGuiasForm({
 }: Props) {
   const [estado, formAction, pending] = useActionState(generarGuiasAction, ESTADO_INICIAL);
   const [contacto, setContacto] = useState("");
+  const [agrupar, setAgrupar] = useState(false);
   const [descargando, setDescargando] = useState(false);
   const [avisoDescarga, setAvisoDescarga] = useState<string | null>(null);
 
@@ -56,6 +58,12 @@ export function GenerarGuiasForm({
   const centrosDetectados = [...new Set(filas.map((f) => f.centro).filter((c): c is string => !!c))];
   const tieneCentros = centrosDetectados.length > 0;
 
+  // Mismo reparto que hara el servidor (lib/guias/armar.ts): lo anunciado es
+  // lo que se emite.
+  const guiasSeparadas = armarGuias(filas, contacto || "contacto", false).length;
+  const guiasAgrupadas = armarGuias(filas, contacto || "contacto", true).length;
+  const ahorro = guiasSeparadas - guiasAgrupadas;
+
   // Solo el pedido: el producto de Relbase, el precio y la categoria los
   // resuelve el servidor contra el catalogo (son el contenido de un DTE, no
   // pueden depender de lo que viaje por el navegador).
@@ -74,10 +82,36 @@ export function GenerarGuiasForm({
           <input type="hidden" name="nombreArchivo" value={nombreArchivo} />
           <input type="hidden" name="filas" value={JSON.stringify(filasParaGenerar)} />
           <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+          <input type="hidden" name="agrupar" value={agrupar ? "1" : "0"} />
+
+          <div className="flex w-full flex-col gap-2 rounded-sm border border-line bg-surface-muted px-3 py-2 text-sm">
+            <label className="flex cursor-pointer items-start gap-2">
+              <input
+                type="checkbox"
+                checked={agrupar}
+                onChange={(e) => setAgrupar(e.target.checked)}
+                disabled={ahorro === 0}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="font-medium">Agrupar en la menor cantidad de guías</span>
+                <span className="block text-ink-muted">
+                  {ahorro > 0
+                    ? `Junta las categorías (abarrotes, congelados, frutas y verduras…) de cada centro: ${guiasAgrupadas} guía(s) en vez de ${guiasSeparadas}. Cada guía sigue teniendo como máximo 60 productos.`
+                    : "Este pedido ya sale en la menor cantidad de guías posible."}
+                </span>
+              </span>
+            </label>
+            <p>
+              Se generarán{" "}
+              <span className="font-semibold">{agrupar ? guiasAgrupadas : guiasSeparadas} guía(s)</span>
+              {agrupar ? ", juntando categorías por centro." : ", una por centro y categoría."}
+            </p>
+          </div>
 
           {tieneCentros ? (
             <p className="text-sm text-ink-muted">
-              Se generara una guia por centro detectado en el archivo:{" "}
+              Centros detectados en el archivo:{" "}
               <span className="font-medium text-ink">{centrosDetectados.join(", ")}</span>
             </p>
           ) : (
