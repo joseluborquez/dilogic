@@ -2,17 +2,9 @@
 
 import { createHash } from "node:crypto";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
-import { decryptToken } from "@/lib/crypto/tokens";
-import {
-  crearGuiaDespacho,
-  emisionBloqueadaEnV2,
-  obtenerPdfUrlDte,
-  RelbaseApiError,
-} from "@/lib/relbase/client";
-import {
-  TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
-  type RelbaseCredenciales,
-} from "@/lib/relbase/types";
+import { crearGuiaDespacho, obtenerPdfUrlDte, RelbaseApiError } from "@/lib/relbase/client";
+import { obtenerEstadoConexion } from "@/lib/relbase/oauth";
+import { TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA } from "@/lib/relbase/types";
 import { guardarPdfGuia } from "@/lib/storage/guias-pdf";
 import { obtenerCatalogoEmpresa } from "@/lib/catalogo/validar";
 import { traerTodasLasFilas } from "@/lib/supabase/paginar";
@@ -283,13 +275,16 @@ export async function generarGuiasAction(
     };
   }
 
-  // Antes de crear la corrida: un bloqueo a mitad de camino dejaria filas en
-  // error en el historial por algo que no es culpa del pedido.
-  if (emisionBloqueadaEnV2()) {
+  // Antes de crear la corrida: sin conexion cada guia fallaria por separado y
+  // dejaria filas en error en el historial por algo que no es culpa del pedido.
+  const conexion = await obtenerEstadoConexion();
+  if (conexion.estado !== "conectada") {
     return {
       status: "error",
       mensaje:
-        "La generación de guías está en pausa mientras se completa el cambio a la nueva API de Relbase.",
+        conexion.estado === "revocada"
+          ? "Relbase cerró la conexión. Un administrador debe reconectarla en Empresas antes de generar."
+          : "Relbase no está conectado. Un administrador debe conectarlo en Empresas antes de generar.",
     };
   }
 
@@ -315,27 +310,12 @@ export async function generarGuiasAction(
     };
   }
 
-  const { data: cred, error: errCred } = await supabase
-    .from("credenciales_relbase")
-    .select("token_empresa, token_usuario_integrador")
-    .eq("empresa_id", empresa.id)
-    .single();
-
-  if (errCred || !cred) {
-    return { status: "error", mensaje: "No hay credenciales de Relbase para esta empresa." };
-  }
-
   // Ya confirmada la empresa, se resuelve el pedido contra su catalogo.
   const resuelto = await resolverContraCatalogo(empresaCodigo, pedidas);
   if (!resuelto.ok) {
     return { status: "error", mensaje: resuelto.mensaje };
   }
   const filas = resuelto.filas;
-
-  const credenciales: RelbaseCredenciales = {
-    tokenEmpresa: decryptToken(cred.token_empresa),
-    tokenUsuarioIntegrador: decryptToken(cred.token_usuario_integrador),
-  };
 
   const { data: corrida, error: errCorrida } = await supabase
     .from("corridas")
@@ -418,7 +398,6 @@ export async function generarGuiasAction(
       for (const [indiceLote, lote] of lotes.entries()) {
         try {
           const respuesta = await crearGuiaDespacho(
-            credenciales,
             {
               type_document: 52,
               start_date: fecha,
@@ -451,7 +430,6 @@ export async function generarGuiasAction(
           try {
             const quedaTiempo = Date.now() - inicioCorrida < PRESUPUESTO_ESPERA_PDF_MS;
             const pdfUrl = await obtenerPdfUrlDte(
-              credenciales,
               respuesta.id,
               quedaTiempo ? {} : { intentos: 1 }
             );

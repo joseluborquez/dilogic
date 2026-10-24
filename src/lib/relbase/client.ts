@@ -7,7 +7,6 @@ import {
   RelbaseApiError,
   type RelbaseCrearDtePayload,
   type RelbaseCrearDteResponse,
-  type RelbaseCredenciales,
   type RelbaseDteDetalle,
   type RelbaseProducto,
   type RelbaseProductosPage,
@@ -17,51 +16,19 @@ import {
 } from "./types";
 
 /**
- * v1 esta por caducar. RELBASE_API_VERSION=v2 cambia todas las llamadas a la
- * API v2 (OAuth2, ver token.ts); sin la variable, o con "v1", sigue todo como
- * antes. Sirve de interruptor para volver atras sin desplegar codigo.
- *
- * En v2 el parametro `credenciales` de cada funcion se ignora: la autorizacion
- * sale de la conexion OAuth guardada en relbase_conexion.
+ * Cliente de la API v2 de Relbase. La autorizacion sale de la conexion OAuth2
+ * guardada en relbase_conexion (ver token.ts y oauth.ts): un admin la conecta
+ * una vez desde Empresas y la app renueva el token sola.
  */
-export type VersionRelbase = "v1" | "v2";
+const BASE_URL = "https://api.relbase.cl/api/v2";
 
-export function versionRelbase(): VersionRelbase {
-  return process.env.RELBASE_API_VERSION === "v2" ? "v2" : "v1";
-}
-
-/**
- * Emitir guias con v2 queda bloqueado hasta la prueba controlada (Paso 6 de
- * la migracion): son DTEs ante el SII y no se emiten con una integracion sin
- * verificar. RELBASE_V2_EMISION_HABILITADA=true lo habilita.
- */
-export function emisionBloqueadaEnV2(): boolean {
-  return versionRelbase() === "v2" && process.env.RELBASE_V2_EMISION_HABILITADA !== "true";
-}
-
-const BASE_URL: Record<VersionRelbase, string> = {
-  v1: "https://api.relbase.cl/api/v1",
-  v2: "https://api.relbase.cl/api/v2",
-};
-
-// v1: 7 req/s. v2: 300 req/min por empresa (= 5/s); se deja holgura porque el
-// limite es por empresa y puede haber dos invocaciones a la vez.
-const queues: Record<VersionRelbase, ReturnType<typeof createThrottledQueue>> = {
-  v1: createThrottledQueue(7),
-  v2: createThrottledQueue(4.5),
-};
+// 300 req/min por empresa (= 5/s); se deja holgura porque el limite es por
+// empresa y puede haber dos invocaciones a la vez.
+const queue = createThrottledQueue(4.5);
 
 // v2 sugiere Retry-After: 60 en los 429. Esperar eso dentro de una funcion
 // serverless arriesga el limite de ejecucion: se espera como mucho esto.
 const MAX_ESPERA_RETRY_AFTER_MS = 15_000;
-
-function authHeadersV1(credenciales: RelbaseCredenciales): HeadersInit {
-  return {
-    company: credenciales.tokenEmpresa,
-    authorization: credenciales.tokenUsuarioIntegrador,
-    "Content-Type": "application/json",
-  };
-}
 
 async function errorDesdeRespuesta(res: Response, path: string): Promise<RelbaseApiError> {
   const body = await res.json().catch(() => undefined);
@@ -73,16 +40,9 @@ async function errorDesdeRespuesta(res: Response, path: string): Promise<Relbase
   return error;
 }
 
-async function fetchV1(path: string, credenciales: RelbaseCredenciales, init: RequestInit) {
-  return fetch(`${BASE_URL.v1}${path}`, {
-    ...init,
-    headers: { ...authHeadersV1(credenciales), ...init.headers },
-  });
-}
-
-async function fetchV2(path: string, init: RequestInit) {
-  const enviar = (token: string) =>
-    fetch(`${BASE_URL.v2}${path}`, {
+async function enviar(path: string, init: RequestInit) {
+  const conToken = (token: string) =>
+    fetch(`${BASE_URL}${path}`, {
       ...init,
       headers: {
         authorization: `Bearer ${token}`,
@@ -94,70 +54,48 @@ async function fetchV2(path: string, init: RequestInit) {
     });
 
   const token = await obtenerAccessToken();
-  const res = await enviar(token);
+  const res = await conToken(token);
   if (res.status !== 401) return res;
   // Token rechazado aunque pareciera vigente (revocado o rotado por fuera):
   // se fuerza una renovacion y se reintenta una sola vez.
-  return enviar(await obtenerAccessToken(token));
+  return conToken(await obtenerAccessToken(token));
 }
 
 interface OpcionesRequest {
   /** Reemplaza la regla de reintentos por defecto (ver crearGuiaDespacho). */
-  esReintentable?: (err: RelbaseApiError, version: VersionRelbase) => boolean;
+  esReintentable?: (err: RelbaseApiError) => boolean;
 }
 
-function reintentablePorDefecto(err: RelbaseApiError, version: VersionRelbase): boolean {
-  // v1 señala el exceso de tasa con 403; v2 con 429, y en v2 el 403 es falta
-  // de permisos (scope), que no se arregla reintentando. Los 5xx se
-  // reintentan en ambas: antes un fallo transitorio del servidor abortaba la
-  // guia sin ningun reintento.
-  return (version === "v1" && err.status === 403) || err.status === 429 || err.status >= 500;
+function reintentablePorDefecto(err: RelbaseApiError): boolean {
+  // 429 es exceso de tasa. El 403 en v2 es falta de permisos (scope), que no
+  // se arregla reintentando. Los 5xx se reintentan: un fallo transitorio del
+  // servidor no deberia abortar una lectura.
+  return err.status === 429 || err.status >= 500;
 }
 
 async function request<T>(
   path: string,
-  credenciales: RelbaseCredenciales,
   init: RequestInit = {},
   { esReintentable = reintentablePorDefecto }: OpcionesRequest = {}
 ): Promise<T> {
-  const version = versionRelbase();
-  return queues[version].schedule(() =>
+  return queue.schedule(() =>
     withExponentialBackoff(
       async () => {
-        const res =
-          version === "v2" ? await fetchV2(path, init) : await fetchV1(path, credenciales, init);
+        const res = await enviar(path, init);
         if (!res.ok) throw await errorDesdeRespuesta(res, path);
         return res.json() as Promise<T>;
       },
       {
-        isRetryable: (err) => err instanceof RelbaseApiError && esReintentable(err, version),
+        isRetryable: (err) => err instanceof RelbaseApiError && esReintentable(err),
         delayMs: (err) => (err instanceof RelbaseApiError ? err.retryAfterMs : undefined),
       }
     )
   );
 }
 
-export async function listarProductosPagina(
-  credenciales: RelbaseCredenciales,
-  page: number
-): Promise<RelbaseProductosPage> {
-  return request<RelbaseProductosPage>(`/productos?page=${page}`, credenciales);
-}
-
-/** Trae todas las paginas (12 registros/pagina, confirmado PRD 6.2). */
-export async function listarTodosLosProductos(
-  credenciales: RelbaseCredenciales
-): Promise<RelbaseProducto[]> {
-  const productos: RelbaseProducto[] = [];
-  let page = 1;
-  let totalPages = 1;
-  do {
-    const pagina = await listarProductosPagina(credenciales, page);
-    productos.push(...pagina.data.products);
-    totalPages = pagina.meta.total_pages;
-    page += 1;
-  } while (page <= totalPages);
-  return productos;
+/** Una pagina del catalogo (12 registros/pagina, confirmado PRD 6.2). */
+export async function listarProductosPagina(page: number): Promise<RelbaseProductosPage> {
+  return request<RelbaseProductosPage>(`/productos?page=${page}`);
 }
 
 /**
@@ -166,22 +104,15 @@ export async function listarTodosLosProductos(
  * 09-jul-2026): la paginacion por `page` a veces salta productos que
  * `query=<codigo>` sigue encontrando.
  */
-export async function buscarProductoPorCodigo(
-  credenciales: RelbaseCredenciales,
-  codigo: string
-): Promise<RelbaseProducto | null> {
-  const productos = await buscarProductos(credenciales, codigo);
+export async function buscarProductoPorCodigo(codigo: string): Promise<RelbaseProducto | null> {
+  const productos = await buscarProductos(codigo);
   return productos.find((p) => p.code === codigo) ?? null;
 }
 
 /** GET /productos?query=: todo lo que Relbase considere parecido, no solo el exacto. */
-export async function buscarProductos(
-  credenciales: RelbaseCredenciales,
-  query: string
-): Promise<RelbaseProducto[]> {
+export async function buscarProductos(query: string): Promise<RelbaseProducto[]> {
   const pagina = await request<RelbaseProductosPage>(
-    `/productos?query=${encodeURIComponent(query)}`,
-    credenciales
+    `/productos?query=${encodeURIComponent(query)}`
   );
   return pagina.data.products;
 }
@@ -202,21 +133,12 @@ function extraerLista(json: unknown): RelbaseReferencia[] {
 }
 
 /** Solo lectura: clientes de Relbase, para elegir el destinatario de las guias. */
-export async function buscarClientesRelbase(
-  credenciales: RelbaseCredenciales,
-  query: string
-): Promise<RelbaseReferencia[]> {
-  const json = await request<unknown>(
-    `/clientes?query=${encodeURIComponent(query)}`,
-    credenciales
-  );
-  return extraerLista(json);
+export async function buscarClientesRelbase(query: string): Promise<RelbaseReferencia[]> {
+  return extraerLista(await request<unknown>(`/clientes?query=${encodeURIComponent(query)}`));
 }
 
-export async function listarBodegasRelbase(
-  credenciales: RelbaseCredenciales
-): Promise<RelbaseReferencia[]> {
-  return extraerLista(await request<unknown>("/bodegas", credenciales));
+export async function listarBodegasRelbase(): Promise<RelbaseReferencia[]> {
+  return extraerLista(await request<unknown>("/bodegas"));
 }
 
 function normalizar(texto: string): string {
@@ -224,7 +146,7 @@ function normalizar(texto: string): string {
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[̀-ͯ]/g, "");
 }
 
 function filtrarPorNombre(registros: RelbaseReferencia[], query: string): RelbaseReferencia[] {
@@ -237,12 +159,8 @@ function filtrarPorNombre(registros: RelbaseReferencia[], query: string): Relbas
  * GET /ciudades no filtra: devuelve las ~340 ciudades siempre (confirmado en
  * v2, 24-oct-2026, `?query=` se ignora). Se filtra aca por nombre.
  */
-export async function buscarCiudadesRelbase(
-  credenciales: RelbaseCredenciales,
-  query: string
-): Promise<RelbaseReferencia[]> {
-  const json = await request<unknown>("/ciudades", credenciales);
-  return filtrarPorNombre(extraerLista(json), query);
+export async function buscarCiudadesRelbase(query: string): Promise<RelbaseReferencia[]> {
+  return filtrarPorNombre(extraerLista(await request<unknown>("/ciudades")), query);
 }
 
 /**
@@ -251,21 +169,14 @@ export async function buscarCiudadesRelbase(
  * nombre.
  */
 export async function buscarComunasRelbase(
-  credenciales: RelbaseCredenciales,
   ciudadId: number,
   query: string
 ): Promise<RelbaseReferencia[]> {
-  const json = await request<unknown>(`/comunas?city_id=${ciudadId}`, credenciales);
-  return filtrarPorNombre(extraerLista(json), query);
+  return filtrarPorNombre(extraerLista(await request<unknown>(`/comunas?city_id=${ciudadId}`)), query);
 }
 
-export async function obtenerTiposTraslado(
-  credenciales: RelbaseCredenciales
-): Promise<RelbaseTipoTraslado[]> {
-  const res = await request<RelbaseTiposTrasladoResponse>(
-    "/dtes/guias/tipos_traslado",
-    credenciales
-  );
+export async function obtenerTiposTraslado(): Promise<RelbaseTipoTraslado[]> {
+  const res = await request<RelbaseTiposTrasladoResponse>("/dtes/guias/tipos_traslado");
   return res.data.type_transfers;
 }
 
@@ -274,37 +185,29 @@ export async function obtenerTiposTraslado(
  * se debe invocar tras confirmacion explicita del usuario (PRD seccion 5).
  */
 export async function crearGuiaDespacho(
-  credenciales: RelbaseCredenciales,
   payload: RelbaseCrearDtePayload,
   /**
-   * v2: clave estable por guia. Si Relbase la respeta en /dtes, repetir el
-   * mismo POST devuelve la guia ya emitida en vez de otra nueva. La spec no
-   * marca /dtes como idempotente, asi que no se confia en ella para reintentar.
+   * Clave estable por guia. Si Relbase la respeta en /dtes, repetir el mismo
+   * POST devuelve la guia ya emitida en vez de otra nueva. La spec no marca
+   * /dtes como idempotente, asi que no se confia en ella para reintentar.
    */
   idempotencyKey?: string
 ): Promise<RelbaseCrearDteResponse> {
-  if (emisionBloqueadaEnV2()) {
-    throw new Error("La emision de guias con Relbase v2 aun no esta habilitada.");
-  }
   // La respuesta viene envuelta en {data: {...}}, igual que el resto de la
   // API (confirmado 11-jul-2026: sin este unwrap, .folio/.id quedan
   // undefined aunque el documento se haya creado correctamente en Relbase).
   const res = await request<{ data: RelbaseCrearDteResponse }>(
     "/dtes",
-    credenciales,
     {
       method: "POST",
       body: JSON.stringify(payload),
-      ...(versionRelbase() === "v2" && idempotencyKey
-        ? { headers: { "Idempotency-Key": idempotencyKey } }
-        : {}),
+      ...(idempotencyKey ? { headers: { "Idempotency-Key": idempotencyKey } } : {}),
     },
     {
-      // En v2 solo se reintenta el 429, que garantiza que Relbase no proceso
-      // el request. Un 5xx no lo garantiza: la guia pudo quedar emitida antes
-      // del error y reintentar emitiria otra (un DTE no se deshace).
-      esReintentable: (err, version) =>
-        version === "v2" ? err.status === 429 : reintentablePorDefecto(err, version),
+      // Solo se reintenta el 429, que garantiza que Relbase no proceso el
+      // request. Un 5xx no lo garantiza: la guia pudo quedar emitida antes del
+      // error y reintentar emitiria otra (un DTE no se deshace).
+      esReintentable: (err) => err.status === 429,
     }
   );
   if (!res?.data?.id) {
@@ -318,11 +221,8 @@ export async function crearGuiaDespacho(
 }
 
 /** Solo lectura: trae el detalle de un DTE ya creado, incluida la URL (firmada, ~1h) del PDF. */
-export async function obtenerDte(
-  credenciales: RelbaseCredenciales,
-  id: number
-): Promise<RelbaseDteDetalle> {
-  const res = await request<{ data: RelbaseDteDetalle }>(`/dtes/${id}`, credenciales);
+export async function obtenerDte(id: number): Promise<RelbaseDteDetalle> {
+  const res = await request<{ data: RelbaseDteDetalle }>(`/dtes/${id}`);
   return res.data;
 }
 
@@ -345,13 +245,12 @@ export async function obtenerDte(
  * generada, y como se guarda el dte_id_relbase se puede recuperar despues.
  */
 export async function obtenerPdfUrlDte(
-  credenciales: RelbaseCredenciales,
   id: number,
   opciones: { intentos?: number; esperaMs?: number } = {}
 ): Promise<string | null> {
   const { intentos = 6, esperaMs = 1500 } = opciones;
   for (let intento = 0; intento < intentos; intento += 1) {
-    const detalle = await obtenerDte(credenciales, id);
+    const detalle = await obtenerDte(id);
     if (detalle.pdf_file?.url) return detalle.pdf_file.url;
     if (intento < intentos - 1) {
       await new Promise((resolve) => setTimeout(resolve, esperaMs));

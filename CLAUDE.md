@@ -10,11 +10,12 @@ This app is **Dilogic — Automatización de Guías de Despacho**: Dilogic SPA (
 
 The full PRD lives one directory up: `../PRD_Dilogic_Automatizacion.md (1).pdf`. Read it before implementing any Relbase integration or data-model work — it is the source of truth for business rules. Key constraints from it that shape the architecture:
 
-- **Three client companies**, each with its own product catalog and its own Relbase `company` token: `CERQ` (Cermaq), `MTX` (Multiexport), `YDR` (Yadran). Codes/names to seed `productos_catalogo` come from `../CODIGOS DILOGIC.xlsx` (one sheet per company, clean sequential SKUs, no duplicates — treat as source of truth). `../SOLICITUD CERMAQ.xlsx` is only a sample of a raw customer order file, useful for shaping the upload parser — it is *not* a clean catalog (the same SKU maps to different products across its own sheets).
-- **Validation must never write to Relbase.** Only `GET` calls (e.g. `/api/v1/productos`) are allowed during the preview/validation step. Guide creation (`POST /api/v1/dtes`, `type_document: 52`) only happens after an explicit user confirmation — these are SII electronic tax documents and cannot be created "by accident."
-- **Products are matched by Relbase's numeric `product_id`, not by the SKU Hugo uses.** Maintain a `sku -> product_id` mapping per company, synced via `GET /api/v1/productos` (paginated, 12/page).
-- **Rate limit: 7 req/s** on the Relbase v1 API. Any batch generation must throttle and use backoff on 403. Because Vercel serverless functions have execution time limits, generate guides in small batches driven by repeated client calls (not one long-running request), persisting progress after each row so retries never re-create an already-folioed guide.
-- **Relbase credentials (`token_empresa`, `token_usuario_integrador`) belong in the database** (`credenciales_relbase` table, encrypted) or environment variables — never hardcoded, never in the frontend bundle, never committed. Adding a new client company must be possible without a code change.
+- **Three client companies**, each with its own product catalog: `CERQ` (Cermaq), `MTX` (Multiexport), `YDR` (Yadran). All of them are served from Dilogic's single Relbase account. Codes/names to seed `productos_catalogo` come from `../CODIGOS DILOGIC.xlsx` (one sheet per company, clean sequential SKUs, no duplicates — treat as source of truth). `../SOLICITUD CERMAQ.xlsx` is only a sample of a raw customer order file, useful for shaping the upload parser — it is *not* a clean catalog (the same SKU maps to different products across its own sheets).
+- **Validation must never write to Relbase.** Only `GET` calls (e.g. `/api/v2/productos`) are allowed during the preview/validation step. Guide creation (`POST /api/v2/dtes`, `type_document: 52`) only happens after an explicit user confirmation — these are SII electronic tax documents and cannot be created "by accident."
+- **Products are matched by Relbase's numeric `product_id`, not by the SKU Hugo uses.** Maintain a `sku -> product_id` mapping per company, synced via `GET /api/v2/productos` (paginated, 12/page).
+- **Relbase API v2 only** (v1 was retired in Oct 2026). Auth is OAuth2 authorization_code + PKCE: an admin connects once from Empresas (`/api/relbase/oauth/*`), and `src/lib/relbase/token.ts` hands out access tokens (15 min). The refresh token **rotates on every use**, so never refresh outside `obtenerAccessToken()`: a second concurrent refresh revokes the whole connection. Scripts must import the app's client (`npm run script scripts/<name>.mts`) for the same reason.
+- **Rate limit: 300 req/min per company** (client throttles to 4.5 req/s). Retry 429 honouring `Retry-After`; in v2 a 403 means a missing scope, not rate limiting. Never retry a 5xx on `POST /dtes`: the guide may already exist. Because Vercel serverless functions have execution time limits, generate guides in small batches driven by repeated client calls (not one long-running request), persisting progress after each row so retries never re-create an already-folioed guide.
+- **Relbase OAuth tokens live in the database** (`relbase_conexion`, single row, encrypted with `CREDENTIALS_ENCRYPTION_KEY`, which must match between local and Vercel). The OAuth client id/secret are environment variables — never hardcoded, never in the frontend bundle, never committed. Adding a new client company must be possible without a code change.
 - Interface language is Spanish; the primary user (Hugo) is non-technical — prioritize clarity over advanced functionality.
 
 ## Commands
@@ -24,6 +25,7 @@ npm run dev      # start dev server (Turbopack) at localhost:3000
 npm run build    # production build
 npm run start    # run the production build
 npm run lint     # eslint (flat config: eslint-config-next core-web-vitals + typescript)
+npm run script scripts/test-relbase-connection.mts   # run a maintenance script (tsx, loads .env.local)
 ```
 
 No test runner is configured yet.
@@ -32,7 +34,7 @@ No test runner is configured yet.
 
 - **Next.js 16** (App Router, Turbopack), **React 19**, **TypeScript** (strict), **Tailwind CSS v4**. Source lives under `src/app`; import alias `@/*` → `src/*`.
 - ⚠️ Next.js 16 postdates most training data — its APIs/conventions may differ from what you expect. Check `node_modules/next/dist/docs/` before writing framework-specific code (routing, data fetching, config), per `AGENTS.md`.
-- No backend/data layer exists yet. Per the PRD, the intended stack is **Supabase (Postgres)** for `empresas`, `credenciales_relbase`, `productos_catalogo`, `corridas`, `guias_generadas`, with all Relbase calls made server-side (Next.js route handlers / server actions), and **Vercel** for hosting — deploy must fit within Supabase/Vercel free-tier limits.
+- No backend/data layer exists yet. Per the PRD, the intended stack is **Supabase (Postgres)** for `empresas`, `relbase_conexion`, `productos_catalogo`, `corridas`, `guias_generadas`, with all Relbase calls made server-side (Next.js route handlers / server actions), and **Vercel** for hosting — deploy must fit within Supabase/Vercel free-tier limits.
 
 ## Skills
 

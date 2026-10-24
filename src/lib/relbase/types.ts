@@ -1,8 +1,3 @@
-export interface RelbaseCredenciales {
-  tokenEmpresa: string;
-  tokenUsuarioIntegrador: string;
-}
-
 export interface RelbaseProducto {
   id: number;
   name: string;
@@ -45,7 +40,7 @@ export interface RelbaseCrearDtePayload {
   customer_id: number;
   ware_house_id: number;
   type_transfer: number; // confirmado: 6 = "Otros traslados no venta" (PRD 6.3)
-  // Direccion PRINCIPAL del documento (schema oficial: api.relbase.cl/api/v1/docs.json,
+  // Direccion PRINCIPAL del documento (schema oficial: api.relbase.cl/api/v1/docs.json, igual en v2,
   // confirmado 11-jul-2026 contra un DTE real donde estos 3 campos vienen
   // poblados). Es la que valida el mensaje de error "Address Debe ingresar
   // direccion". No usar ademas dispatch_address/dispatch_city_id/

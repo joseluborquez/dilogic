@@ -62,7 +62,7 @@ export function NuevaEmpresaForm({ valoresPorDefecto, bodegas }: Props) {
         <div>
           <h2 className="font-display text-lg font-semibold">Nueva empresa</h2>
           <p className="mt-1 text-sm text-ink-muted">
-            Usa las mismas credenciales de Relbase que las demás. Lo único propio de cada empresa es
+            Usa la misma conexión con Relbase que las demás. Lo único propio de cada empresa es
             a quién se le despacha y su lista de códigos.
           </p>
         </div>

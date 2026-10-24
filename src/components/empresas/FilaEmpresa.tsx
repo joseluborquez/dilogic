@@ -19,7 +19,6 @@ export function FilaEmpresa({ empresa }: { empresa: EmpresaDetalle }) {
   const listaParaGenerar =
     empresa.relbaseCustomerId != null &&
     empresa.relbaseWareHouseId != null &&
-    empresa.tieneCredenciales &&
     empresa.totalSkus > 0 &&
     empresa.skusSinProductId === 0;
 

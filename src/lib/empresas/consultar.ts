@@ -1,7 +1,6 @@
 import "server-only";
 
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
-import type { VersionApi } from "@/lib/supabase/types";
 
 export interface EmpresaOpcion {
   codigo: string;
@@ -16,7 +15,6 @@ export interface EmpresaDetalle extends EmpresaOpcion {
   dispatchCityId: number | null;
   dispatchCommuneId: number | null;
   relbaseWareHouseId: number | null;
-  tieneCredenciales: boolean;
   totalSkus: number;
   skusSinProductId: number;
 }
@@ -44,12 +42,6 @@ export async function listarEmpresas(): Promise<EmpresaDetalle[]> {
     )
     .order("nombre");
 
-  const { data: credenciales } = await supabase
-    .from("credenciales_relbase")
-    .select("empresa_id");
-
-  const conCredenciales = new Set((credenciales ?? []).map((c) => c.empresa_id));
-
   return Promise.all(
     (empresas ?? []).map(async (e) => {
       // Conteos con head: no traen filas, solo el total.
@@ -75,7 +67,6 @@ export async function listarEmpresas(): Promise<EmpresaDetalle[]> {
         dispatchCityId: e.dispatch_city_id,
         dispatchCommuneId: e.dispatch_commune_id,
         relbaseWareHouseId: e.relbase_ware_house_id,
-        tieneCredenciales: conCredenciales.has(e.id),
         totalSkus: total ?? 0,
         skusSinProductId: sinId ?? 0,
       };
@@ -110,41 +101,18 @@ export async function obtenerValoresPorDefecto(): Promise<{
 }
 
 /**
- * Bodegas de Relbase para el selector. Si la consulta falla (sin credenciales,
+ * Bodegas de Relbase para el selector. Si la consulta falla (sin conexion,
  * Relbase caido) se devuelve vacio: el formulario cae al valor por defecto en
  * vez de quedar inutilizable.
  */
 export async function listarBodegas(): Promise<{ id: number; etiqueta: string }[]> {
   try {
-    const { obtenerCredencialesCompartidas } = await import("@/lib/relbase/credenciales");
     const { listarBodegasRelbase } = await import("@/lib/relbase/client");
     const { aOpcion } = await import("./referencias");
 
-    const credenciales = await obtenerCredencialesCompartidas();
-    const bodegas = await listarBodegasRelbase(credenciales);
+    const bodegas = await listarBodegasRelbase();
     return bodegas.map(aOpcion).map((b) => ({ id: b.id, etiqueta: b.etiqueta }));
   } catch {
     return [];
   }
-}
-
-/**
- * Credenciales de Relbase de cualquier empresa ya configurada, tal como estan
- * guardadas (cifradas). Todas las empresas comparten las credenciales de
- * Dilogic, asi que una empresa nueva copia el mismo par: se copia el texto
- * cifrado sin descifrarlo, porque la clave es la misma.
- */
-export async function obtenerCredencialesCifradasExistentes(): Promise<{
-  token_empresa: string;
-  token_usuario_integrador: string;
-  version_api: VersionApi;
-} | null> {
-  const supabase = getSupabaseServiceClient();
-  const { data } = await supabase
-    .from("credenciales_relbase")
-    .select("token_empresa, token_usuario_integrador, version_api")
-    .limit(1)
-    .maybeSingle();
-
-  return data ?? null;
 }

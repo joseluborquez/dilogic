@@ -10,16 +10,14 @@
 //      codigo este escrito distinto (espacios, mayusculas, guiones, ceros a la
 //      izquierda)?
 //
-// Usa el mismo cliente de Relbase que la app (v1 o v2 segun
-// RELBASE_API_VERSION): en v2 comparte el token OAuth y su candado de
-// renovacion, asi que correrlo no corta la conexion de produccion.
+// Usa el mismo cliente de Relbase que la app: comparte el token OAuth y su
+// candado de renovacion, asi que correrlo no corta la conexion de produccion.
 //
 // Uso:
 //   npm run script scripts/diagnostico-sku.mts MTX_AB_234 MTX_CC_165
 //   npm run script scripts/diagnostico-sku.mts MTX_AB_234 --rapido   (omite el barrido)
 
-import { buscarProductos, listarProductosPagina, versionRelbase } from "@/lib/relbase/client";
-import { obtenerCredencialesCompartidas } from "@/lib/relbase/credenciales";
+import { buscarProductos, listarProductosPagina } from "@/lib/relbase/client";
 import type { RelbaseProducto } from "@/lib/relbase/types";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 
@@ -59,9 +57,7 @@ if (skus.length === 0) {
   process.exit(1);
 }
 
-console.log(`Relbase API ${versionRelbase()}`);
 const supabase = getSupabaseServiceClient();
-const credenciales = await obtenerCredencialesCompartidas();
 
 const { data: empresas, error: errEmpresas } = await supabase
   .from("empresas")
@@ -97,7 +93,7 @@ for (const sku of skus) {
 
   console.log("\n[2] GET /productos?query=<sku>  (lo que usa la sincronizacion)");
   try {
-    const productos = await buscarProductos(credenciales, sku);
+    const productos = await buscarProductos(sku);
     if (productos.length === 0) {
       console.log("    Relbase no devuelve NINGUN producto para esa busqueda.");
     }
@@ -119,7 +115,7 @@ if (!rapido) {
   let page = 1;
   let totalPages = 1;
   do {
-    const pagina = await listarProductosPagina(credenciales, page);
+    const pagina = await listarProductosPagina(page);
     totalPages = pagina.meta.total_pages;
     todos.push(...pagina.data.products);
     if (page % 20 === 0) console.log(`  pagina ${page}/${totalPages}`);

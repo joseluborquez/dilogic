@@ -3,12 +3,10 @@ import "server-only";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { traerTodasLasFilas } from "@/lib/supabase/paginar";
 import { enLotes } from "@/lib/util/lotes";
-import { decryptToken } from "@/lib/crypto/tokens";
 import {
   buscarProductoPorCodigo,
   listarProductosPagina,
 } from "@/lib/relbase/client";
-import type { RelbaseCredenciales } from "@/lib/relbase/types";
 
 export interface ResumenEmpresa {
   codigoInterno: string;
@@ -52,38 +50,6 @@ function empresaYFamiliaDeSku(
 }
 
 /**
- * Todas las empresas comparten las mismas credenciales Relbase (confirmado
- * 09-jul-2026), asi que basta con las de la primera empresa activa para
- * traer el catalogo completo.
- */
-async function obtenerCredencialesCompartidas(): Promise<RelbaseCredenciales> {
-  const supabase = getSupabaseServiceClient();
-
-  const { data: empresas, error: errEmpresas } = await supabase
-    .from("empresas")
-    .select("id")
-    .eq("activo", true)
-    .limit(1);
-  if (errEmpresas || !empresas || empresas.length === 0) {
-    throw new Error("No hay empresas activas configuradas.");
-  }
-
-  const { data: cred, error: errCred } = await supabase
-    .from("credenciales_relbase")
-    .select("token_empresa, token_usuario_integrador")
-    .eq("empresa_id", empresas[0].id)
-    .single();
-  if (errCred || !cred) {
-    throw new Error("No hay credenciales de Relbase configuradas.");
-  }
-
-  return {
-    tokenEmpresa: decryptToken(cred.token_empresa),
-    tokenUsuarioIntegrador: decryptToken(cred.token_usuario_integrador),
-  };
-}
-
-/**
  * Sincroniza un lote de paginas de Relbase (solo lectura hacia Relbase) y
  * actualiza los matches encontrados en productos_catalogo. Disenado para
  * ser llamado repetidamente desde el cliente (paginas [startPage,
@@ -95,7 +61,6 @@ export async function sincronizarLotePaginas(
   startPage: number,
   cantidadPaginas: number
 ): Promise<ResultadoLote> {
-  const credenciales = await obtenerCredencialesCompartidas();
   const supabase = getSupabaseServiceClient();
 
   const porCodigo = new Map<
@@ -105,7 +70,7 @@ export async function sincronizarLotePaginas(
   let totalPages = startPage; // se corrige con la respuesta de la primera pagina del lote
 
   for (let page = startPage; page < startPage + cantidadPaginas; page++) {
-    const pagina = await listarProductosPagina(credenciales, page);
+    const pagina = await listarProductosPagina(page);
     totalPages = pagina.meta.total_pages;
     if (page > totalPages) break;
     for (const p of pagina.data.products) {
@@ -261,7 +226,6 @@ const PENDIENTES_POR_LOTE = 40;
 export async function sincronizarPendientesDirecto(
   desdeIndice = 0
 ): Promise<ResumenSincronizacion> {
-  const credenciales = await obtenerCredencialesCompartidas();
   const supabase = getSupabaseServiceClient();
 
   const { data: empresas, error: errEmpresas } = await supabase
@@ -298,7 +262,7 @@ export async function sincronizarPendientesDirecto(
   }
 
   for (const p of pendientes) {
-    const producto = await buscarProductoPorCodigo(credenciales, p.sku);
+    const producto = await buscarProductoPorCodigo(p.sku);
     const codigoEmpresa = codigoPorEmpresaId.get(p.empresa_id) ?? "?";
     if (producto) {
       await supabase

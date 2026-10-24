@@ -1,6 +1,6 @@
 /**
- * Limitador simple para respetar el rate limit de Relbase (v1: 7 req/seg,
- * PRD seccion 6.4; v2: 300 req/min). Encola llamadas y las espacía; vive dentro de una sola
+ * Limitador simple para respetar el rate limit de Relbase (v2: 300 req/min
+ * por empresa). Encola llamadas y las espacía; vive dentro de una sola
  * invocacion de route handler (no persiste entre requests), que es la razon
  * por la que la generacion masiva se hace en lotes chicos desde el cliente
  * en vez de un solo request largo.

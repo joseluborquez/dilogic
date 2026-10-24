@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
-import { obtenerCredencialesCompartidas } from "@/lib/relbase/credenciales";
 import {
   buscarCiudadesRelbase,
   buscarClientesRelbase,
@@ -10,7 +9,6 @@ import {
   RelbaseApiError,
 } from "@/lib/relbase/client";
 import { aOpcion, type OpcionReferencia } from "@/lib/empresas/referencias";
-import { obtenerCredencialesCifradasExistentes } from "@/lib/empresas/consultar";
 import { importarCatalogoDesdeExcel } from "@/lib/catalogo/importar";
 import { requerirAdmin } from "@/lib/auth/sesion";
 
@@ -30,8 +28,7 @@ export async function buscarClienteRelbaseAction(
   }
 
   try {
-    const credenciales = await obtenerCredencialesCompartidas();
-    const clientes = await buscarClientesRelbase(credenciales, texto);
+    const clientes = await buscarClientesRelbase(texto);
     if (clientes.length === 0) {
       return { ok: false, mensaje: "Relbase no encontró clientes con ese RUT o nombre." };
     }
@@ -70,11 +67,10 @@ export async function buscarReferenciaRelbaseAction(
   }
 
   try {
-    const credenciales = await obtenerCredencialesCompartidas();
     const registros =
       tipo === "ciudad"
-        ? await buscarCiudadesRelbase(credenciales, texto)
-        : await buscarComunasRelbase(credenciales, ciudadId!, texto);
+        ? await buscarCiudadesRelbase(texto)
+        : await buscarComunasRelbase(ciudadId!, texto);
 
     if (registros.length === 0) {
       return { ok: false, mensaje: `Relbase no encontró ninguna ${tipo} con ese nombre.` };
@@ -154,22 +150,6 @@ export async function crearEmpresaAction(
   }
 
   const advertencias: string[] = [];
-
-  // Las credenciales son las de Dilogic y las comparten todas las empresas: se
-  // copia el par ya cifrado (misma clave), sin descifrarlo ni pedirlo de nuevo.
-  const credenciales = await obtenerCredencialesCifradasExistentes();
-  if (credenciales) {
-    await supabase.from("credenciales_relbase").insert({
-      empresa_id: empresa.id,
-      token_empresa: credenciales.token_empresa,
-      token_usuario_integrador: credenciales.token_usuario_integrador,
-      version_api: credenciales.version_api,
-    });
-  } else {
-    advertencias.push(
-      "No había credenciales de Relbase que copiar: hay que cargarlas antes de generar guías."
-    );
-  }
 
   const archivo = formData.get("catalogo");
   if (archivo instanceof File && archivo.size > 0) {

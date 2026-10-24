@@ -17,7 +17,7 @@ function getKey(): Buffer {
 }
 
 /**
- * Cifra un token de Relbase antes de guardarlo en credenciales_relbase.
+ * Cifra un token OAuth de Relbase antes de guardarlo en relbase_conexion.
  * Formato de salida: "<iv>.<authTag>.<datos>" (cada parte en base64).
  */
 export function encryptToken(plaintext: string): string {

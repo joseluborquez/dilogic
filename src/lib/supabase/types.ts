@@ -1,8 +1,6 @@
 // Refleja supabase/migrations/0001_init.sql. Reemplazar por los tipos
 // generados con `supabase gen types typescript` en cuanto exista el proyecto.
 
-export type VersionApi = "v1" | "v2";
-
 export type EstadoCorrida =
   | "pendiente"
   | "validando"
@@ -30,16 +28,6 @@ export type Empresa = {
   dispatch_commune_id: number | null;
   relbase_ware_house_id: number | null;
   created_at: string;
-};
-
-export type CredencialRelbase = {
-  id: string;
-  empresa_id: string;
-  token_empresa: string;
-  token_usuario_integrador: string;
-  version_api: VersionApi;
-  created_at: string;
-  updated_at: string;
 };
 
 export type EstadoConexionRelbase = "conectada" | "revocada";
@@ -145,12 +133,6 @@ export interface Database {
         Row: Empresa;
         Insert: Partial<Empresa>;
         Update: Partial<Empresa>;
-        Relationships: [];
-      };
-      credenciales_relbase: {
-        Row: CredencialRelbase;
-        Insert: Partial<CredencialRelbase>;
-        Update: Partial<CredencialRelbase>;
         Relationships: [];
       };
       relbase_conexion: {
