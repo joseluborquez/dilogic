@@ -1,22 +1,33 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Inter, IBM_Plex_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const display = Space_Grotesk({
+// Fuentes incluidas en el repo (licencia SIL OFL, subconjunto latin bajado de
+// Google Fonts) en vez de next/font/google: esa variante las descarga en cada
+// build, y cuando Google no respondia a tiempo el despliegue en Vercel fallaba
+// entero (paso dos veces el 24-oct-2026).
+const display = localFont({
   variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  src: "./fonts/SpaceGrotesk-latin-500-700.woff2",
+  weight: "500 700",
+  display: "swap",
 });
 
-const body = Inter({
+const body = localFont({
   variable: "--font-body",
-  subsets: ["latin"],
+  src: "./fonts/Inter-latin-100-900.woff2",
+  weight: "100 900",
+  display: "swap",
 });
 
-const data = IBM_Plex_Mono({
+const data = localFont({
   variable: "--font-data",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  src: [
+    { path: "./fonts/IBMPlexMono-latin-400.woff2", weight: "400" },
+    { path: "./fonts/IBMPlexMono-latin-500.woff2", weight: "500" },
+    { path: "./fonts/IBMPlexMono-latin-600.woff2", weight: "600" },
+  ],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
