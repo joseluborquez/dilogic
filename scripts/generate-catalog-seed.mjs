@@ -69,7 +69,7 @@ async function main() {
 -- "../CODIGOS DILOGIC.xlsx" (fuente de verdad del catalogo, ver CLAUDE.md).
 -- product_id_relbase queda en null: se completa recien cuando exista el token
 -- de usuario integrador y se corra la sincronizacion contra
--- GET /api/v1/productos.
+-- GET /productos de Relbase.
 
 insert into empresas (nombre, codigo_interno)
 values

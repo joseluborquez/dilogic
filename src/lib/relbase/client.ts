@@ -170,11 +170,20 @@ export async function buscarProductoPorCodigo(
   credenciales: RelbaseCredenciales,
   codigo: string
 ): Promise<RelbaseProducto | null> {
+  const productos = await buscarProductos(credenciales, codigo);
+  return productos.find((p) => p.code === codigo) ?? null;
+}
+
+/** GET /productos?query=: todo lo que Relbase considere parecido, no solo el exacto. */
+export async function buscarProductos(
+  credenciales: RelbaseCredenciales,
+  query: string
+): Promise<RelbaseProducto[]> {
   const pagina = await request<RelbaseProductosPage>(
-    `/productos?query=${encodeURIComponent(codigo)}`,
+    `/productos?query=${encodeURIComponent(query)}`,
     credenciales
   );
-  return pagina.data.products.find((p) => p.code === codigo) ?? null;
+  return pagina.data.products;
 }
 
 /**
