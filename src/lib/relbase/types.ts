@@ -44,6 +44,10 @@ export interface RelbaseCrearDtePayload {
   // 2023): 1 = por cuenta del receptor del documento. Relbase lo exige en las
   // guias desde el 01-11-2026 (spec v2, campo type_dispatch).
   type_dispatch: number;
+  // Comentario del documento: Relbase lo imprime en el PDF. Se usa para que
+  // el tipo de despacho se lea en la guia impresa, que la plantilla de
+  // Relbase no muestra aunque viaje en el XML (<TipoDespacho>).
+  comment?: string;
   // Direccion PRINCIPAL del documento (schema oficial: api.relbase.cl/api/v1/docs.json, igual en v2,
   // confirmado 11-jul-2026 contra un DTE real donde estos 3 campos vienen
   // poblados). Es la que valida el mensaje de error "Address Debe ingresar
@@ -104,6 +108,9 @@ export const TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA = 6;
  * Definido por Dilogic el 24-oct-2026 para todas sus guias.
  */
 export const TYPE_DISPATCH_POR_CUENTA_DEL_RECEPTOR = 1;
+
+/** Texto que acompana a TYPE_DISPATCH_POR_CUENTA_DEL_RECEPTOR en el PDF. */
+export const COMENTARIO_TIPO_DESPACHO = "Tipo de despacho: Por cuenta del receptor del documento";
 
 export class RelbaseApiError extends Error {
   /** v2: espera sugerida por el header Retry-After de un 429 (acotada). */

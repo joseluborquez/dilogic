@@ -5,6 +5,7 @@ import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { crearGuiaDespacho, obtenerPdfUrlDte, RelbaseApiError } from "@/lib/relbase/client";
 import { obtenerEstadoConexion } from "@/lib/relbase/oauth";
 import {
+  COMENTARIO_TIPO_DESPACHO,
   TYPE_DISPATCH_POR_CUENTA_DEL_RECEPTOR,
   TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
 } from "@/lib/relbase/types";
@@ -413,6 +414,7 @@ export async function generarGuiasAction(
               ware_house_id: destino.wareHouseId,
               type_transfer: TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
               type_dispatch: TYPE_DISPATCH_POR_CUENTA_DEL_RECEPTOR,
+              comment: COMENTARIO_TIPO_DESPACHO,
               address: destino.address,
               city_id: destino.cityId,
               commune_id: destino.communeId,
