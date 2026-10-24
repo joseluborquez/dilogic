@@ -1,0 +1,294 @@
+"use client";
+
+import Link from "next/link";
+import { useActionState, useState } from "react";
+import {
+  emitirTraspasoAction,
+  revisarTraspasoAction,
+  type EstadoEmision,
+  type EstadoRevision,
+} from "@/app/traspaso/actions";
+import type { EmpresaOpcion } from "@/lib/empresas/consultar";
+import { descargarZipGuias } from "@/components/historial/descargar-zip";
+
+const REVISION_INICIAL: EstadoRevision = { status: "inicial" };
+const EMISION_INICIAL: EstadoEmision = { status: "inicial" };
+
+const pesos = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
+
+function nuevaClave(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random()}`;
+}
+
+export function TraspasoForm({
+  empresas,
+  empresaInicial,
+  centroInicial,
+}: {
+  empresas: EmpresaOpcion[];
+  empresaInicial: string;
+  centroInicial: string;
+}) {
+  const [revision, revisar, revisando] = useActionState(revisarTraspasoAction, REVISION_INICIAL);
+  const [emision, emitir, emitiendo] = useActionState(emitirTraspasoAction, EMISION_INICIAL);
+  const [empresa, setEmpresa] = useState(empresaInicial);
+  const [centro, setCentro] = useState(centroInicial);
+  // Huella de los archivos elegidos: la revision vale solo para esos archivos.
+  const [archivos, setArchivos] = useState("");
+  const [archivosRevisados, setArchivosRevisados] = useState<string | null>(null);
+  // Una clave por seleccion de archivos: reenviar el mismo traspaso no emite dos veces.
+  const [idempotencyKey, setIdempotencyKey] = useState(nuevaClave);
+  const [descargando, setDescargando] = useState(false);
+
+  const revisionVigente = revision.status === "ok" && archivosRevisados === archivos;
+  const conErrores = revision.status === "ok" && revision.facturas.some((f) => f.estado === "error");
+  const calculo = revision.status === "ok" ? revision.calculo : null;
+  const puedeEmitir = revisionVigente && !conErrores && !!calculo && centro.trim() !== "" && !emitiendo;
+  const emitido = emision.status === "listo" && emision.ok;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <form className="flex flex-col gap-5 rounded-sm border border-line bg-surface p-5">
+        <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor="facturas" className="text-xs tracking-wide text-ink-muted uppercase">
+            Facturas del proveedor (PDF)
+          </label>
+          <input
+            id="facturas"
+            name="facturas"
+            type="file"
+            accept="application/pdf,.pdf"
+            multiple
+            required
+            onChange={(e) => {
+              const lista = [...(e.target.files ?? [])];
+              setArchivos(lista.map((f) => `${f.name}:${f.size}`).join("|"));
+              setIdempotencyKey(nuevaClave());
+            }}
+            className="text-sm"
+          />
+          <p className="text-xs text-ink-muted">
+            Puedes elegir varias a la vez. Se leen completas y se comparan con la compra registrada
+            en Relbase antes de generar nada.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-4">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="empresa" className="text-xs tracking-wide text-ink-muted uppercase">
+              Empresa
+            </label>
+            <select
+              id="empresa"
+              name="empresa"
+              value={empresa}
+              onChange={(e) => setEmpresa(e.target.value)}
+              className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+            >
+              {empresas.map((e) => (
+                <option key={e.codigo} value={e.codigo}>
+                  {e.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="centro" className="text-xs tracking-wide text-ink-muted uppercase">
+              Centro / contacto
+            </label>
+            <input
+              id="centro"
+              name="centro"
+              value={centro}
+              onChange={(e) => setCentro(e.target.value)}
+              placeholder="Ej: PALVITAD"
+              className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            formAction={(datos) => {
+              setArchivosRevisados(archivos);
+              return revisar(datos);
+            }}
+            disabled={revisando || !archivos || emitido}
+            className="rounded-sm border border-teal px-5 py-2 font-display text-sm font-medium text-teal transition-colors hover:bg-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {revisando ? "Revisando…" : "Revisar facturas"}
+          </button>
+          {calculo && (
+            <button
+              formAction={emitir}
+              disabled={!puedeEmitir || emitido}
+              className="rounded-sm bg-teal px-5 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {emitiendo ? "Emitiendo…" : `Emitir ${calculo.guias.length} guía(s)`}
+            </button>
+          )}
+        </div>
+        {revision.status === "ok" && !revisionVigente && (
+          <p className="text-sm text-advertencia">Cambiaste los archivos: vuelve a revisarlos.</p>
+        )}
+      </form>
+
+      {revision.status === "error" && (
+        <p role="alert" className="rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
+          {revision.mensaje}
+        </p>
+      )}
+
+      {revision.status === "ok" && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-display text-base font-semibold">Facturas</h2>
+          <div className="overflow-x-auto rounded-sm border border-line">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-line bg-surface-muted text-left text-xs tracking-wide text-ink-muted uppercase">
+                  <th className="px-3 py-2 font-medium">Factura</th>
+                  <th className="px-3 py-2 font-medium">Fecha</th>
+                  <th className="px-3 py-2 text-right font-medium">Líneas</th>
+                  <th className="px-3 py-2 text-right font-medium">Neto</th>
+                  <th className="px-3 py-2 text-right font-medium">Total</th>
+                  <th className="px-3 py-2 font-medium">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {revision.facturas.map((f) => (
+                  <tr key={f.archivo} className="border-b border-line align-top last:border-0">
+                    <td className="px-3 py-2">
+                      <span className="font-mono">{f.folio || "—"}</span>
+                      <span className="block text-xs text-ink-muted">{f.archivo}</span>
+                    </td>
+                    <td className="px-3 py-2">{f.fecha ?? "—"}</td>
+                    <td className="px-3 py-2 text-right font-mono">{f.lineas}</td>
+                    <td className="px-3 py-2 text-right font-mono">{f.neto ? pesos(f.neto) : "—"}</td>
+                    <td className="px-3 py-2 text-right font-mono">{f.total ? pesos(f.total) : "—"}</td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={
+                          f.estado === "ok" ? "text-valido" : f.estado === "aviso" ? "text-advertencia" : "text-error"
+                        }
+                      >
+                        {f.estado === "ok" ? "Lista" : f.estado === "aviso" ? "Revisar" : "No se puede usar"}
+                      </span>
+                      {f.mensajes.map((m) => (
+                        <span key={m} className="block text-xs text-ink-muted">
+                          {m}
+                        </span>
+                      ))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {conErrores && (
+            <p className="text-sm text-error">
+              Hay facturas que no se pueden usar: quítalas de la selección y vuelve a revisar.
+            </p>
+          )}
+        </section>
+      )}
+
+      {calculo && revisionVigente && (
+        <section className="flex flex-col gap-3 rounded-sm border border-line bg-surface p-4">
+          <h2 className="font-display text-base font-semibold">Guías a emitir</h2>
+          <p className="text-sm">
+            {calculo.lineasFacturas} líneas de factura →{" "}
+            {calculo.guias.reduce((n, g) => n + g.lineas.length, 0)} productos (los repetidos se
+            suman) → <span className="font-semibold">{calculo.guias.length} guía(s)</span> con{" "}
+            <span className="font-mono">PRODUCTO GENERICO</span>, contacto{" "}
+            <span className="font-semibold">{centro.trim().toUpperCase() || "—"}</span>.
+          </p>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:max-w-md">
+            <dt className="text-ink-muted">Total facturas</dt>
+            <dd className="text-right font-mono">{pesos(calculo.totalFacturas)}</dd>
+            <dt className="text-ink-muted">Total guías</dt>
+            <dd className="text-right font-mono font-semibold">{pesos(calculo.totalGuias)}</dd>
+            <dt className="text-ink-muted">Neto facturas</dt>
+            <dd className="text-right font-mono">{pesos(calculo.netoFacturas)}</dd>
+            <dt className="text-ink-muted">Neto guías</dt>
+            <dd className="text-right font-mono">{pesos(calculo.netoGuias)}</dd>
+          </dl>
+          {calculo.netoGuias !== calculo.netoFacturas && (
+            <p className="text-xs text-ink-muted">
+              El neto de las guías es mayor porque las facturas traen impuestos específicos (carne,
+              harina, bebidas): se reparten en los precios para que el total sea el mismo.
+            </p>
+          )}
+          {calculo.guias.map((g, i) => (
+            <details key={i} className="rounded-sm border border-line">
+              <summary className="cursor-pointer px-3 py-2 text-sm">
+                Guía {i + 1}: {g.lineas.length} productos · neto {pesos(g.neto)} · total {pesos(g.total)}
+              </summary>
+              <table className="w-full border-collapse text-xs">
+                <tbody>
+                  {g.lineas.map((l) => (
+                    <tr key={l.descripcion} className="border-t border-line">
+                      <td className="px-3 py-1">{l.descripcion}</td>
+                      <td className="px-3 py-1 text-right font-mono">{l.cantidad.toLocaleString("es-CL")}</td>
+                      <td className="px-3 py-1 text-right font-mono">{pesos(l.neto)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
+          ))}
+        </section>
+      )}
+
+      {emision.status === "listo" && !emision.ok && (
+        <p role="alert" className="rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
+          {emision.mensaje}
+        </p>
+      )}
+
+      {emision.status === "listo" && emision.ok && (
+        <section className="flex flex-col gap-2">
+          <p className="font-display text-sm font-semibold">Resultado</p>
+          {emision.yaExistia && (
+            <p className="rounded-sm bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
+              Este traspaso ya se había emitido: estas son sus guías, no se emitieron nuevas.
+            </p>
+          )}
+          <ul className="flex flex-col gap-2">
+            {emision.guias.map((g, i) => (
+              <li
+                key={i}
+                className={`rounded-sm px-3 py-2 text-sm ${g.error ? "bg-error-bg text-error" : "bg-valido-bg text-valido"}`}
+              >
+                {g.error ? `Guía ${i + 1}: ${g.error}` : `Folio ${g.folio}${g.total ? ` · total ${pesos(g.total)}` : ""}`}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-line pt-3">
+            <button
+              type="button"
+              disabled={descargando}
+              onClick={async () => {
+                setDescargando(true);
+                try {
+                  await descargarZipGuias({ corridaId: emision.corridaId });
+                } finally {
+                  setDescargando(false);
+                }
+              }}
+              className="rounded-sm bg-teal px-4 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:opacity-50"
+            >
+              {descargando ? "Preparando…" : "Descargar las guías (ZIP)"}
+            </button>
+            <Link href="/historial" className="text-sm text-teal hover:underline">
+              Ver en historial →
+            </Link>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}

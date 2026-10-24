@@ -46,6 +46,11 @@ export default async function NuevaCorridaPage() {
               descripcion="Clientes y sus códigos"
             />
             <EnlaceSeccion
+              href="/traspaso"
+              titulo="Traspaso de costos"
+              descripcion="Facturas de proveedor a guías"
+            />
+            <EnlaceSeccion
               href="/usuarios"
               titulo="Usuarios"
               descripcion="Cuentas y lo que ha generado cada una"

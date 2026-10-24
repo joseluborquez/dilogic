@@ -84,6 +84,19 @@ export type SincronizacionCatalogo = {
   created_at: string;
 };
 
+export type TraspasoFactura = {
+  id: string;
+  proveedor_rut: string;
+  folio: string;
+  fecha_factura: string | null;
+  neto: number;
+  total: number;
+  empresa_id: string;
+  centro: string;
+  corrida_id: string | null;
+  created_at: string;
+};
+
 export type Corrida = {
   id: string;
   empresa_id: string;
@@ -170,6 +183,12 @@ export interface Database {
         Row: SincronizacionCatalogo;
         Insert: Partial<SincronizacionCatalogo>;
         Update: Partial<SincronizacionCatalogo>;
+        Relationships: [];
+      };
+      traspasos_factura: {
+        Row: TraspasoFactura;
+        Insert: Partial<TraspasoFactura>;
+        Update: Partial<TraspasoFactura>;
         Relationships: [];
       };
       corridas: {

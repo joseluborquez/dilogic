@@ -220,6 +220,49 @@ export async function crearGuiaDespacho(
   return res.data;
 }
 
+/** Factura de compra registrada en Relbase (llega del SII o por correo de intercambio). */
+export interface CompraRelbase {
+  id: number;
+  folio: number;
+  providerRut: string;
+  providerName: string;
+  fecha: string;
+  neto: number;
+  total: number;
+  /** false: Relbase solo tiene los totales (sin el XML del proveedor, sin productos). */
+  conDetalle: boolean;
+}
+
+/** Solo lectura: compras de un proveedor (por RUT), todas las paginas. */
+export async function listarComprasProveedor(rut: string): Promise<CompraRelbase[]> {
+  const cuerpo = rut.replace(/[^\dkK]/g, "").slice(0, -1);
+  const compras: CompraRelbase[] = [];
+  let pagina = 1;
+  let totalPaginas = 1;
+  do {
+    const json = await request<{ data: Record<string, unknown>; meta: { total_pages?: number } }>(
+      `/compras?query=${encodeURIComponent(cuerpo)}&page=${pagina}`
+    );
+    totalPaginas = json.meta?.total_pages ?? 1;
+    const lista = (Object.values(json.data ?? {}).find(Array.isArray) ?? []) as Record<string, unknown>[];
+    for (const c of lista) {
+      if (String(c.provider_rut ?? "").replace(/[^\dkK]/g, "").slice(0, -1) !== cuerpo) continue;
+      compras.push({
+        id: Number(c.id),
+        folio: Number(c.folio),
+        providerRut: String(c.provider_rut ?? ""),
+        providerName: String(c.provider_name ?? ""),
+        fecha: String(c.start_date ?? ""),
+        neto: Number(c.amount_neto ?? 0),
+        total: Number(c.amount_total ?? 0),
+        conDetalle: c.is_load_xml === true,
+      });
+    }
+    pagina += 1;
+  } while (pagina <= totalPaginas);
+  return compras;
+}
+
 /** Solo lectura: trae el detalle de un DTE ya creado, incluida la URL (firmada, ~1h) del PDF. */
 export async function obtenerDte(id: number): Promise<RelbaseDteDetalle> {
   const res = await request<{ data: RelbaseDteDetalle }>(`/dtes/${id}`);
