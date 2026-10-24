@@ -2,9 +2,9 @@ import Link from "next/link";
 import { IconoFlechaIzquierda } from "./iconos";
 
 /**
- * Enlace de vuelta con forma de boton. Mismo lenguaje que EnlaceSeccion
- * (contorno, no relleno) pero compacto, porque vive en la esquina del
- * encabezado y no es la accion principal de ninguna pantalla.
+ * Enlace de vuelta con forma de boton: contorno, no relleno, y compacto,
+ * porque vive en la esquina del encabezado y no es la accion principal de
+ * ninguna pantalla.
  */
 export function BotonVolver({ href, children }: { href: string; children: string }) {
   return (

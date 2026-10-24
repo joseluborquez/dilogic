@@ -1,5 +1,5 @@
 import { BotonVolver } from "@/components/ui/BotonVolver";
-import { requerirAdmin } from "@/lib/auth/sesion";
+import { requerirUsuario } from "@/lib/auth/sesion";
 import { listarBodegas, listarEmpresas, obtenerValoresPorDefecto } from "@/lib/empresas/consultar";
 import { NuevaEmpresaForm } from "@/components/empresas/NuevaEmpresaForm";
 import { FilaEmpresa } from "@/components/empresas/FilaEmpresa";
@@ -17,14 +17,18 @@ export default async function EmpresasPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  await requerirAdmin();
+  // Los operadores pueden crear empresas; editarlas, activarlas y la conexion
+  // con Relbase quedan para administradores.
+  const usuario = await requerirUsuario();
+  const esAdmin = usuario.rol === "admin";
   const params = await searchParams;
 
   const [empresas, valoresPorDefecto, bodegas, conexion] = await Promise.all([
     listarEmpresas(),
     obtenerValoresPorDefecto(),
     listarBodegas(),
-    obtenerEstadoConexion(),
+    // Ademas de mostrarse solo a admins, el estado de la conexion no se consulta para operadores.
+    esAdmin ? obtenerEstadoConexion() : Promise.resolve(null),
   ]);
 
   return (
@@ -41,17 +45,19 @@ export default async function EmpresasPage({
         <BotonVolver href="/nueva-corrida">Nueva corrida</BotonVolver>
       </header>
 
-      <ConexionRelbase
-        conexion={conexion}
-        resultado={primerValor(params.relbase)}
-        motivo={primerValor(params.motivo)}
-      />
+      {esAdmin && (
+        <ConexionRelbase
+          conexion={conexion!}
+          resultado={primerValor(params.relbase)}
+          motivo={primerValor(params.motivo)}
+        />
+      )}
 
       <NuevaEmpresaForm valoresPorDefecto={valoresPorDefecto} bodegas={bodegas} />
 
       <ul className="flex flex-col gap-3">
         {empresas.map((empresa) => (
-          <FilaEmpresa key={empresa.id} empresa={empresa} />
+          <FilaEmpresa key={empresa.id} empresa={empresa} puedeEditar={esAdmin} />
         ))}
       </ul>
 

@@ -1,13 +1,13 @@
 import { SincronizarCatalogoForm } from "@/components/catalogo/SincronizarCatalogoForm";
 import { BotonVolver } from "@/components/ui/BotonVolver";
-import { requerirAdmin } from "@/lib/auth/sesion";
+import { requerirUsuario } from "@/lib/auth/sesion";
 import { obtenerUltimaSincronizacion } from "@/lib/catalogo/sincronizar";
 import { UltimaSincronizacion } from "@/components/catalogo/UltimaSincronizacion";
 
 export const dynamic = "force-dynamic";
 
 export default async function CatalogoPage() {
-  await requerirAdmin();
+  await requerirUsuario();
   const ultima = await obtenerUltimaSincronizacion();
 
   return (

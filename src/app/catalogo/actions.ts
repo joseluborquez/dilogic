@@ -13,7 +13,7 @@ import {
 } from "@/lib/catalogo/sincronizar";
 
 import { PAGINAS_POR_LOTE } from "@/lib/catalogo/constantes";
-import { requerirAdmin } from "@/lib/auth/sesion";
+import { requerirUsuario } from "@/lib/auth/sesion";
 
 /**
  * El boton de Catalogo hace la sincronizacion en pasos (cada uno cabe holgado
@@ -21,12 +21,12 @@ import { requerirAdmin } from "@/lib/auth/sesion";
  * los no vistos, y finalizar, que aplica el estado de Relbase.
  */
 export async function iniciarSincronizacionAction(): Promise<{ id: string; inicio: string }> {
-  await requerirAdmin();
+  await requerirUsuario();
   return iniciarRegistroSincronizacion("manual");
 }
 
 export async function sincronizarLoteAction(startPage: number): Promise<ResultadoLote> {
-  await requerirAdmin();
+  await requerirUsuario();
   return sincronizarLotePaginas(startPage, PAGINAS_POR_LOTE);
 }
 
@@ -34,7 +34,7 @@ export async function sincronizarPendientesAction(
   desdeIndice: number,
   inicio: string
 ): Promise<ResumenSincronizacion> {
-  await requerirAdmin();
+  await requerirUsuario();
   return sincronizarPendientesDirecto(desdeIndice, inicio);
 }
 
@@ -43,7 +43,7 @@ export async function finalizarSincronizacionAction(
   inicio: string,
   acumulado: { actualizados: number; insertados: string[]; codigosCambiados: CodigoCambiado[] }
 ): Promise<ResultadoEstado> {
-  await requerirAdmin();
+  await requerirUsuario();
   try {
     const estado = await aplicarEstadoRelbase(
       inicio,
@@ -60,6 +60,6 @@ export async function finalizarSincronizacionAction(
 }
 
 export async function registrarErrorSincronizacionAction(id: string, mensaje: string): Promise<void> {
-  await requerirAdmin();
+  await requerirUsuario();
   await cerrarRegistroSincronizacion(id, { error: mensaje });
 }

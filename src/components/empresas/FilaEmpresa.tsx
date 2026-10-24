@@ -11,7 +11,14 @@ import type { EmpresaDetalle } from "@/lib/empresas/consultar";
 
 const ESTADO_INICIAL: EstadoEmpresa = { status: "inicial" };
 
-export function FilaEmpresa({ empresa }: { empresa: EmpresaDetalle }) {
+export function FilaEmpresa({
+  empresa,
+  puedeEditar,
+}: {
+  empresa: EmpresaDetalle;
+  /** Editar y activar/desactivar es de administradores; los operadores solo crean. */
+  puedeEditar: boolean;
+}) {
   const [estado, formAction, guardando] = useActionState(actualizarEmpresaAction, ESTADO_INICIAL);
   const [editando, setEditando] = useState(false);
   const [cambiandoEstado, iniciarCambio] = useTransition();
@@ -36,9 +43,7 @@ export function FilaEmpresa({ empresa }: { empresa: EmpresaDetalle }) {
             )}
           </div>
           <p className="mt-1 text-sm text-ink-muted">
-            {empresa.totalSkus > 0
-              ? `${empresa.totalSkus} códigos`
-              : "Sin catálogo cargado"}
+            {empresa.totalSkus > 0 ? `${empresa.totalSkus} códigos` : "Sin catálogo cargado"}
             {empresa.skusSinProductId > 0 && (
               <> · {empresa.skusSinProductId} sin sincronizar con Relbase</>
             )}
@@ -61,29 +66,33 @@ export function FilaEmpresa({ empresa }: { empresa: EmpresaDetalle }) {
               Sincronizar →
             </Link>
           )}
-          <button
-            type="button"
-            onClick={() => setEditando((v) => !v)}
-            className="text-teal hover:underline"
-          >
-            {editando ? "Cerrar" : "Editar"}
-          </button>
-          <button
-            type="button"
-            disabled={cambiandoEstado}
-            onClick={() =>
-              iniciarCambio(async () => {
-                await alternarActivoEmpresaAction(empresa.id, !empresa.activo);
-              })
-            }
-            className="text-ink-muted hover:underline disabled:opacity-50"
-          >
-            {empresa.activo ? "Desactivar" : "Activar"}
-          </button>
+          {puedeEditar && (
+            <>
+              <button
+                type="button"
+                onClick={() => setEditando((v) => !v)}
+                className="text-teal hover:underline"
+              >
+                {editando ? "Cerrar" : "Editar"}
+              </button>
+              <button
+                type="button"
+                disabled={cambiandoEstado}
+                onClick={() =>
+                  iniciarCambio(async () => {
+                    await alternarActivoEmpresaAction(empresa.id, !empresa.activo);
+                  })
+                }
+                className="text-ink-muted hover:underline disabled:opacity-50"
+              >
+                {empresa.activo ? "Desactivar" : "Activar"}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {editando && (
+      {editando && puedeEditar && (
         <form action={formAction} className="flex flex-col gap-4 border-t border-line px-4 py-4">
           <input type="hidden" name="id" value={empresa.id} />
 
@@ -153,7 +162,9 @@ export function FilaEmpresa({ empresa }: { empresa: EmpresaDetalle }) {
             </p>
           )}
           {estado.status === "ok" && (
-            <p className="rounded-sm bg-valido-bg px-3 py-2 text-sm text-valido">{estado.mensaje}</p>
+            <p className="rounded-sm bg-valido-bg px-3 py-2 text-sm text-valido">
+              {estado.mensaje}
+            </p>
           )}
 
           <div className="flex justify-end">
