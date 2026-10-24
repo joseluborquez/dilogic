@@ -1,9 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { sincronizarLoteAction, sincronizarPendientesAction } from "@/app/catalogo/actions";
+import {
+  desactivarCodigoAction,
+  sincronizarLoteAction,
+  sincronizarPendientesAction,
+} from "@/app/catalogo/actions";
 import { PAGINAS_POR_LOTE } from "@/lib/catalogo/constantes";
-import type { ResumenSincronizacion } from "@/lib/catalogo/sincronizar";
+import type { CodigoCambiado, ResumenSincronizacion } from "@/lib/catalogo/sincronizar";
 
 type Estado =
   | { fase: "inicial" }
@@ -15,11 +19,26 @@ type Estado =
       reanudarDesde: number;
       actualizadosHastaAhora: number;
       insertadosHastaAhora: string[];
+      cambiadosHastaAhora: CodigoCambiado[];
     }
-  | { fase: "ok"; resumen: ResumenSincronizacion; actualizados: number; insertados: string[] };
+  | {
+      fase: "ok";
+      resumen: ResumenSincronizacion;
+      actualizados: number;
+      insertados: string[];
+      cambiados: CodigoCambiado[];
+    };
 
 export function SincronizarCatalogoForm() {
   const [estado, setEstado] = useState<Estado>({ fase: "inicial" });
+  // Por SKU: "…" mientras se desactiva, "Desactivado" o el mensaje de error.
+  const [desactivados, setDesactivados] = useState<Record<string, string>>({});
+
+  async function desactivar(sku: string) {
+    setDesactivados((d) => ({ ...d, [sku]: "…" }));
+    const res = await desactivarCodigoAction(sku);
+    setDesactivados((d) => ({ ...d, [sku]: res.ok ? "Desactivado" : res.mensaje }));
+  }
 
   async function sincronizarLoteConReintentos(page: number) {
     const INTENTOS = 3;
@@ -39,12 +58,14 @@ export function SincronizarCatalogoForm() {
   async function iniciarSincronizacion(
     desdePagina = 1,
     actualizadosPrevios = 0,
-    insertadosPrevios: string[] = []
+    insertadosPrevios: string[] = [],
+    cambiadosPrevios: CodigoCambiado[] = []
   ) {
     let page = desdePagina;
     let totalPages = 1;
     let actualizados = actualizadosPrevios;
     const insertados = [...insertadosPrevios];
+    const cambiados = [...cambiadosPrevios];
 
     try {
       do {
@@ -52,6 +73,7 @@ export function SincronizarCatalogoForm() {
         totalPages = resultado.totalPages;
         actualizados += resultado.actualizados;
         insertados.push(...resultado.insertados);
+        cambiados.push(...resultado.codigosCambiados);
         page = resultado.hastaPagina + 1;
         setEstado({ fase: "sincronizando", paginaActual: resultado.hastaPagina, totalPages, actualizados });
       } while (page <= totalPages);
@@ -63,7 +85,13 @@ export function SincronizarCatalogoForm() {
       while (resumen.quedanMas) {
         resumen = await sincronizarPendientesAction(resumen.siguienteIndice);
       }
-      setEstado({ fase: "ok", resumen, actualizados, insertados: insertados.sort() });
+      setEstado({
+        fase: "ok",
+        resumen,
+        actualizados,
+        insertados: insertados.sort(),
+        cambiados: cambiados.sort((a, b) => a.sku.localeCompare(b.sku)),
+      });
     } catch (err) {
       setEstado({
         fase: "error",
@@ -71,6 +99,7 @@ export function SincronizarCatalogoForm() {
         reanudarDesde: page,
         actualizadosHastaAhora: actualizados,
         insertadosHastaAhora: insertados,
+        cambiadosHastaAhora: cambiados,
       });
     }
   }
@@ -123,7 +152,8 @@ export function SincronizarCatalogoForm() {
                 iniciarSincronizacion(
                   estado.reanudarDesde,
                   estado.actualizadosHastaAhora,
-                  estado.insertadosHastaAhora
+                  estado.insertadosHastaAhora,
+                  estado.cambiadosHastaAhora
                 )
               }
               className="rounded-sm border border-error px-3 py-1 text-xs font-medium hover:bg-error hover:text-white"
@@ -147,6 +177,42 @@ export function SincronizarCatalogoForm() {
                 Estaban en Relbase y faltaban acá. Ya se pueden usar en los pedidos.
               </p>
               <p className="font-mono text-xs text-ink-muted">{estado.insertados.join(", ")}</p>
+            </div>
+          )}
+
+          {estado.cambiados.length > 0 && (
+            <div className="flex flex-col gap-2 rounded-sm bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
+              <p className="font-medium">
+                {estado.cambiados.length} código(s) del catálogo cambiaron en Relbase
+              </p>
+              <p>
+                Alguien le cambió el código al producto en Relbase. Las guías con el código de la
+                izquierda salen con el producto de la derecha: revisa que sea el mismo. Si no lo es,
+                desactiva el código del catálogo.
+              </p>
+              <ul className="flex flex-col gap-1">
+                {estado.cambiados.map((c) => (
+                  <li key={c.sku} className="flex flex-wrap items-center justify-between gap-2 text-ink">
+                    <span>
+                      <span className="font-mono text-xs">{c.sku}</span> {c.descripcion ?? ""}{" "}
+                      <span className="text-ink-muted">→</span>{" "}
+                      <span className="font-mono text-xs">{c.codigoRelbase ?? "(sin código)"}</span>{" "}
+                      {c.nombreRelbase ?? ""}
+                    </span>
+                    {desactivados[c.sku] ? (
+                      <span className="text-xs text-ink-muted">{desactivados[c.sku]}</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => desactivar(c.sku)}
+                        className="rounded-sm border border-advertencia px-2 py-0.5 text-xs font-medium text-advertencia hover:bg-advertencia hover:text-white"
+                      >
+                        Desactivar
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
           <div className="overflow-x-auto rounded-sm border border-line">

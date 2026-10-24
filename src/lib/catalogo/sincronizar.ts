@@ -29,6 +29,22 @@ export interface ResultadoLote {
   actualizados: number;
   /** SKUs que estaban en Relbase y no en productos_catalogo: se dieron de alta. */
   insertados: string[];
+  /** Codigos activos cuyo producto de Relbase hoy tiene otro codigo. */
+  codigosCambiados: CodigoCambiado[];
+}
+
+/**
+ * Un codigo del catalogo cuyo product_id ahora lleva otro codigo en Relbase:
+ * alguien recodifico (o reutilizo) el producto alla. Casos reales: CERQ_FV_090
+ * paso a CERQ_FV_310 (mismo producto), pero YDR_AS_011 "caja aislapol 70 lb"
+ * paso a YDR_FV_100 "CAJA PLASTICA" (otro producto). No se corrige solo:
+ * decidir si el codigo viejo sigue valido es del negocio.
+ */
+export interface CodigoCambiado {
+  sku: string;
+  descripcion: string | null;
+  codigoRelbase: string | null;
+  nombreRelbase: string | null;
 }
 
 /**
@@ -67,6 +83,8 @@ export async function sincronizarLotePaginas(
     string,
     { id: number; precio: number | null; nombre: string | null; descripcionRelbase: string | null }
   >();
+  // Por id, para detectar codigos del catalogo cuyo producto se recodifico.
+  const porId = new Map<number, { code: string | null; name: string | null }>();
   let totalPages = startPage; // se corrige con la respuesta de la primera pagina del lote
 
   for (let page = startPage; page < startPage + cantidadPaginas; page++) {
@@ -74,6 +92,7 @@ export async function sincronizarLotePaginas(
     totalPages = pagina.meta.total_pages;
     if (page > totalPages) break;
     for (const p of pagina.data.products) {
+      porId.set(p.id, { code: p.code, name: p.name ?? null });
       if (!p.code) continue;
       // Sin Number.isFinite, un producto sin precio en Relbase daba NaN, que
       // se serializa como null y borraba en silencio el precio guardado. Se
@@ -92,7 +111,7 @@ export async function sincronizarLotePaginas(
   const nuestroCatalogo = await traerTodasLasFilas((desde, hasta) =>
     supabase
       .from("productos_catalogo")
-      .select("id, sku")
+      .select("id, sku, descripcion, product_id_relbase, activo")
       .order("sku")
       .order("id", { ascending: true })
       .range(desde, hasta)
@@ -140,11 +159,28 @@ export async function sincronizarLotePaginas(
 
   const insertados = await darDeAltaCodigosNuevos(porCodigo, new Set(nuestroCatalogo.map((r) => r.sku)));
 
+  // Cada producto de Relbase aparece en una sola pagina, asi que al recorrer
+  // todos los lotes cada product_id se revisa una vez.
+  const codigosCambiados: CodigoCambiado[] = [];
+  for (const row of nuestroCatalogo) {
+    if (!row.activo || row.product_id_relbase == null) continue;
+    const actual = porId.get(Number(row.product_id_relbase));
+    if (actual && actual.code !== row.sku) {
+      codigosCambiados.push({
+        sku: row.sku,
+        descripcion: row.descripcion,
+        codigoRelbase: actual.code,
+        nombreRelbase: actual.name,
+      });
+    }
+  }
+
   return {
     totalPages,
     hastaPagina: Math.min(startPage + cantidadPaginas - 1, totalPages),
     actualizados: actualizaciones.length,
     insertados,
+    codigosCambiados,
   };
 }
 

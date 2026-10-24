@@ -83,6 +83,10 @@ async function resolverContraCatalogo(
       problemas.push(`${codigo}: ya no está en el catálogo`);
       continue;
     }
+    if (!producto.activo) {
+      problemas.push(`${codigo}: está desactivado en el catálogo`);
+      continue;
+    }
     if (producto.productIdRelbase == null) {
       problemas.push(`${codigo}: sin producto de Relbase (falta sincronizar)`);
       continue;

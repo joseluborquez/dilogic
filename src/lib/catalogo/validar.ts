@@ -22,6 +22,11 @@ export interface ProductoCatalogoResumen {
   productIdRelbase: number | null;
   precio: number | null;
   familia: string | null;
+  /**
+   * Un codigo desactivado sigue en el catalogo (para el historial) pero no se
+   * puede pedir: ej. YDR_AS_011, cuyo producto de Relbase paso a ser otro.
+   */
+  activo: boolean;
 }
 
 export interface CatalogoEmpresa {
@@ -74,7 +79,7 @@ export async function obtenerCatalogoEmpresa(codigoInterno: string): Promise<Cat
     const productos = await traerTodasLasFilas((desde, hasta) =>
       supabase
         .from("productos_catalogo")
-        .select("sku, descripcion, descripcion_relbase, product_id_relbase, precio, familia")
+        .select("sku, descripcion, descripcion_relbase, product_id_relbase, precio, familia, activo")
         .eq("empresa_id", empresa.id)
         .order("sku")
         .order("id", { ascending: true })
@@ -89,6 +94,7 @@ export async function obtenerCatalogoEmpresa(codigoInterno: string): Promise<Cat
         productIdRelbase: p.product_id_relbase,
         precio: p.precio,
         familia: p.familia ?? derivarFamiliaDeSku(p.sku),
+        activo: p.activo,
       });
     }
     return { mapa, fuente: "supabase" };
@@ -105,6 +111,7 @@ export async function obtenerCatalogoEmpresa(codigoInterno: string): Promise<Cat
       productIdRelbase: null,
       precio: null,
       familia: derivarFamiliaDeSku(p.sku),
+      activo: true,
     });
   }
   return { mapa, fuente: "local" };
@@ -121,6 +128,9 @@ export function validarFilas(filas: FilaPedido[], catalogo: CatalogoEmpresa["map
     if (!producto) {
       estado = "error";
       mensajes.push("El codigo no existe en el catalogo de esta empresa.");
+    } else if (!producto.activo) {
+      estado = "error";
+      mensajes.push("El codigo esta desactivado en el catalogo.");
     } else if (producto.productIdRelbase == null) {
       estado = "error";
       mensajes.push("Producto sin product_id de Relbase (falta sincronizar).");
