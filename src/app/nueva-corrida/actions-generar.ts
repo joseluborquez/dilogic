@@ -4,7 +4,10 @@ import { createHash } from "node:crypto";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { crearGuiaDespacho, obtenerPdfUrlDte, RelbaseApiError } from "@/lib/relbase/client";
 import { obtenerEstadoConexion } from "@/lib/relbase/oauth";
-import { TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA } from "@/lib/relbase/types";
+import {
+  TYPE_DISPATCH_POR_CUENTA_DEL_RECEPTOR,
+  TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
+} from "@/lib/relbase/types";
 import { guardarPdfGuia } from "@/lib/storage/guias-pdf";
 import { obtenerCatalogoEmpresa } from "@/lib/catalogo/validar";
 import { traerTodasLasFilas } from "@/lib/supabase/paginar";
@@ -409,6 +412,7 @@ export async function generarGuiasAction(
               customer_id: destino.customerId,
               ware_house_id: destino.wareHouseId,
               type_transfer: TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
+              type_dispatch: TYPE_DISPATCH_POR_CUENTA_DEL_RECEPTOR,
               address: destino.address,
               city_id: destino.cityId,
               commune_id: destino.communeId,

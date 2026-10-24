@@ -40,6 +40,10 @@ export interface RelbaseCrearDtePayload {
   customer_id: number;
   ware_house_id: number;
   type_transfer: number; // confirmado: 6 = "Otros traslados no venta" (PRD 6.3)
+  // Tipo de despacho (SII, Res. Ex. N° 100 de 2024, que modifica la N° 154 de
+  // 2023): 1 = por cuenta del receptor del documento. Relbase lo exige en las
+  // guias desde el 01-11-2026 (spec v2, campo type_dispatch).
+  type_dispatch: number;
   // Direccion PRINCIPAL del documento (schema oficial: api.relbase.cl/api/v1/docs.json, igual en v2,
   // confirmado 11-jul-2026 contra un DTE real donde estos 3 campos vienen
   // poblados). Es la que valida el mensaje de error "Address Debe ingresar
@@ -93,6 +97,13 @@ export interface RelbaseTiposTrasladoResponse {
 
 /** Confirmado 09-jul-2026 via GET /dtes/guias/tipos_traslado (PRD 6.3). */
 export const TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA = 6;
+
+/**
+ * Despacho por cuenta del receptor del documento (spec v2: 1 receptor, 2
+ * emisor a instalaciones del cliente, 3 emisor a otras instalaciones).
+ * Definido por Dilogic el 24-oct-2026 para todas sus guias.
+ */
+export const TYPE_DISPATCH_POR_CUENTA_DEL_RECEPTOR = 1;
 
 export class RelbaseApiError extends Error {
   /** v2: espera sugerida por el header Retry-After de un 429 (acotada). */
