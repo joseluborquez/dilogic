@@ -92,13 +92,17 @@ export class RelbaseOAuthError extends Error {
 }
 
 /** POST /oauth/token. Se reutiliza para la renovacion con refresh_token. */
-export async function pedirTokens(parametros: Record<string, string>): Promise<TokensRelbase> {
+export async function pedirTokens(
+  parametros: Record<string, string>,
+  signal?: AbortSignal
+): Promise<TokensRelbase> {
   const { clientId, clientSecret } = obtenerConfigOAuth();
   const res = await fetch(`${OAUTH_URL}/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, ...parametros }),
     cache: "no-store",
+    signal,
   });
   const body = await res.json().catch(() => undefined);
   if (!res.ok || !body?.access_token || !body?.refresh_token) {

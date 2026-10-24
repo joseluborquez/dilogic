@@ -1,6 +1,8 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { createThrottledQueue, withExponentialBackoff } from "./throttle";
+import { obtenerAccessToken } from "./token";
 import {
   RelbaseApiError,
   type RelbaseCrearDtePayload,
@@ -14,14 +16,46 @@ import {
   type RelbaseTipoTraslado,
 } from "./types";
 
-const BASE_URL = "https://api.relbase.cl/api/v1";
-const MAX_REQ_PER_SECOND = 7;
+/**
+ * v1 esta por caducar. RELBASE_API_VERSION=v2 cambia todas las llamadas a la
+ * API v2 (OAuth2, ver token.ts); sin la variable, o con "v1", sigue todo como
+ * antes. Sirve de interruptor para volver atras sin desplegar codigo.
+ *
+ * En v2 el parametro `credenciales` de cada funcion se ignora: la autorizacion
+ * sale de la conexion OAuth guardada en relbase_conexion.
+ */
+export type VersionRelbase = "v1" | "v2";
 
-// Compartida por request a este modulo: dentro de una misma invocacion del
-// route handler, todas las llamadas a Relbase pasan por esta cola.
-const queue = createThrottledQueue(MAX_REQ_PER_SECOND);
+export function versionRelbase(): VersionRelbase {
+  return process.env.RELBASE_API_VERSION === "v2" ? "v2" : "v1";
+}
 
-function authHeaders(credenciales: RelbaseCredenciales): HeadersInit {
+/**
+ * Emitir guias con v2 queda bloqueado hasta la prueba controlada (Paso 6 de
+ * la migracion): son DTEs ante el SII y no se emiten con una integracion sin
+ * verificar. RELBASE_V2_EMISION_HABILITADA=true lo habilita.
+ */
+export function emisionBloqueadaEnV2(): boolean {
+  return versionRelbase() === "v2" && process.env.RELBASE_V2_EMISION_HABILITADA !== "true";
+}
+
+const BASE_URL: Record<VersionRelbase, string> = {
+  v1: "https://api.relbase.cl/api/v1",
+  v2: "https://api.relbase.cl/api/v2",
+};
+
+// v1: 7 req/s. v2: 300 req/min por empresa (= 5/s); se deja holgura porque el
+// limite es por empresa y puede haber dos invocaciones a la vez.
+const queues: Record<VersionRelbase, ReturnType<typeof createThrottledQueue>> = {
+  v1: createThrottledQueue(7),
+  v2: createThrottledQueue(4.5),
+};
+
+// v2 sugiere Retry-After: 60 en los 429. Esperar eso dentro de una funcion
+// serverless arriesga el limite de ejecucion: se espera como mucho esto.
+const MAX_ESPERA_RETRY_AFTER_MS = 15_000;
+
+function authHeadersV1(credenciales: RelbaseCredenciales): HeadersInit {
   return {
     company: credenciales.tokenEmpresa,
     authorization: credenciales.tokenUsuarioIntegrador,
@@ -29,37 +63,67 @@ function authHeaders(credenciales: RelbaseCredenciales): HeadersInit {
   };
 }
 
+async function errorDesdeRespuesta(res: Response, path: string): Promise<RelbaseApiError> {
+  const body = await res.json().catch(() => undefined);
+  const error = new RelbaseApiError(`Relbase API ${res.status} en ${path}`, res.status, body);
+  const retryAfter = Number(res.headers.get("retry-after"));
+  if (Number.isFinite(retryAfter) && retryAfter > 0) {
+    error.retryAfterMs = Math.min(retryAfter * 1000, MAX_ESPERA_RETRY_AFTER_MS);
+  }
+  return error;
+}
+
+async function fetchV1(path: string, credenciales: RelbaseCredenciales, init: RequestInit) {
+  return fetch(`${BASE_URL.v1}${path}`, {
+    ...init,
+    headers: { ...authHeadersV1(credenciales), ...init.headers },
+  });
+}
+
+async function fetchV2(path: string, init: RequestInit) {
+  const enviar = (token: string) =>
+    fetch(`${BASE_URL.v2}${path}`, {
+      ...init,
+      headers: {
+        authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        // Relbase lo pide en los tickets de soporte para rastrear un request.
+        "X-Request-Id": randomUUID(),
+        ...init.headers,
+      },
+    });
+
+  const token = await obtenerAccessToken();
+  const res = await enviar(token);
+  if (res.status !== 401) return res;
+  // Token rechazado aunque pareciera vigente (revocado o rotado por fuera):
+  // se fuerza una renovacion y se reintenta una sola vez.
+  return enviar(await obtenerAccessToken(token));
+}
+
 async function request<T>(
   path: string,
   credenciales: RelbaseCredenciales,
   init: RequestInit = {}
 ): Promise<T> {
-  return queue.schedule(() =>
+  const version = versionRelbase();
+  return queues[version].schedule(() =>
     withExponentialBackoff(
       async () => {
-        const res = await fetch(`${BASE_URL}${path}`, {
-          ...init,
-          headers: { ...authHeaders(credenciales), ...init.headers },
-        });
-
-        if (!res.ok) {
-          const body = await res.json().catch(() => undefined);
-          throw new RelbaseApiError(
-            `Relbase API ${res.status} en ${path}`,
-            res.status,
-            body
-          );
-        }
-
+        const res =
+          version === "v2" ? await fetchV2(path, init) : await fetchV1(path, credenciales, init);
+        if (!res.ok) throw await errorDesdeRespuesta(res, path);
         return res.json() as Promise<T>;
       },
       {
-        // 403 es como Relbase señala el exceso de tasa. Se agregan 429 y los
-        // 5xx: antes un fallo transitorio del servidor abortaba la guia sin
-        // ningun reintento.
+        // v1 señala el exceso de tasa con 403; v2 con 429, y en v2 el 403 es
+        // falta de permisos (scope), que no se arregla reintentando. Los 5xx
+        // se reintentan en ambas: antes un fallo transitorio del servidor
+        // abortaba la guia sin ningun reintento.
         isRetryable: (err) =>
           err instanceof RelbaseApiError &&
-          (err.status === 403 || err.status === 429 || err.status >= 500),
+          ((version === "v1" && err.status === 403) || err.status === 429 || err.status >= 500),
+        delayMs: (err) => (err instanceof RelbaseApiError ? err.retryAfterMs : undefined),
       }
     )
   );
@@ -138,26 +202,44 @@ export async function listarBodegasRelbase(
   return extraerLista(await request<unknown>("/bodegas", credenciales));
 }
 
+function normalizar(texto: string): string {
+  return texto
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function filtrarPorNombre(registros: RelbaseReferencia[], query: string): RelbaseReferencia[] {
+  const buscado = normalizar(query);
+  if (!buscado) return registros;
+  return registros.filter((r) => typeof r.name === "string" && normalizar(r.name).includes(buscado));
+}
+
+/**
+ * GET /ciudades no filtra: devuelve las ~340 ciudades siempre (confirmado en
+ * v2, 24-oct-2026, `?query=` se ignora). Se filtra aca por nombre.
+ */
 export async function buscarCiudadesRelbase(
   credenciales: RelbaseCredenciales,
   query: string
 ): Promise<RelbaseReferencia[]> {
-  const json = await request<unknown>(
-    `/ciudades?query=${encodeURIComponent(query)}`,
-    credenciales
-  );
-  return extraerLista(json);
+  const json = await request<unknown>("/ciudades", credenciales);
+  return filtrarPorNombre(extraerLista(json), query);
 }
 
+/**
+ * GET /comunas exige `city_id` (v2 responde 400 sin el; confirmado
+ * 24-oct-2026): se listan las comunas de la ciudad elegida y se filtran por
+ * nombre.
+ */
 export async function buscarComunasRelbase(
   credenciales: RelbaseCredenciales,
+  ciudadId: number,
   query: string
 ): Promise<RelbaseReferencia[]> {
-  const json = await request<unknown>(
-    `/comunas?query=${encodeURIComponent(query)}`,
-    credenciales
-  );
-  return extraerLista(json);
+  const json = await request<unknown>(`/comunas?city_id=${ciudadId}`, credenciales);
+  return filtrarPorNombre(extraerLista(json), query);
 }
 
 export async function obtenerTiposTraslado(
@@ -178,6 +260,9 @@ export async function crearGuiaDespacho(
   credenciales: RelbaseCredenciales,
   payload: RelbaseCrearDtePayload
 ): Promise<RelbaseCrearDteResponse> {
+  if (emisionBloqueadaEnV2()) {
+    throw new Error("La emision de guias con Relbase v2 aun no esta habilitada.");
+  }
   // La respuesta viene envuelta en {data: {...}}, igual que el resto de la
   // API (confirmado 11-jul-2026: sin este unwrap, .folio/.id quedan
   // undefined aunque el documento se haya creado correctamente en Relbase).

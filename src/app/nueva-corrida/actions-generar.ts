@@ -2,7 +2,12 @@
 
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { decryptToken } from "@/lib/crypto/tokens";
-import { crearGuiaDespacho, obtenerPdfUrlDte, RelbaseApiError } from "@/lib/relbase/client";
+import {
+  crearGuiaDespacho,
+  emisionBloqueadaEnV2,
+  obtenerPdfUrlDte,
+  RelbaseApiError,
+} from "@/lib/relbase/client";
 import {
   TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
   type RelbaseCredenciales,
@@ -249,6 +254,16 @@ export async function generarGuiasAction(
     return {
       status: "error",
       mensaje: "Indica el centro de cultivo / contacto antes de generar.",
+    };
+  }
+
+  // Antes de crear la corrida: un bloqueo a mitad de camino dejaria filas en
+  // error en el historial por algo que no es culpa del pedido.
+  if (emisionBloqueadaEnV2()) {
+    return {
+      status: "error",
+      mensaje:
+        "La generación de guías está en pausa mientras se completa el cambio a la nueva API de Relbase.",
     };
   }
 

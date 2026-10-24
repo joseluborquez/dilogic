@@ -55,11 +55,17 @@ export async function buscarClienteRelbaseAction(
  */
 export async function buscarReferenciaRelbaseAction(
   tipo: "ciudad" | "comuna",
-  query: string
+  query: string,
+  /** Comunas: Relbase solo las lista dentro de una ciudad. */
+  ciudadId?: number
 ): Promise<{ ok: true; opciones: OpcionReferencia[] } | { ok: false; mensaje: string }> {
   await requerirAdmin();
   const texto = query.trim();
-  if (texto.length < 3) {
+  if (tipo === "comuna" && !ciudadId) {
+    return { ok: false, mensaje: "Elige primero la ciudad." };
+  }
+  // Las comunas de una ciudad son pocas: se pueden listar sin escribir nada.
+  if (tipo === "ciudad" && texto.length < 3) {
     return { ok: false, mensaje: "Escribe al menos 3 letras." };
   }
 
@@ -68,7 +74,7 @@ export async function buscarReferenciaRelbaseAction(
     const registros =
       tipo === "ciudad"
         ? await buscarCiudadesRelbase(credenciales, texto)
-        : await buscarComunasRelbase(credenciales, texto);
+        : await buscarComunasRelbase(credenciales, ciudadId!, texto);
 
     if (registros.length === 0) {
       return { ok: false, mensaje: `Relbase no encontró ninguna ${tipo} con ese nombre.` };

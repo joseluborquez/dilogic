@@ -13,6 +13,8 @@ interface Props {
   onElegir: (opcion: OpcionReferencia) => void;
   /** Nombre a mostrar cuando el valor vino del cliente de Relbase. */
   nombreElegido: string | null;
+  /** Solo comunas: Relbase las busca dentro de la ciudad ya elegida. */
+  ciudadId?: string;
 }
 
 /**
@@ -27,6 +29,7 @@ export function BuscadorReferencia({
   valor,
   onElegir,
   nombreElegido,
+  ciudadId,
 }: Props) {
   const [texto, setTexto] = useState("");
   const [resultados, setResultados] = useState<OpcionReferencia[] | null>(null);
@@ -36,7 +39,11 @@ export function BuscadorReferencia({
   function buscar() {
     setError(null);
     iniciar(async () => {
-      const respuesta = await buscarReferenciaRelbaseAction(tipo, texto);
+      const respuesta = await buscarReferenciaRelbaseAction(
+        tipo,
+        texto,
+        ciudadId ? Number(ciudadId) : undefined
+      );
       if (respuesta.ok) {
         setResultados(respuesta.opciones);
       } else {
@@ -80,7 +87,13 @@ export function BuscadorReferencia({
                 buscar();
               }
             }}
-            placeholder={tipo === "ciudad" ? "Ej: Quellón" : "Ej: Puerto Montt"}
+            placeholder={
+              tipo === "ciudad"
+                ? "Ej: Quellón"
+                : ciudadId
+                  ? "Vacío para ver todas"
+                  : "Elige primero la ciudad"
+            }
             className="flex-1 rounded-sm border border-line bg-paper px-3 py-2 text-sm"
           />
           <button

@@ -1,6 +1,6 @@
 /**
- * Limitador simple para respetar el rate limit de Relbase v1 (7 req/seg,
- * PRD seccion 6.4). Encola llamadas y las espacía; vive dentro de una sola
+ * Limitador simple para respetar el rate limit de Relbase (v1: 7 req/seg,
+ * PRD seccion 6.4; v2: 300 req/min). Encola llamadas y las espacía; vive dentro de una sola
  * invocacion de route handler (no persiste entre requests), que es la razon
  * por la que la generacion masiva se hace en lotes chicos desde el cliente
  * en vez de un solo request largo.
@@ -32,9 +32,15 @@ export function createThrottledQueue(maxPerSecond: number) {
 
 export async function withExponentialBackoff<T>(
   fn: () => Promise<T>,
-  options: { retries?: number; baseDelayMs?: number; isRetryable?: (err: unknown) => boolean } = {}
+  options: {
+    retries?: number;
+    baseDelayMs?: number;
+    isRetryable?: (err: unknown) => boolean;
+    /** Espera impuesta por el error (ej. Retry-After); si no hay, backoff exponencial. */
+    delayMs?: (err: unknown) => number | undefined;
+  } = {}
 ): Promise<T> {
-  const { retries = 3, baseDelayMs = 500, isRetryable = () => true } = options;
+  const { retries = 3, baseDelayMs = 500, isRetryable = () => true, delayMs } = options;
 
   let attempt = 0;
   for (;;) {
@@ -43,7 +49,7 @@ export async function withExponentialBackoff<T>(
     } catch (err) {
       attempt += 1;
       if (attempt > retries || !isRetryable(err)) throw err;
-      const delay = baseDelayMs * 2 ** (attempt - 1);
+      const delay = delayMs?.(err) ?? baseDelayMs * 2 ** (attempt - 1);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }

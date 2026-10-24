@@ -100,6 +100,9 @@ export interface RelbaseTiposTrasladoResponse {
 export const TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA = 6;
 
 export class RelbaseApiError extends Error {
+  /** v2: espera sugerida por el header Retry-After de un 429 (acotada). */
+  retryAfterMs?: number;
+
   constructor(
     message: string,
     public status: number,

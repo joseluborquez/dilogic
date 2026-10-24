@@ -139,6 +139,7 @@ export function NuevaEmpresaForm({ valoresPorDefecto, bodegas }: Props) {
           etiqueta="Comuna"
           nombreCampo="communeId"
           valor={communeId}
+          ciudadId={cityId}
           nombreElegido={nombreComuna}
           onElegir={(o) => {
             setCommuneId(o.id ? String(o.id) : "");
