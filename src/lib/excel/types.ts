@@ -15,6 +15,9 @@ export interface FilaPedido {
 export interface ErrorParseo {
   fila: number | null; // null = error a nivel de archivo (ej. columna faltante)
   mensaje: string;
+  // "aviso": informa algo que no se proceso (una hoja oculta) sin impedir
+  // generar con el resto. Sin tipo es un error.
+  tipo?: "aviso";
 }
 
 export interface ResultadoParseo {

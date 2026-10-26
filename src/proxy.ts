@@ -35,9 +35,11 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims verifica la firma del token aca mismo (llaves ES256 publicadas
+  // por Supabase) y lo refresca si vencio; getUser consultaba Supabase en
+  // cada clic y sumaba 0,2-0,7 s a cada pagina.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub ?? null;
 
   const ruta = request.nextUrl.pathname;
   const esPublica = PUBLICAS.some((p) => ruta === p || ruta.startsWith(`${p}/`));
@@ -57,7 +59,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (user && ruta === "/login") {
-    return NextResponse.redirect(new URL("/nueva-corrida", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return respuesta;

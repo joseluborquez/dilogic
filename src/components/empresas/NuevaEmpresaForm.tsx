@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { crearEmpresaAction, type EstadoEmpresa } from "@/app/empresas/actions";
+import { Suspense, use, useActionState, useState } from "react";
+import { crearEmpresaAction, type EstadoEmpresa } from "@/app/(panel)/empresas/actions";
 import type { OpcionReferencia } from "@/lib/empresas/referencias";
 import { BuscadorClienteRelbase } from "./BuscadorClienteRelbase";
 import { BuscadorReferencia } from "./BuscadorReferencia";
@@ -14,8 +14,34 @@ interface Props {
     cityId: number | null;
     communeId: number | null;
   };
-  /** Bodegas de Relbase, para elegir por nombre en vez de por numero. */
-  bodegas: { id: number; etiqueta: string }[];
+  /**
+   * Bodegas de Relbase, para elegir por nombre en vez de por numero. Llega
+   * como promesa: la pagina no espera a Relbase para mostrarse.
+   */
+  bodegas: Promise<Bodega[]>;
+}
+
+interface Bodega {
+  id: number;
+  etiqueta: string;
+}
+
+const CLASE_SELECT = "rounded-lg border border-line bg-paper px-3 py-2 text-sm";
+
+function SelectorBodega({ bodegas, porDefecto }: { bodegas: Promise<Bodega[]>; porDefecto: number | null }) {
+  const lista = use(bodegas);
+  return (
+    <select id="wareHouseId" name="wareHouseId" defaultValue={porDefecto ?? ""} className={CLASE_SELECT}>
+      {lista.length === 0 && (
+        <option value={porDefecto ?? ""}>Bodega actual (#{porDefecto ?? "—"})</option>
+      )}
+      {lista.map((b) => (
+        <option key={b.id} value={b.id}>
+          {b.etiqueta}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 export function NuevaEmpresaForm({ valoresPorDefecto, bodegas }: Props) {
@@ -49,7 +75,7 @@ export function NuevaEmpresaForm({ valoresPorDefecto, bodegas }: Props) {
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        className="self-start rounded-sm bg-teal px-4 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong"
+        className="self-start rounded-lg bg-teal px-4 py-2 font-display text-sm font-medium text-on-accent transition-colors hover:bg-teal-strong"
       >
         Agregar empresa
       </button>
@@ -57,7 +83,7 @@ export function NuevaEmpresaForm({ valoresPorDefecto, bodegas }: Props) {
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-5 rounded-sm border border-line bg-surface p-5">
+    <form action={formAction} className="flex flex-col gap-5 vidrio p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-display text-lg font-semibold">Nueva empresa</h2>
@@ -85,7 +111,7 @@ export function NuevaEmpresaForm({ valoresPorDefecto, bodegas }: Props) {
             name="nombre"
             required
             placeholder="Ej: Salmones Camanchaca"
-            className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+            className="rounded-lg border border-line bg-paper px-3 py-2 text-sm"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -98,7 +124,7 @@ export function NuevaEmpresaForm({ valoresPorDefecto, bodegas }: Props) {
             required
             maxLength={10}
             placeholder="Ej: CAM"
-            className="rounded-sm border border-line bg-paper px-3 py-2 font-mono text-sm uppercase"
+            className="rounded-lg border border-line bg-paper px-3 py-2 font-mono text-sm uppercase"
           />
           <p className="text-xs text-ink-muted">
             Es el prefijo de sus códigos de producto (CAM_AB_001). No se puede cambiar después.
@@ -120,7 +146,7 @@ export function NuevaEmpresaForm({ valoresPorDefecto, bodegas }: Props) {
             value={direccion}
             onChange={(e) => setDireccion(e.target.value)}
             placeholder="Se completa al elegir el cliente"
-            className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+            className="rounded-lg border border-line bg-paper px-3 py-2 text-sm"
           />
         </div>
         <BuscadorReferencia
@@ -150,23 +176,15 @@ export function NuevaEmpresaForm({ valoresPorDefecto, bodegas }: Props) {
           <label htmlFor="wareHouseId" className="text-xs tracking-wide text-ink-muted uppercase">
             Bodega de salida
           </label>
-          <select
-            id="wareHouseId"
-            name="wareHouseId"
-            defaultValue={valoresPorDefecto.wareHouseId ?? ""}
-            className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+          <Suspense
+            fallback={
+              <select id="wareHouseId" disabled className={CLASE_SELECT}>
+                <option>Cargando bodegas…</option>
+              </select>
+            }
           >
-            {bodegas.length === 0 && (
-              <option value={valoresPorDefecto.wareHouseId ?? ""}>
-                Bodega actual (#{valoresPorDefecto.wareHouseId ?? "—"})
-              </option>
-            )}
-            {bodegas.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.etiqueta}
-              </option>
-            ))}
-          </select>
+            <SelectorBodega bodegas={bodegas} porDefecto={valoresPorDefecto.wareHouseId} />
+          </Suspense>
           <p className="text-xs text-ink-muted">
             Desde dónde sale la mercadería. Es la bodega de Dilogic, la misma para todos los
             clientes.
@@ -184,7 +202,7 @@ export function NuevaEmpresaForm({ valoresPorDefecto, bodegas }: Props) {
           type="file"
           accept=".xlsx,.xls"
           onChange={(e) => setNombreCatalogo(e.target.files?.[0]?.name ?? null)}
-          className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+          className="rounded-lg border border-line bg-paper px-3 py-2 text-sm"
         />
         <p className="text-xs text-ink-muted">
           Con columnas <span className="font-mono">codigo</span> y{" "}
@@ -194,13 +212,13 @@ export function NuevaEmpresaForm({ valoresPorDefecto, bodegas }: Props) {
       </div>
 
       {estado.status === "error" && (
-        <p role="alert" className="rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
+        <p role="alert" className="rounded-lg bg-error-bg px-3 py-2 text-sm text-error">
           {estado.mensaje}
         </p>
       )}
 
       {estado.status === "ok" && (
-        <div className="flex flex-col gap-2 rounded-sm bg-valido-bg px-3 py-2 text-sm text-valido">
+        <div className="flex flex-col gap-2 rounded-lg bg-valido-bg px-3 py-2 text-sm text-valido">
           <p className="font-medium">{estado.mensaje}</p>
           {estado.advertencias.map((a, i) => (
             <p key={i} className="text-ink-muted">
@@ -214,7 +232,7 @@ export function NuevaEmpresaForm({ valoresPorDefecto, bodegas }: Props) {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-sm bg-teal px-5 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-teal px-5 py-2 font-display text-sm font-medium text-on-accent transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? "Creando…" : "Crear empresa"}
         </button>

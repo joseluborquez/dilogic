@@ -10,7 +10,7 @@ import { DOMINIO_PERMITIDO } from "@/lib/auth/constantes";
 
 const ESTADO_INICIAL: EstadoLogin = { status: "inicial" };
 
-const CAMPO = "rounded-sm border border-line bg-paper px-3 py-2 text-sm";
+const CAMPO = "rounded-lg border border-line bg-paper px-3 py-2 text-sm";
 const ETIQUETA = "text-xs tracking-wide text-ink-muted uppercase";
 
 export function FormularioAcceso({ volver, aviso }: { volver: string; aviso: string | null }) {
@@ -27,7 +27,7 @@ export function FormularioAcceso({ volver, aviso }: { volver: string; aviso: str
   const estado = modo === "ingresar" ? estadoIngreso : estadoRegistro;
 
   return (
-    <div className="flex w-full max-w-sm flex-col gap-5 rounded-sm border border-line bg-surface p-6">
+    <div className="flex w-full max-w-sm flex-col gap-5 vidrio p-6">
       <div>
         <p className="text-xs tracking-widest text-ink-muted uppercase">Dilogic</p>
         <h1 className="font-display text-xl font-semibold">
@@ -41,7 +41,7 @@ export function FormularioAcceso({ volver, aviso }: { volver: string; aviso: str
       </div>
 
       {aviso && (
-        <p className="rounded-sm bg-advertencia-bg px-3 py-2 text-sm text-advertencia">{aviso}</p>
+        <p className="rounded-lg bg-advertencia-bg px-3 py-2 text-sm text-advertencia">{aviso}</p>
       )}
 
       {modo === "ingresar" ? (
@@ -69,7 +69,7 @@ export function FormularioAcceso({ volver, aviso }: { volver: string; aviso: str
           <button
             type="submit"
             disabled={ingresando}
-            className="mt-1 rounded-sm bg-teal px-4 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:opacity-50"
+            className="mt-1 rounded-lg bg-teal px-4 py-2 font-display text-sm font-medium text-on-accent transition-colors hover:bg-teal-strong disabled:opacity-50"
           >
             {ingresando ? "Entrando…" : "Entrar"}
           </button>
@@ -114,7 +114,7 @@ export function FormularioAcceso({ volver, aviso }: { volver: string; aviso: str
           <button
             type="submit"
             disabled={registrando}
-            className="mt-1 rounded-sm bg-teal px-4 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:opacity-50"
+            className="mt-1 rounded-lg bg-teal px-4 py-2 font-display text-sm font-medium text-on-accent transition-colors hover:bg-teal-strong disabled:opacity-50"
           >
             {registrando ? "Creando…" : "Crear cuenta"}
           </button>
@@ -122,12 +122,12 @@ export function FormularioAcceso({ volver, aviso }: { volver: string; aviso: str
       )}
 
       {estado.status === "error" && (
-        <p role="alert" className="rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
+        <p role="alert" className="rounded-lg bg-error-bg px-3 py-2 text-sm text-error">
           {estado.mensaje}
         </p>
       )}
       {estado.status === "registrado" && (
-        <p className="rounded-sm bg-valido-bg px-3 py-2 text-sm text-valido">{estado.mensaje}</p>
+        <p className="rounded-lg bg-valido-bg px-3 py-2 text-sm text-valido">{estado.mensaje}</p>
       )}
 
       <button

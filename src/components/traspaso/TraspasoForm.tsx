@@ -7,7 +7,7 @@ import {
   revisarTraspasoAction,
   type EstadoEmision,
   type EstadoRevision,
-} from "@/app/traspaso/actions";
+} from "@/app/(panel)/traspaso/actions";
 import type { EmpresaOpcion } from "@/lib/empresas/consultar";
 import { descargarZipGuias } from "@/components/historial/descargar-zip";
 
@@ -84,7 +84,7 @@ export function TraspasoForm({
       <form
         ref={formRef}
         onSubmit={(e) => e.preventDefault()}
-        className="flex flex-col gap-5 rounded-sm border border-line bg-surface p-5"
+        className="flex flex-col gap-5 vidrio p-5"
       >
         <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
 
@@ -102,7 +102,7 @@ export function TraspasoForm({
               setArrastrando(false);
               asignarArchivos([...(e.dataTransfer.files ?? [])]);
             }}
-            className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-sm border-2 border-dashed px-6 py-8 text-center transition-colors ${
+            className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors ${
               arrastrando ? "border-teal bg-teal/5" : "border-line bg-paper"
             }`}
           >
@@ -155,7 +155,7 @@ export function TraspasoForm({
               name="empresa"
               value={empresa}
               onChange={(e) => setEmpresa(e.target.value)}
-              className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+              className="rounded-lg border border-line bg-paper px-3 py-2 text-sm"
             >
               {empresas.map((e) => (
                 <option key={e.codigo} value={e.codigo}>
@@ -174,7 +174,7 @@ export function TraspasoForm({
               value={centro}
               onChange={(e) => setCentro(e.target.value)}
               placeholder="Ej: PALVITAD"
-              className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+              className="rounded-lg border border-line bg-paper px-3 py-2 text-sm"
             />
           </div>
         </div>
@@ -191,7 +191,7 @@ export function TraspasoForm({
               lanzar(revisar);
             }}
             disabled={revisando || emitido}
-            className="rounded-sm border border-teal px-5 py-2 font-display text-sm font-medium text-teal transition-colors hover:bg-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-teal px-5 py-2 font-display text-sm font-medium text-teal transition-colors hover:bg-teal hover:text-on-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             {revisando ? "Revisando…" : "Revisar facturas"}
           </button>
@@ -200,7 +200,7 @@ export function TraspasoForm({
               type="button"
               onClick={() => lanzar(emitir)}
               disabled={!puedeEmitir || emitido}
-              className="rounded-sm bg-teal px-5 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-teal px-5 py-2 font-display text-sm font-medium text-on-accent transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
             >
               {emitiendo ? "Emitiendo…" : `Emitir ${calculo.guias.length} guía(s)`}
             </button>
@@ -212,7 +212,7 @@ export function TraspasoForm({
       </form>
 
       {revision.status === "error" && (
-        <p role="alert" className="rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
+        <p role="alert" className="rounded-lg bg-error-bg px-3 py-2 text-sm text-error">
           {revision.mensaje}
         </p>
       )}
@@ -220,7 +220,7 @@ export function TraspasoForm({
       {revision.status === "ok" && (
         <section className="flex flex-col gap-3">
           <h2 className="font-display text-base font-semibold">Facturas</h2>
-          <div className="overflow-x-auto rounded-sm border border-line">
+          <div className="overflow-x-auto rounded-lg border border-line">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-line bg-surface-muted text-left text-xs tracking-wide text-ink-muted uppercase">
@@ -271,7 +271,7 @@ export function TraspasoForm({
       )}
 
       {calculo && revisionVigente && (
-        <section className="flex flex-col gap-3 rounded-sm border border-line bg-surface p-4">
+        <section className="flex flex-col gap-3 vidrio p-4">
           <h2 className="font-display text-base font-semibold">Guías a emitir</h2>
           <p className="text-sm">
             {calculo.lineasFacturas} líneas de factura →{" "}
@@ -297,7 +297,7 @@ export function TraspasoForm({
             </p>
           )}
           {calculo.guias.map((g, i) => (
-            <details key={i} className="rounded-sm border border-line">
+            <details key={i} className="rounded-lg border border-line">
               <summary className="cursor-pointer px-3 py-2 text-sm">
                 Guía {i + 1}: {g.lineas.length} productos · neto {pesos(g.neto)} · total {pesos(g.total)}
               </summary>
@@ -318,7 +318,7 @@ export function TraspasoForm({
       )}
 
       {emision.status === "listo" && !emision.ok && (
-        <p role="alert" className="rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
+        <p role="alert" className="rounded-lg bg-error-bg px-3 py-2 text-sm text-error">
           {emision.mensaje}
         </p>
       )}
@@ -327,7 +327,7 @@ export function TraspasoForm({
         <section className="flex flex-col gap-2">
           <p className="font-display text-sm font-semibold">Resultado</p>
           {emision.yaExistia && (
-            <p className="rounded-sm bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
+            <p className="rounded-lg bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
               Este traspaso ya se había emitido: estas son sus guías, no se emitieron nuevas.
             </p>
           )}
@@ -335,7 +335,7 @@ export function TraspasoForm({
             {emision.guias.map((g, i) => (
               <li
                 key={i}
-                className={`rounded-sm px-3 py-2 text-sm ${g.error ? "bg-error-bg text-error" : "bg-valido-bg text-valido"}`}
+                className={`rounded-lg px-3 py-2 text-sm ${g.error ? "bg-error-bg text-error" : "bg-valido-bg text-valido"}`}
               >
                 {g.error ? `Guía ${i + 1}: ${g.error}` : `Folio ${g.folio}${g.total ? ` · total ${pesos(g.total)}` : ""}`}
               </li>
@@ -353,7 +353,7 @@ export function TraspasoForm({
                   setDescargando(false);
                 }
               }}
-              className="rounded-sm bg-teal px-4 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:opacity-50"
+              className="rounded-lg bg-teal px-4 py-2 font-display text-sm font-medium text-on-accent transition-colors hover:bg-teal-strong disabled:opacity-50"
             >
               {descargando ? "Preparando…" : "Descargar las guías (ZIP)"}
             </button>

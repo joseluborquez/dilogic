@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/sincronizar-catalogo",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/sincronizar-ventas",
+      "schedule": "15 10 * * *"
     }
   ]
 }

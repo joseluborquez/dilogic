@@ -9,7 +9,7 @@ type Tono = "neutro" | "destructivo";
  * el cursor, asi que en reposo la tabla se lee como datos y no como controles.
  */
 const BASE =
-  "inline-flex size-8 items-center justify-center rounded-sm border border-transparent text-ink-muted transition-colors focus-visible:outline-2 focus-visible:outline-offset-2";
+  "inline-flex size-8 items-center justify-center rounded-lg border border-transparent text-ink-muted transition-colors focus-visible:outline-2 focus-visible:outline-offset-2";
 
 const TONOS: Record<Tono, string> = {
   neutro: "hover:border-line hover:bg-surface-muted hover:text-teal focus-visible:outline-teal",

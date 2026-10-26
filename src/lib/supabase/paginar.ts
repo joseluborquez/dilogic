@@ -1,6 +1,7 @@
 import "server-only";
 
 const TAMANO_PAGINA = 1000;
+const PAGINAS_EN_PARALELO = 5;
 
 /**
  * PostgREST recorta las respuestas (max-rows), asi que un `.limit(5000)` puede
@@ -22,12 +23,23 @@ export async function traerTodasLasFilas<T>(
   consulta: (desde: number, hasta: number) => PromiseLike<{ data: T[] | null }>,
   tamanoPagina = TAMANO_PAGINA
 ): Promise<T[]> {
-  const filas: T[] = [];
-  for (let desde = 0; ; desde += tamanoPagina) {
-    const { data } = await consulta(desde, desde + tamanoPagina - 1);
-    if (!data || data.length === 0) break;
-    filas.push(...data);
-    if (data.length < tamanoPagina) break;
+  const pedir = async (pagina: number) =>
+    (await consulta(pagina * tamanoPagina, (pagina + 1) * tamanoPagina - 1)).data ?? [];
+
+  // La primera sola: casi todas las consultas caben en una pagina.
+  const filas: T[] = await pedir(0);
+  if (filas.length < tamanoPagina) return filas;
+
+  // Si hay mas, de a PAGINAS_EN_PARALELO a la vez: cada ida y vuelta a Supabase
+  // cuesta ~220 ms y una a una el historial tardaba ~3 s (9 paginas,
+  // 25-oct-2026). Se arman en orden; la primera pagina incompleta corta.
+  for (let siguiente = 1; ; siguiente += PAGINAS_EN_PARALELO) {
+    const paginas = await Promise.all(
+      Array.from({ length: PAGINAS_EN_PARALELO }, (_, i) => pedir(siguiente + i))
+    );
+    for (const data of paginas) {
+      filas.push(...data);
+      if (data.length < tamanoPagina) return filas;
+    }
   }
-  return filas;
 }

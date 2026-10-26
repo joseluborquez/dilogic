@@ -1,41 +1,36 @@
 @import "tailwindcss";
 
+/*
+ * Tema "Aurora": hermano del "Nebulosa" del buscador de precios (mismo cielo,
+ * mismo vidrio), pero distinguible a primera vista: la luz del fondo es una
+ * aurora verde-agua / azul petroleo en vez de nebulosa violeta, y el acento es
+ * verde-agua, nunca el azul del buscador. Es un tema oscuro unico: el cielo no
+ * tiene version clara.
+ */
 :root {
-  --paper: #f6f5f0;
-  --surface: #ffffff;
-  --surface-muted: #eeebe2;
-  --ink: #1b2b2e;
-  --ink-muted: #5b6b6a;
-  --line: #dbd6c8;
+  color-scheme: dark;
 
-  --teal: #0f5c5c;
-  --teal-strong: #0b4a4a;
-  --valido: #2f7a5c;
-  --valido-bg: #e4efe7;
-  --advertencia: #a8631a;
-  --advertencia-bg: #f4e9da;
-  --error: #9e2b25;
-  --error-bg: #f5e2e0;
-}
+  --cielo: #05070d;
+  /* Campos de formulario y celdas alternas: mas oscuros que el vidrio. */
+  --paper: rgba(4, 6, 14, 0.55);
+  /* Ventanas de vidrio. */
+  --surface: rgba(16, 14, 28, 0.78);
+  --surface-muted: rgba(255, 255, 255, 0.05);
+  --ink: #eceef6;
+  --ink-muted: #a8a6c4;
+  --line: rgba(255, 255, 255, 0.1);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #10161a;
-    --surface: #161d22;
-    --surface-muted: #1c242a;
-    --ink: #e7ecea;
-    --ink-muted: #90a19f;
-    --line: #2a3339;
+  /* Acento verde-agua. Sobre el, texto oscuro (--on-accent) para que se lea. */
+  --teal: #4fc3b4;
+  --teal-strong: #7ad6ca;
+  --on-accent: #0b1020;
 
-    --teal: #4fb3a9;
-    --teal-strong: #6fc7bd;
-    --valido: #59b98b;
-    --valido-bg: #17281f;
-    --advertencia: #d08a3e;
-    --advertencia-bg: #2b2015;
-    --error: #e0645c;
-    --error-bg: #2c1917;
-  }
+  --valido: #5cc896;
+  --valido-bg: rgba(92, 200, 150, 0.14);
+  --advertencia: #e3a35a;
+  --advertencia-bg: rgba(227, 163, 90, 0.14);
+  --error: #f07a72;
+  --error-bg: rgba(240, 122, 114, 0.14);
 }
 
 @theme inline {
@@ -48,6 +43,7 @@
 
   --color-teal: var(--teal);
   --color-teal-strong: var(--teal-strong);
+  --color-on-accent: var(--on-accent);
   --color-valido: var(--valido);
   --color-valido-bg: var(--valido-bg);
   --color-advertencia: var(--advertencia);
@@ -60,8 +56,92 @@
   --font-mono: var(--font-data);
 }
 
+/*
+ * Ventana de vidrio oscuro. Ojo: backdrop-filter convierte al elemento en
+ * contenedor de sus hijos `position: fixed`; un modal o barra fija no debe ir
+ * dentro de una ventana.
+ */
+@utility vidrio {
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  -webkit-backdrop-filter: blur(40px) saturate(170%);
+  backdrop-filter: blur(40px) saturate(170%);
+}
+
+/*
+ * Para ventanas que se repiten en una lista larga (solicitudes del historial,
+ * empresas): mismo aspecto, sin backdrop-filter. Con el cielo fijo detras, el
+ * navegador recalcula el desenfoque de cada ventana en cada scroll, y 25
+ * ventanas con blur(40px) bastaban para que la pagina se arrastrara. Con el
+ * fondo al 78% de opacidad la diferencia no se ve.
+ */
+@utility vidrio-lista {
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
 body {
-  background: var(--paper);
+  background: var(--cielo);
   color: var(--ink);
   font-family: var(--font-body), Arial, Helvetica, sans-serif;
+}
+
+/*
+ * Cielo fijo (no se mueve al hacer scroll). Cada estrella es una capa propia
+ * que se repite con un tamano de baldosa distinto (primos entre si), asi la
+ * repeticion no forma una grilla visible. Debajo, la aurora: manchas grandes y
+ * difusas de verde-agua y azul petroleo.
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  /* Capa propia: el cielo se pinta una vez y no en cada scroll. */
+  transform: translateZ(0);
+  background-color: var(--cielo);
+  background-image:
+    radial-gradient(1px 1px at 23px 41px, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(1px 1px at 131px 17px, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 67px 149px, rgba(220, 255, 250, 0.85), transparent),
+    radial-gradient(1px 1px at 181px 97px, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 251px 199px, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(2px 2px at 97px 263px, rgba(235, 250, 255, 0.9), transparent),
+    radial-gradient(1px 1px at 311px 59px, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(1.5px 1.5px at 353px 331px, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1px 1px at 41px 389px, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(2px 2px at 467px 211px, rgba(210, 255, 245, 0.8), transparent),
+    radial-gradient(1px 1px at 509px 457px, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(2.5px 2.5px at 233px 571px, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(ellipse 70% 45% at 18% 8%, rgba(38, 170, 150, 0.32), transparent 70%),
+    radial-gradient(ellipse 55% 60% at 88% 22%, rgba(16, 92, 120, 0.38), transparent 70%),
+    radial-gradient(ellipse 80% 35% at 55% 0%, rgba(79, 195, 180, 0.16), transparent 75%),
+    radial-gradient(ellipse 60% 50% at 30% 100%, rgba(12, 70, 92, 0.3), transparent 70%);
+  background-size:
+    157px 157px,
+    211px 211px,
+    263px 263px,
+    293px 293px,
+    331px 331px,
+    379px 379px,
+    419px 419px,
+    467px 467px,
+    509px 509px,
+    563px 563px,
+    613px 613px,
+    677px 677px,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  background-repeat:
+    repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat,
+    no-repeat, no-repeat, no-repeat, no-repeat;
+}
+
+::selection {
+  background: rgba(79, 195, 180, 0.35);
 }

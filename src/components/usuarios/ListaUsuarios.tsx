@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import {
   cambiarEstadoUsuarioAction,
   cambiarRolUsuarioAction,
-} from "@/app/usuarios/actions";
+} from "@/app/(panel)/usuarios/actions";
 import type { ResumenUsuario } from "@/lib/auth/usuarios";
 
 function formatearFecha(iso: string | null): string {
@@ -45,13 +45,13 @@ export function ListaUsuarios({
   return (
     <div className="flex flex-col gap-4">
       {error && (
-        <p role="alert" className="rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
+        <p role="alert" className="rounded-lg bg-error-bg px-3 py-2 text-sm text-error">
           {error}
         </p>
       )}
 
       {pendientes.length > 0 && (
-        <p className="rounded-sm bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
+        <p className="rounded-lg bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
           {pendientes.length === 1
             ? "Hay 1 cuenta esperando aprobación."
             : `Hay ${pendientes.length} cuentas esperando aprobación.`}{" "}
@@ -59,7 +59,7 @@ export function ListaUsuarios({
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-sm border border-line">
+      <div className="overflow-x-auto rounded-lg border border-line">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-line bg-surface-muted text-left text-xs tracking-wide text-ink-muted uppercase">
@@ -74,7 +74,7 @@ export function ListaUsuarios({
           </thead>
           <tbody>
             {usuarios.map((u) => (
-              <tr key={u.id} className="border-b border-line last:border-0 odd:bg-surface even:bg-paper">
+              <tr key={u.id} className="border-b border-line last:border-0 even:bg-surface-muted">
                 <td className="px-3 py-2">
                   <span className="block font-medium">{u.nombre ?? "—"}</span>
                   <span className="block text-xs text-ink-muted">{u.email}</span>
@@ -88,7 +88,7 @@ export function ListaUsuarios({
                         cambiarRolUsuarioAction(u.id, e.target.value as "admin" | "operador")
                       )
                     }
-                    className="rounded-sm border border-line bg-paper px-2 py-1 text-sm"
+                    className="rounded-lg border border-line bg-paper px-2 py-1 text-sm"
                   >
                     <option value="operador">Operador</option>
                     <option value="admin">Administrador</option>
@@ -96,7 +96,7 @@ export function ListaUsuarios({
                 </td>
                 <td className="px-3 py-2">
                   <span
-                    className={`inline-block rounded-sm border-2 px-2 py-0.5 font-display text-[11px] font-semibold tracking-wider uppercase ${ESTADOS[u.estado]}`}
+                    className={`inline-block rounded-lg border-2 px-2 py-0.5 font-display text-[11px] font-semibold tracking-wider uppercase ${ESTADOS[u.estado]}`}
                   >
                     {u.estado}
                   </span>

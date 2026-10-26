@@ -112,14 +112,17 @@ export async function obtenerHistorial(
     hayFiltros,
   };
 
-  const { data: empresas } = await supabase.from("empresas").select("id, nombre, codigo_interno");
+  // Sale en paralelo con lo demas: solo el filtro por empresa necesita esperarla.
+  // Promise.resolve la dispara ya: el builder de Supabase no corre hasta su then.
+  const promesaEmpresas = Promise.resolve(supabase.from("empresas").select("id, nombre, codigo_interno"));
+  const empresasListas = async () => (await promesaEmpresas).data;
 
   let consulta = supabase
     .from("corridas")
     .select("id, empresa_id, archivo_original_nombre, fecha_ejecucion", { count: "exact" });
 
   if (filtros.empresa) {
-    const empresa = (empresas ?? []).find((e) => e.codigo_interno === filtros.empresa);
+    const empresa = ((await empresasListas()) ?? []).find((e) => e.codigo_interno === filtros.empresa);
     if (!empresa) return vacio;
     consulta = consulta.eq("empresa_id", empresa.id);
   }
@@ -186,6 +189,7 @@ export async function obtenerHistorial(
       .range(inicio, fin)
   );
 
+  const empresas = await empresasListas();
   const empresaPorId = new Map((empresas ?? []).map((e) => [e.id, e]));
   const corridaPorId = new Map((corridas ?? []).map((c) => [c.id, c]));
 

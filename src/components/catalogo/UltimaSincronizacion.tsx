@@ -12,7 +12,7 @@ function formatearFecha(iso: string): string {
 export function UltimaSincronizacion({ ultima }: { ultima: Ultima | null }) {
   if (!ultima) {
     return (
-      <section className="rounded-sm border border-line bg-surface p-4 text-sm text-ink-muted">
+      <section className="vidrio p-4 text-sm text-ink-muted">
         Todavía no hay sincronizaciones registradas.
       </section>
     );
@@ -21,7 +21,7 @@ export function UltimaSincronizacion({ ultima }: { ultima: Ultima | null }) {
   const origen = ultima.origen === "automatica" ? "automática" : "manual";
 
   return (
-    <section className="flex flex-col gap-3 rounded-sm border border-line bg-surface p-4">
+    <section className="flex flex-col gap-3 vidrio p-4">
       <div className="flex flex-col gap-1">
         <h2 className="font-display text-base font-semibold">Última sincronización</h2>
         <p className="text-sm text-ink-muted">
@@ -37,7 +37,7 @@ export function UltimaSincronizacion({ ultima }: { ultima: Ultima | null }) {
       </div>
 
       {ultima.estado === "error" && ultima.error && (
-        <p className="rounded-sm bg-error-bg px-3 py-2 text-sm text-error">{ultima.error}</p>
+        <p className="rounded-lg bg-error-bg px-3 py-2 text-sm text-error">{ultima.error}</p>
       )}
 
       {ultima.estado === "ok" && ultima.resumen && (

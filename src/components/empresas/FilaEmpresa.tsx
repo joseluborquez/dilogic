@@ -6,7 +6,7 @@ import {
   actualizarEmpresaAction,
   alternarActivoEmpresaAction,
   type EstadoEmpresa,
-} from "@/app/empresas/actions";
+} from "@/app/(panel)/empresas/actions";
 import type { EmpresaDetalle } from "@/lib/empresas/consultar";
 
 const ESTADO_INICIAL: EstadoEmpresa = { status: "inicial" };
@@ -30,14 +30,14 @@ export function FilaEmpresa({
     empresa.skusSinProductId === 0;
 
   return (
-    <li className="rounded-sm border border-line bg-surface">
+    <li className="vidrio-lista">
       <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="font-display text-base font-semibold">{empresa.nombre}</h2>
             <span className="font-mono text-xs text-ink-muted">{empresa.codigo}</span>
             {!empresa.activo && (
-              <span className="rounded-sm border border-line px-2 py-0.5 text-[11px] tracking-wider text-ink-muted uppercase">
+              <span className="rounded-lg border border-line px-2 py-0.5 text-[11px] tracking-wider text-ink-muted uppercase">
                 Inactiva
               </span>
             )}
@@ -103,7 +103,7 @@ export function FilaEmpresa({
                 name="nombre"
                 defaultValue={empresa.nombre}
                 required
-                className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+                className="rounded-lg border border-line bg-paper px-3 py-2 text-sm"
               />
             </div>
             <div className="flex flex-col gap-1 sm:col-span-2">
@@ -113,7 +113,7 @@ export function FilaEmpresa({
               <input
                 name="direccion"
                 defaultValue={empresa.dispatchAddress ?? ""}
-                className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+                className="rounded-lg border border-line bg-paper px-3 py-2 text-sm"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -124,7 +124,7 @@ export function FilaEmpresa({
                 name="customerId"
                 inputMode="numeric"
                 defaultValue={empresa.relbaseCustomerId ?? ""}
-                className="rounded-sm border border-line bg-paper px-3 py-2 font-mono text-sm"
+                className="rounded-lg border border-line bg-paper px-3 py-2 font-mono text-sm"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -133,7 +133,7 @@ export function FilaEmpresa({
                 name="wareHouseId"
                 inputMode="numeric"
                 defaultValue={empresa.relbaseWareHouseId ?? ""}
-                className="rounded-sm border border-line bg-paper px-3 py-2 font-mono text-sm"
+                className="rounded-lg border border-line bg-paper px-3 py-2 font-mono text-sm"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -142,7 +142,7 @@ export function FilaEmpresa({
                 name="cityId"
                 inputMode="numeric"
                 defaultValue={empresa.dispatchCityId ?? ""}
-                className="rounded-sm border border-line bg-paper px-3 py-2 font-mono text-sm"
+                className="rounded-lg border border-line bg-paper px-3 py-2 font-mono text-sm"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -151,18 +151,18 @@ export function FilaEmpresa({
                 name="communeId"
                 inputMode="numeric"
                 defaultValue={empresa.dispatchCommuneId ?? ""}
-                className="rounded-sm border border-line bg-paper px-3 py-2 font-mono text-sm"
+                className="rounded-lg border border-line bg-paper px-3 py-2 font-mono text-sm"
               />
             </div>
           </div>
 
           {estado.status === "error" && (
-            <p role="alert" className="rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
+            <p role="alert" className="rounded-lg bg-error-bg px-3 py-2 text-sm text-error">
               {estado.mensaje}
             </p>
           )}
           {estado.status === "ok" && (
-            <p className="rounded-sm bg-valido-bg px-3 py-2 text-sm text-valido">
+            <p className="rounded-lg bg-valido-bg px-3 py-2 text-sm text-valido">
               {estado.mensaje}
             </p>
           )}
@@ -171,7 +171,7 @@ export function FilaEmpresa({
             <button
               type="submit"
               disabled={guardando}
-              className="rounded-sm bg-teal px-4 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:opacity-50"
+              className="rounded-lg bg-teal px-4 py-2 font-display text-sm font-medium text-on-accent transition-colors hover:bg-teal-strong disabled:opacity-50"
             >
               {guardando ? "Guardando…" : "Guardar cambios"}
             </button>

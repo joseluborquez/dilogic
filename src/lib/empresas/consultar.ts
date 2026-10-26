@@ -106,13 +106,22 @@ export async function obtenerValoresPorDefecto(): Promise<{
  * vez de quedar inutilizable.
  */
 export async function listarBodegas(): Promise<{ id: number; etiqueta: string }[]> {
+  if (cacheBodegas && cacheBodegas.expiraMs > Date.now()) return cacheBodegas.bodegas;
   try {
     const { listarBodegasRelbase } = await import("@/lib/relbase/client");
     const { aOpcion } = await import("./referencias");
 
-    const bodegas = await listarBodegasRelbase();
-    return bodegas.map(aOpcion).map((b) => ({ id: b.id, etiqueta: b.etiqueta }));
+    const bodegas = (await listarBodegasRelbase())
+      .map(aOpcion)
+      .map((b) => ({ id: b.id, etiqueta: b.etiqueta }));
+    if (bodegas.length > 0) cacheBodegas = { bodegas, expiraMs: Date.now() + DURACION_CACHE_BODEGAS_MS };
+    return bodegas;
   } catch {
     return [];
   }
 }
+
+// Las bodegas casi nunca cambian y pedirlas a Relbase toma ~2 s: se guardan en
+// memoria de la instancia un rato. Una lista vacia (Relbase fallo) no se guarda.
+const DURACION_CACHE_BODEGAS_MS = 10 * 60 * 1000;
+let cacheBodegas: { bodegas: { id: number; etiqueta: string }[]; expiraMs: number } | null = null;

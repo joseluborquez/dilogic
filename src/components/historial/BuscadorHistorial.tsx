@@ -16,7 +16,7 @@ export function BuscadorHistorial({ empresas, valores, hayFiltros }: Props) {
     <form
       method="get"
       action="/historial"
-      className="flex flex-wrap items-end gap-3 rounded-sm border border-line bg-surface px-3 py-3"
+      className="flex flex-wrap items-end gap-3 vidrio px-3 py-3"
     >
       <div className="flex min-w-56 flex-1 flex-col gap-1">
         <label htmlFor="q" className="text-xs tracking-wide text-ink-muted uppercase">
@@ -28,7 +28,7 @@ export function BuscadorHistorial({ empresas, valores, hayFiltros }: Props) {
           type="search"
           defaultValue={valores.texto}
           placeholder="Ej: 39805 o MELCHOR"
-          className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+          className="rounded-lg border border-line bg-paper px-3 py-2 text-sm"
         />
       </div>
 
@@ -40,7 +40,7 @@ export function BuscadorHistorial({ empresas, valores, hayFiltros }: Props) {
           id="empresa"
           name="empresa"
           defaultValue={valores.empresa}
-          className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+          className="rounded-lg border border-line bg-paper px-3 py-2 text-sm"
         >
           <option value="">Todas</option>
           {empresas.map((e) => (
@@ -60,7 +60,7 @@ export function BuscadorHistorial({ empresas, valores, hayFiltros }: Props) {
           name="desde"
           type="date"
           defaultValue={valores.desde}
-          className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+          className="rounded-lg border border-line bg-paper px-3 py-2 text-sm"
         />
       </div>
 
@@ -73,14 +73,14 @@ export function BuscadorHistorial({ empresas, valores, hayFiltros }: Props) {
           name="hasta"
           type="date"
           defaultValue={valores.hasta}
-          className="rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+          className="rounded-lg border border-line bg-paper px-3 py-2 text-sm"
         />
       </div>
 
       <div className="flex items-center gap-3">
         <button
           type="submit"
-          className="rounded-sm bg-teal px-4 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong"
+          className="rounded-lg bg-teal px-4 py-2 font-display text-sm font-medium text-on-accent transition-colors hover:bg-teal-strong"
         >
           Buscar
         </button>

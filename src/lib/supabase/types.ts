@@ -84,6 +84,81 @@ export type SincronizacionCatalogo = {
   created_at: string;
 };
 
+// Ventas (0016): copia de las guias tipo 52 de Relbase con sus productos.
+export type VentaGuia = {
+  dte_id: number;
+  folio: number;
+  fecha: string;
+  sii_status: string | null;
+  anulada: boolean; // generada: sii_status = 'cancel'
+  customer_id: number | null;
+  contacto: string | null;
+  type_transfer: number | null;
+  monto_neto: number;
+  monto_total: number;
+  lineas_cargadas: boolean;
+  actualizado_en: string;
+  created_at: string;
+};
+
+export type VentaLinea = {
+  dte_id: number;
+  linea: number;
+  product_id: number | null;
+  codigo: string | null;
+  nombre: string | null;
+  empresa: string;
+  familia: string | null;
+  cantidad: number;
+  precio: number;
+  descuento: number | null;
+  monto_neto: number;
+};
+
+export type SincronizacionVentas = {
+  id: string;
+  origen: "manual" | "automatica" | "carga_inicial";
+  desde: string;
+  iniciada_en: string;
+  terminada_en: string | null;
+  estado: "en_curso" | "ok" | "parcial" | "error";
+  resumen: unknown;
+  error: string | null;
+  created_at: string;
+};
+
+// Guias manuales (0017): una fila por emision desde "Guia manual".
+/** Memoria de la guia manual (0018): texto del cliente -> producto con que se emitio. */
+export type MemoriaListado = {
+  texto: string;
+  texto_original: string;
+  codigo: string;
+  product_id: number | null;
+  veces: number;
+  usuario: string | null;
+  actualizado_en: string;
+  created_at: string;
+};
+
+export type GuiaManual = {
+  id: string;
+  idempotency_key: string;
+  estado: "emitiendo" | "emitida" | "error";
+  customer_id: number;
+  cliente_rut: string | null;
+  cliente_nombre: string | null;
+  opcion_precio: string;
+  monto_neto: number;
+  payload: unknown;
+  dte_id: number | null;
+  folio: string | null;
+  mensaje_error: string | null;
+  usuario_id: string | null;
+  usuario: string | null;
+  created_at: string;
+  emitida_en: string | null;
+};
+
 export type TraspasoFactura = {
   id: string;
   proveedor_rut: string;
@@ -183,6 +258,36 @@ export interface Database {
         Row: SincronizacionCatalogo;
         Insert: Partial<SincronizacionCatalogo>;
         Update: Partial<SincronizacionCatalogo>;
+        Relationships: [];
+      };
+      ventas_guias: {
+        Row: VentaGuia;
+        Insert: Partial<VentaGuia>;
+        Update: Partial<VentaGuia>;
+        Relationships: [];
+      };
+      ventas_lineas: {
+        Row: VentaLinea;
+        Insert: Partial<VentaLinea>;
+        Update: Partial<VentaLinea>;
+        Relationships: [];
+      };
+      sincronizaciones_ventas: {
+        Row: SincronizacionVentas;
+        Insert: Partial<SincronizacionVentas>;
+        Update: Partial<SincronizacionVentas>;
+        Relationships: [];
+      };
+      memoria_listados: {
+        Row: MemoriaListado;
+        Insert: Partial<MemoriaListado>;
+        Update: Partial<MemoriaListado>;
+        Relationships: [];
+      };
+      guias_manuales: {
+        Row: GuiaManual;
+        Insert: Partial<GuiaManual>;
+        Update: Partial<GuiaManual>;
         Relationships: [];
       };
       traspasos_factura: {

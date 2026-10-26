@@ -26,8 +26,12 @@ export const SCOPES_RELBASE = [
   "users:read",
 ] as const;
 
-/** Cookie temporal con state + code_verifier entre /iniciar y /callback. */
-export const COOKIE_OAUTH = "relbase_oauth";
+/**
+ * Cookie temporal con state + code_verifier entre /iniciar y /callback. Con
+ * prefijo: en localhost las cookies no se separan por puerto, y el buscador de
+ * precios usa "relbase_oauth" para su propia conexion.
+ */
+export const COOKIE_OAUTH = "dilogic_relbase_oauth";
 export const COOKIE_OAUTH_RUTA = "/api/relbase/oauth";
 export const COOKIE_OAUTH_DURACION_SEGUNDOS = 600;
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { generarGuiasAction, type EstadoGeneracion } from "@/app/nueva-corrida/actions-generar";
+import { generarGuiasAction, type EstadoGeneracion } from "@/app/(panel)/nueva-corrida/actions-generar";
 import type { FilaValidada } from "@/lib/catalogo/validar";
 import { descargarZipGuias } from "@/components/historial/descargar-zip";
 import { armarGuias } from "@/lib/guias/armar";
@@ -84,7 +84,7 @@ export function GenerarGuiasForm({
           <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
           <input type="hidden" name="agrupar" value={agrupar ? "1" : "0"} />
 
-          <div className="flex w-full flex-col gap-2 rounded-sm border border-line bg-surface-muted px-3 py-2 text-sm">
+          <div className="flex w-full flex-col gap-2 rounded-lg border border-line bg-surface-muted px-3 py-2 text-sm">
             <label className="flex cursor-pointer items-start gap-2">
               <input
                 type="checkbox"
@@ -127,7 +127,7 @@ export function GenerarGuiasForm({
                 value={contacto}
                 onChange={(e) => setContacto(e.target.value)}
                 placeholder="Ej: BASE CHURRECUE"
-                className="rounded-sm border border-line bg-surface px-3 py-2 text-sm"
+                className="rounded-lg border border-line bg-paper px-3 py-2 text-sm"
               />
             </div>
           )}
@@ -135,7 +135,7 @@ export function GenerarGuiasForm({
           <button
             type="submit"
             disabled={pending || (!tieneCentros && !contacto.trim())}
-            className="rounded-sm bg-teal px-5 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-teal px-5 py-2 font-display text-sm font-medium text-on-accent transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? "Generando…" : "Generar guías"}
           </button>
@@ -143,7 +143,7 @@ export function GenerarGuiasForm({
       )}
 
       {estado.status === "error" && (
-        <p role="alert" className="rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
+        <p role="alert" className="rounded-lg bg-error-bg px-3 py-2 text-sm text-error">
           {estado.mensaje}
         </p>
       )}
@@ -152,7 +152,7 @@ export function GenerarGuiasForm({
         <div className="flex flex-col gap-2">
           <p className="font-display text-sm font-semibold">Resultado de la generación</p>
           {estado.yaExistia && (
-            <p className="rounded-sm bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
+            <p className="rounded-lg bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
               Este pedido ya se había generado. Estas son las guías de esa vez: no se emitieron
               nuevas.
             </p>
@@ -161,7 +161,7 @@ export function GenerarGuiasForm({
             {estado.grupos.map((g, i) => (
               <li
                 key={i}
-                className={`rounded-sm px-3 py-2 text-sm ${
+                className={`rounded-lg px-3 py-2 text-sm ${
                   g.estado === "generada" ? "bg-valido-bg text-valido" : "bg-error-bg text-error"
                 }`}
               >
@@ -181,7 +181,7 @@ export function GenerarGuiasForm({
                 type="button"
                 onClick={() => descargarTodas(estado.corridaId)}
                 disabled={descargando}
-                className="rounded-sm bg-teal px-4 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg bg-teal px-4 py-2 font-display text-sm font-medium text-on-accent transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {descargando ? "Preparando…" : "Descargar todas las guías (ZIP)"}
               </button>
@@ -192,7 +192,7 @@ export function GenerarGuiasForm({
           )}
 
           {avisoDescarga && (
-            <p role="status" className="rounded-sm bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
+            <p role="status" className="rounded-lg bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
               {avisoDescarga}
             </p>
           )}

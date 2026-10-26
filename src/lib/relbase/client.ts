@@ -8,6 +8,10 @@ import {
   type RelbaseCrearDtePayload,
   type RelbaseCrearDteResponse,
   type RelbaseDteDetalle,
+  type RelbaseDteResumen,
+  type RelbaseCliente,
+  type RelbaseDireccionCliente,
+  type RelbaseFormaPago,
   type RelbaseProducto,
   type RelbaseProductosPage,
   type RelbaseReferencia,
@@ -109,6 +113,22 @@ export async function buscarProductoPorCodigo(codigo: string): Promise<RelbasePr
   return productos.find((p) => p.code === codigo) ?? null;
 }
 
+/**
+ * GET /productos/{id}. A diferencia del listado y de ?query=, tambien devuelve
+ * los productos deshabilitados (confirmado 25-oct-2026): es la forma de saber
+ * si un codigo que "desaparecio" sigue existiendo. null si Relbase no lo tiene.
+ */
+export async function obtenerProducto(id: number): Promise<RelbaseProducto | null> {
+  try {
+    // Llega como {data: {...}}; se acepta tambien {data: {product: {...}}}.
+    const res = await request<{ data: RelbaseProducto & { product?: RelbaseProducto } }>(`/productos/${id}`);
+    return res.data.product ?? res.data;
+  } catch (err) {
+    if (err instanceof RelbaseApiError && err.status === 404) return null;
+    throw err;
+  }
+}
+
 /** GET /productos?query=: todo lo que Relbase considere parecido, no solo el exacto. */
 export async function buscarProductos(query: string): Promise<RelbaseProducto[]> {
   const pagina = await request<RelbaseProductosPage>(
@@ -135,6 +155,29 @@ function extraerLista(json: unknown): RelbaseReferencia[] {
 /** Solo lectura: clientes de Relbase, para elegir el destinatario de las guias. */
 export async function buscarClientesRelbase(query: string): Promise<RelbaseReferencia[]> {
   return extraerLista(await request<unknown>(`/clientes?query=${encodeURIComponent(query)}`));
+}
+
+/** Solo lectura: un cliente completo (RUT, razon social, direccion, forma de pago). */
+export async function obtenerCliente(id: number): Promise<RelbaseCliente | null> {
+  try {
+    const res = await request<{ data: RelbaseCliente & { customer?: RelbaseCliente } }>(`/clientes/${id}`);
+    return res.data.customer ?? res.data;
+  } catch (err) {
+    if (err instanceof RelbaseApiError && err.status === 404) return null;
+    throw err;
+  }
+}
+
+/** Solo lectura: direcciones de despacho adicionales del cliente (puede no tener ninguna). */
+export async function listarDireccionesCliente(id: number): Promise<RelbaseDireccionCliente[]> {
+  const res = await request<{ data: { customer_addresses?: RelbaseDireccionCliente[] } }>(`/clientes/${id}/direcciones`);
+  return res.data?.customer_addresses ?? [];
+}
+
+/** Solo lectura: formas de pago de la cuenta (scope users:read). */
+export async function listarFormasPago(): Promise<RelbaseFormaPago[]> {
+  const res = await request<{ data: { type_payments?: RelbaseFormaPago[] } }>("/forma_pagos");
+  return (res.data?.type_payments ?? []).filter((f) => f.enabled !== false);
 }
 
 export async function listarBodegasRelbase(): Promise<RelbaseReferencia[]> {
@@ -261,6 +304,20 @@ export async function listarComprasProveedor(rut: string): Promise<CompraRelbase
     pagina += 1;
   } while (pagina <= totalPaginas);
   return compras;
+}
+
+/**
+ * Solo lectura: una pagina del listado de guias de despacho (12 por pagina,
+ * de la mas nueva a la mas antigua; confirmado 25-oct-2026). El listado no
+ * trae los productos: para eso, obtenerDte.
+ */
+export async function listarGuiasPagina(
+  page: number
+): Promise<{ guias: RelbaseDteResumen[]; totalPaginas: number }> {
+  const json = await request<{ data: { dtes?: RelbaseDteResumen[] }; meta: { total_pages?: number } }>(
+    `/dtes?type_document=52&page=${page}`
+  );
+  return { guias: json.data?.dtes ?? [], totalPaginas: json.meta?.total_pages ?? 1 };
 }
 
 /** Solo lectura: trae el detalle de un DTE ya creado, incluida la URL (firmada, ~1h) del PDF. */

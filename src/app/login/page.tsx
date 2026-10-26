@@ -12,7 +12,7 @@ export default async function LoginPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const params = await searchParams;
-  const volver = typeof params.volver === "string" ? params.volver : "/nueva-corrida";
+  const volver = typeof params.volver === "string" ? params.volver : "/";
   const estado = typeof params.estado === "string" ? params.estado : "";
 
   return (

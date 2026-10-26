@@ -31,6 +31,8 @@ export interface RelbaseDteProducto {
   price: number;
   quantity: number;
   tax_affected: boolean;
+  /** Descripcion propia de la linea (la usa el PRODUCTO GENERICO). */
+  description?: string;
 }
 
 export interface RelbaseCrearDtePayload {
@@ -62,6 +64,49 @@ export interface RelbaseCrearDtePayload {
   // reales 09-jul-2026: es el unico dato que varia por corrida).
   contact: string;
   products: RelbaseDteProducto[];
+  // Solo la guia manual (paso 4) usa estos: forma de pago del cliente,
+  // direccion de despacho distinta de la principal ("Despachar a ..." en el
+  // PDF) y datos de transporte, o la marca de que no se tienen.
+  type_payment_id?: number;
+  dispatch_address?: string;
+  dispatch_city_id?: number;
+  dispatch_commune_id?: number;
+  number_plate?: string;
+  shipper_rut?: string;
+  driver_rut?: string;
+  driver_name?: string;
+  number_plate_unavailable?: boolean;
+  shipper_rut_unavailable?: boolean;
+  driver_rut_unavailable?: boolean;
+  driver_name_unavailable?: boolean;
+}
+
+/** Cliente de Relbase (GET /clientes/{id}); solo los campos que usa la app. */
+export interface RelbaseCliente {
+  id: number;
+  rut: string;
+  name: string;
+  name_fantasy: string | null;
+  address: string | null;
+  city_id: number | null;
+  commune_id: number | null;
+  type_payment_id: number | null;
+  [key: string]: unknown;
+}
+
+/** Direccion de despacho de un cliente (GET /clientes/{id}/direcciones). */
+export interface RelbaseDireccionCliente {
+  id: number;
+  address: string;
+  city_id: number | null;
+  commune_id: number | null;
+  [key: string]: unknown;
+}
+
+export interface RelbaseFormaPago {
+  id: number;
+  name: string;
+  enabled: boolean;
 }
 
 export interface RelbaseCrearDteResponse {
@@ -70,12 +115,37 @@ export interface RelbaseCrearDteResponse {
   [key: string]: unknown;
 }
 
+/** Guia tal como viene en GET /dtes (listado): sin productos. */
+export interface RelbaseDteResumen {
+  id: number;
+  folio: number;
+  start_date: string; // yyyy-mm-dd
+  /** Estado ante el SII: "accepted", "cancel" (anulada) y otros intermedios. */
+  sii_status: string | null;
+  amount_neto: number;
+  amount_total: number;
+  customer_id: number | null;
+  contact: string | null;
+  type_transfer: number | null;
+}
+
+/** Linea de producto de un DTE (GET /dtes/{id}). */
+export interface RelbaseDteLinea {
+  product_id: number;
+  code: string | null;
+  name: string | null;
+  price: number;
+  quantity: number;
+  discount: number | null;
+}
+
 export interface RelbaseDteDetalle {
   id: number;
   folio: number | string;
   // URL firmada de S3, expira ~1h (confirmado 11-jul-2026): descargar de
   // inmediato, no persistir esta URL tal cual.
   pdf_file: { url: string } | null;
+  products?: RelbaseDteLinea[];
   [key: string]: unknown;
 }
 
@@ -111,6 +181,13 @@ export const TYPE_DISPATCH_POR_CUENTA_DEL_RECEPTOR = 1;
 
 /** Texto que acompana a TYPE_DISPATCH_POR_CUENTA_DEL_RECEPTOR en el PDF. */
 export const COMENTARIO_TIPO_DESPACHO = "Tipo de despacho: Por cuenta del receptor del documento";
+
+/** Tipos de despacho del SII (spec v2, obligatorio en guias desde el 01-11-2026). */
+export const TIPOS_DESPACHO: Record<1 | 2 | 3, string> = {
+  1: "Por cuenta del receptor del documento",
+  2: "Por cuenta del emisor a instalaciones del cliente",
+  3: "Por cuenta del emisor a otras instalaciones",
+};
 
 export class RelbaseApiError extends Error {
   /** v2: espera sugerida por el header Retry-After de un 429 (acotada). */

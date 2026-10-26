@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import type { GuiaAgrupada, SolicitudAgrupada } from "@/lib/historial/consultar";
-import { eliminarGuiasAction } from "@/app/historial/actions";
+import { eliminarGuiasAction } from "@/app/(panel)/historial/actions";
 import { AccionIconoBoton, AccionIconoEnlace } from "@/components/ui/AccionIcono";
 import { IconoDescargar, IconoEliminar, IconoVer } from "@/components/ui/iconos";
 import { descargarZipGuias } from "./descargar-zip";
@@ -119,7 +119,7 @@ export function HistorialSolicitudes({ solicitudes, puedeEliminar }: Props) {
 
   if (solicitudes.length === 0) {
     return (
-      <div className="rounded-sm border border-dashed border-line px-6 py-10 text-center">
+      <div className="rounded-lg border border-dashed border-line px-6 py-10 text-center">
         <p className="text-sm text-ink-muted">Todavía no se ha generado ninguna guía.</p>
       </div>
     );
@@ -130,7 +130,7 @@ export function HistorialSolicitudes({ solicitudes, puedeEliminar }: Props) {
       {aviso && (
         <p
           role="status"
-          className={`rounded-sm px-3 py-2 text-sm ${
+          className={`rounded-lg px-3 py-2 text-sm ${
             aviso.tipo === "ok" ? "bg-valido-bg text-valido" : "bg-error-bg text-error"
           }`}
         >
@@ -144,7 +144,7 @@ export function HistorialSolicitudes({ solicitudes, puedeEliminar }: Props) {
         const todas = seleccionadas === claves.length && claves.length > 0;
 
         return (
-          <section key={solicitud.corridaId} className="rounded-sm border border-line bg-surface">
+          <section key={solicitud.corridaId} className="vidrio-lista overflow-hidden">
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface-muted px-3 py-2.5">
               <div className="flex min-w-0 items-start gap-3">
                 <input
@@ -180,7 +180,7 @@ export function HistorialSolicitudes({ solicitudes, puedeEliminar }: Props) {
                 // coinciden, y lo que se baja debe ser lo que esta en pantalla.
                 onClick={() => descargar(solicitud.corridaId, { claves })}
                 disabled={descargando !== null || solicitud.totalConPdf === 0}
-                className="shrink-0 rounded-sm border border-teal px-3 py-1.5 text-sm font-medium text-teal transition-colors hover:bg-teal hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="shrink-0 rounded-lg border border-teal px-3 py-1.5 text-sm font-medium text-teal transition-colors hover:bg-teal hover:text-on-accent disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {descargando === solicitud.corridaId
                   ? "Preparando…"
@@ -222,7 +222,7 @@ export function HistorialSolicitudes({ solicitudes, puedeEliminar }: Props) {
       })}
 
       {seleccion.size > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-surface/95 backdrop-blur">
+        <div className="vidrio fixed inset-x-0 bottom-0 z-10 rounded-none! border-x-0! border-b-0! md:left-68">
           <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3 px-6 py-3">
             <p className="text-sm">
               <span className="font-display font-semibold">
@@ -245,7 +245,7 @@ export function HistorialSolicitudes({ solicitudes, puedeEliminar }: Props) {
                   type="button"
                   onClick={() => setPorEliminar([...seleccion])}
                   disabled={eliminando || descargando !== null}
-                  className="rounded-sm border border-error px-3 py-1.5 text-sm font-medium text-error transition-colors hover:bg-error hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-lg border border-error px-3 py-1.5 text-sm font-medium text-error transition-colors hover:bg-error hover:text-on-accent disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Eliminar
                 </button>
@@ -254,7 +254,7 @@ export function HistorialSolicitudes({ solicitudes, puedeEliminar }: Props) {
                 type="button"
                 onClick={() => descargar("seleccion", { claves: [...seleccion] })}
                 disabled={descargando !== null || seleccionadasConPdf === 0}
-                className="rounded-sm bg-teal px-4 py-1.5 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-lg bg-teal px-4 py-1.5 font-display text-sm font-medium text-on-accent transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {descargando === "seleccion" ? "Preparando…" : "Descargar ZIP"}
               </button>
@@ -299,7 +299,7 @@ function FilaGuia({
   return (
     <tr
       className={`border-b border-line last:border-0 ${
-        seleccionada ? "bg-valido-bg/40" : "odd:bg-surface even:bg-paper"
+        seleccionada ? "bg-valido-bg/40" : "even:bg-surface-muted"
       }`}
     >
       <td className="px-3 py-2">
@@ -317,12 +317,12 @@ function FilaGuia({
       <td className="px-3 py-2 text-right font-mono">{guia.cantidadProductos}</td>
       <td className="px-3 py-2">
         {guia.estado === "generada" ? (
-          <span className="inline-block rounded-sm border-2 border-valido bg-valido-bg px-2 py-0.5 font-display text-[11px] font-semibold tracking-wider whitespace-nowrap text-valido">
+          <span className="inline-block rounded-lg border-2 border-valido bg-valido-bg px-2 py-0.5 font-display text-[11px] font-semibold tracking-wider whitespace-nowrap text-valido">
             GENERADA
           </span>
         ) : (
           <span
-            className="inline-block rounded-sm border-2 border-error bg-error-bg px-2 py-0.5 font-display text-[11px] font-semibold tracking-wider whitespace-nowrap text-error"
+            className="inline-block rounded-lg border-2 border-error bg-error-bg px-2 py-0.5 font-display text-[11px] font-semibold tracking-wider whitespace-nowrap text-error"
             title={guia.mensajeError ?? undefined}
           >
             ERROR
@@ -401,7 +401,7 @@ function ConfirmarEliminacion({
         aria-modal="true"
         aria-labelledby="titulo-eliminar"
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-sm border border-line bg-surface p-5 shadow-lg"
+        className="w-full max-w-md vidrio p-5 shadow-lg"
       >
         <h2 id="titulo-eliminar" className="font-display text-lg font-semibold">
           Eliminar {plural(cantidad, "guía", "guías")} del historial
@@ -415,7 +415,7 @@ function ConfirmarEliminacion({
             type="button"
             autoFocus
             onClick={onCancelar}
-            className="rounded-sm border border-line px-4 py-2 text-sm transition-colors hover:bg-surface-muted"
+            className="rounded-lg border border-line px-4 py-2 text-sm transition-colors hover:bg-surface-muted"
           >
             Cancelar
           </button>
@@ -423,7 +423,7 @@ function ConfirmarEliminacion({
             type="button"
             onClick={onConfirmar}
             disabled={eliminando}
-            className="rounded-sm bg-error px-4 py-2 font-display text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-error px-4 py-2 font-display text-sm font-medium text-on-accent transition-colors disabled:cursor-not-allowed disabled:opacity-50"
           >
             {eliminando ? "Eliminando…" : "Eliminar del historial"}
           </button>

@@ -8,23 +8,22 @@
 export function createThrottledQueue(maxPerSecond: number) {
   const minIntervalMs = 1000 / maxPerSecond;
   let lastCallAt = 0;
-  let chain: Promise<unknown> = Promise.resolve();
+  // Encadena solo los turnos de partida, no las llamadas: cada una sale a su
+  // hora y no espera a que termine la anterior. Antes la cola esperaba la
+  // respuesta, y con ~400 ms por llamada el ritmo real quedaba en ~2,5/s y
+  // pedir varias paginas en paralelo no servia de nada (25-oct-2026).
+  let turnos: Promise<void> = Promise.resolve();
 
   function schedule<T>(fn: () => Promise<T>): Promise<T> {
-    const run = async (): Promise<T> => {
-      const now = Date.now();
-      const wait = Math.max(0, lastCallAt + minIntervalMs - now);
+    const turno = turnos.then(async () => {
+      const wait = Math.max(0, lastCallAt + minIntervalMs - Date.now());
       if (wait > 0) {
         await new Promise((resolve) => setTimeout(resolve, wait));
       }
       lastCallAt = Date.now();
-      return fn();
-    };
-
-    const result = chain.then(run, run);
-    // Evita que un rechazo interrumpa las llamadas siguientes en la cola.
-    chain = result.catch(() => undefined);
-    return result;
+    });
+    turnos = turno;
+    return turno.then(fn);
   }
 
   return { schedule };

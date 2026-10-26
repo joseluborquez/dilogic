@@ -14,7 +14,7 @@ export type EstadoLogin =
   | { status: "error"; mensaje: string }
   | { status: "registrado"; mensaje: string };
 
-const DESTINO_POR_DEFECTO = "/nueva-corrida";
+const DESTINO_POR_DEFECTO = "/";
 
 /**
  * Solo rutas internas: `?volver=` lo controla quien arma el enlace, y una URL

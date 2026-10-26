@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { buscarReferenciaRelbaseAction } from "@/app/empresas/actions";
+import { buscarReferenciaRelbaseAction } from "@/app/(panel)/empresas/actions";
 import type { OpcionReferencia } from "@/lib/empresas/referencias";
 
 interface Props {
@@ -61,7 +61,7 @@ export function BuscadorReferencia({
       <input type="hidden" name={nombreCampo} value={valor} />
 
       {valor ? (
-        <div className="flex items-center justify-between gap-2 rounded-sm border border-line bg-paper px-3 py-2 text-sm">
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-line bg-paper px-3 py-2 text-sm">
           <span>
             {nombreElegido ?? `${etiqueta} seleccionada`}{" "}
             <span className="font-mono text-xs text-ink-muted">#{valor}</span>
@@ -94,13 +94,13 @@ export function BuscadorReferencia({
                   ? "Vacío para ver todas"
                   : "Elige primero la ciudad"
             }
-            className="flex-1 rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+            className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm"
           />
           <button
             type="button"
             onClick={buscar}
             disabled={buscando}
-            className="rounded-sm border border-teal px-3 py-2 text-sm font-medium text-teal transition-colors hover:bg-teal hover:text-white disabled:opacity-50"
+            className="rounded-lg border border-teal px-3 py-2 text-sm font-medium text-teal transition-colors hover:bg-teal hover:text-on-accent disabled:opacity-50"
           >
             {buscando ? "…" : "Buscar"}
           </button>
@@ -110,7 +110,7 @@ export function BuscadorReferencia({
       {error && <p className="text-xs text-error">{error}</p>}
 
       {resultados && resultados.length > 0 && !valor && (
-        <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-sm border border-line p-1">
+        <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-lg border border-line p-1">
           {resultados.map((opcion) => (
             <li key={opcion.id}>
               <button
@@ -119,7 +119,7 @@ export function BuscadorReferencia({
                   onElegir(opcion);
                   setResultados(null);
                 }}
-                className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-surface-muted"
+                className="w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-muted"
               >
                 {opcion.etiqueta}
                 <span className="ml-2 font-mono text-xs text-ink-muted">#{opcion.id}</span>

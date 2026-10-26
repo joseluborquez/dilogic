@@ -5,6 +5,7 @@ import { traerTodasLasFilas } from "@/lib/supabase/paginar";
 import { enLotes } from "@/lib/util/lotes";
 import {
   buscarProductoPorCodigo,
+  obtenerProducto,
   listarProductosPagina,
 } from "@/lib/relbase/client";
 import type { OrigenSincronizacion } from "@/lib/supabase/types";
@@ -326,7 +327,14 @@ export async function sincronizarPendientesDirecto(
   }
 
   for (const p of pendientes) {
-    const producto = await buscarProductoPorCodigo(p.sku);
+    // El listado y ?query= ocultan los deshabilitados: si no aparece por
+    // codigo, se pregunta por su id. Asi un deshabilitado queda registrado
+    // como tal y no como "ya no existe" (paso con 72 codigos el 25-oct-2026).
+    let producto = await buscarProductoPorCodigo(p.sku);
+    if (!producto && p.product_id_relbase != null) {
+      const porId = await obtenerProducto(Number(p.product_id_relbase));
+      if (porId?.code === p.sku) producto = porId;
+    }
     const codigoEmpresa = codigoPorEmpresaId.get(p.empresa_id) ?? "?";
     if (producto) {
       const precio = Number(producto.price);
@@ -441,10 +449,13 @@ export async function aplicarEstadoRelbase(
     }
   }
 
+  // Solo cuentan para el tope los "no vistos": un deshabilitado lo confirmo
+  // Relbase producto por producto, no es una respuesta incompleta.
+  const noVistos = aBloquear.filter((b) => b.cambio.motivo !== MOTIVO_DESHABILITADO);
   const tope = MAX_BLOQUEOS_SIN_REVISAR(filas.length);
-  if (aBloquear.length > tope) {
+  if (noVistos.length > tope) {
     throw new Error(
-      `La sincronización iba a bloquear ${aBloquear.length} códigos (el máximo sin revisión es ${tope}). No se bloqueó nada: puede ser una respuesta incompleta de Relbase. Ejemplos: ${aBloquear
+      `La sincronización iba a bloquear ${noVistos.length} códigos que Relbase no mostró (el máximo sin revisión es ${tope}). No se bloqueó nada: puede ser una respuesta incompleta de Relbase. Ejemplos: ${noVistos
         .slice(0, 5)
         .map((b) => b.cambio.sku)
         .join(", ")}.`

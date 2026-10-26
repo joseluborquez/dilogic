@@ -8,7 +8,7 @@ import {
   registrarErrorSincronizacionAction,
   sincronizarLoteAction,
   sincronizarPendientesAction,
-} from "@/app/catalogo/actions";
+} from "@/app/(panel)/catalogo/actions";
 import { PAGINAS_POR_LOTE } from "@/lib/catalogo/constantes";
 import type {
   CodigoCambiado,
@@ -130,7 +130,7 @@ export function SincronizarCatalogoForm() {
           type="button"
           onClick={() => sincronizar()}
           disabled={enCurso}
-          className="rounded-sm bg-teal px-5 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-lg bg-teal px-5 py-2 font-display text-sm font-medium text-on-accent transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
         >
           {enCurso ? "Sincronizando…" : "Sincronizar ahora"}
         </button>
@@ -164,14 +164,14 @@ export function SincronizarCatalogoForm() {
       )}
 
       {estado.fase === "error" && (
-        <div className="flex flex-col gap-2 rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
+        <div className="flex flex-col gap-2 rounded-lg bg-error-bg px-3 py-2 text-sm text-error">
           <p role="alert">{estado.mensaje}</p>
           {estado.progreso && estado.progreso.siguientePagina > 1 && (
             <div>
               <button
                 type="button"
                 onClick={() => sincronizar(estado.progreso)}
-                className="rounded-sm border border-error px-3 py-1 text-xs font-medium hover:bg-error hover:text-white"
+                className="rounded-lg border border-error px-3 py-1 text-xs font-medium hover:bg-error hover:text-on-accent"
               >
                 Reanudar desde la página {estado.progreso.siguientePagina}
               </button>
@@ -181,7 +181,7 @@ export function SincronizarCatalogoForm() {
       )}
 
       {estado.fase === "ok" && (
-        <div className="flex flex-col gap-3 rounded-sm border border-line bg-surface p-4">
+        <div className="flex flex-col gap-3 vidrio p-4">
           <p className="text-sm text-ink-muted">{estado.actualizados} productos actualizados en total.</p>
 
           <CambiosSincronizacion
@@ -190,7 +190,7 @@ export function SincronizarCatalogoForm() {
             reactivados={estado.estado.reactivados}
           />
 
-          <div className="overflow-x-auto rounded-sm border border-line">
+          <div className="overflow-x-auto rounded-lg border border-line">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-line bg-surface-muted text-left text-xs tracking-wide text-ink-muted uppercase">

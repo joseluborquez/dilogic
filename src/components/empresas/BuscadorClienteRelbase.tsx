@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { buscarClienteRelbaseAction } from "@/app/empresas/actions";
+import { buscarClienteRelbaseAction } from "@/app/(panel)/empresas/actions";
 import type { OpcionReferencia } from "@/lib/empresas/referencias";
 
 interface Props {
@@ -51,13 +51,13 @@ export function BuscadorClienteRelbase({ onElegir, elegido }: Props) {
             }
           }}
           placeholder="RUT (79.784.980-4) o nombre"
-          className="flex-1 rounded-sm border border-line bg-paper px-3 py-2 text-sm"
+          className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm"
         />
         <button
           type="button"
           onClick={buscar}
           disabled={buscando}
-          className="rounded-sm border border-teal px-3 py-2 text-sm font-medium text-teal transition-colors hover:bg-teal hover:text-white disabled:opacity-50"
+          className="rounded-lg border border-teal px-3 py-2 text-sm font-medium text-teal transition-colors hover:bg-teal hover:text-on-accent disabled:opacity-50"
         >
           {buscando ? "Buscando…" : "Buscar"}
         </button>
@@ -66,14 +66,14 @@ export function BuscadorClienteRelbase({ onElegir, elegido }: Props) {
       {error && <p className="text-sm text-error">{error}</p>}
 
       {elegido && (
-        <p className="rounded-sm bg-valido-bg px-3 py-2 text-sm text-valido">
+        <p className="rounded-lg bg-valido-bg px-3 py-2 text-sm text-valido">
           Cliente: <span className="font-medium">{elegido.etiqueta}</span>{" "}
           <span className="font-mono text-xs">#{elegido.id}</span>
         </p>
       )}
 
       {resultados && resultados.length > 0 && (
-        <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-sm border border-line p-1">
+        <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-lg border border-line p-1">
           {resultados.map((cliente) => (
             <li key={cliente.id}>
               <button
@@ -82,7 +82,7 @@ export function BuscadorClienteRelbase({ onElegir, elegido }: Props) {
                   onElegir(cliente);
                   setResultados(null);
                 }}
-                className="w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-surface-muted"
+                className="w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-surface-muted"
               >
                 {cliente.etiqueta}
                 {cliente.detalle && (

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { getSupabaseAuthClient } from "./supabase-sesion";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
@@ -17,21 +18,25 @@ export interface UsuarioSesion {
 
 export { DOMINIO_PERMITIDO, EMAIL_ADMIN_INICIAL, esCorreoPermitido } from "./constantes";
 
-/** Usuario de la sesion actual, o null si no hay o no tiene perfil. */
-export async function obtenerUsuario(): Promise<UsuarioSesion | null> {
+/**
+ * Usuario de la sesion actual, o null si no hay o no tiene perfil. Con `cache`
+ * el layout y la pagina de un mismo request consultan Supabase una sola vez.
+ */
+export const obtenerUsuario = cache(async (): Promise<UsuarioSesion | null> => {
   const auth = await getSupabaseAuthClient();
-  // getUser (y no getSession) porque valida el token contra Supabase en vez de
-  // confiar en la cookie, que el navegador puede alterar.
-  const {
-    data: { user },
-  } = await auth.auth.getUser();
-  if (!user) return null;
+  // getClaims (y no getSession) porque verifica la firma del token, que el
+  // navegador no puede fabricar; lo hace localmente con las llaves publicas
+  // de Supabase, sin el viaje de red de getUser. Bloqueos y bajas igual se
+  // respetan: el estado sale de "perfiles" abajo.
+  const { data } = await auth.auth.getClaims();
+  const userId = data?.claims?.sub;
+  if (!userId) return null;
 
   const supabase = getSupabaseServiceClient();
   const { data: perfil } = await supabase
     .from("perfiles")
     .select("id, email, nombre, rol, estado")
-    .eq("id", user.id)
+    .eq("id", userId)
     .maybeSingle();
 
   if (!perfil) return null;
@@ -43,7 +48,7 @@ export async function obtenerUsuario(): Promise<UsuarioSesion | null> {
     rol: perfil.rol as RolUsuario,
     estado: perfil.estado as EstadoUsuario,
   };
-}
+});
 
 /**
  * Exige sesion activa. El proxy ya redirige a quien no tiene cookie, pero eso

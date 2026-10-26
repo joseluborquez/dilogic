@@ -29,7 +29,7 @@ export function ConexionRelbase({
   const conectada = conexion.estado === "conectada";
 
   return (
-    <section className="flex flex-col gap-3 rounded-sm border border-line bg-surface p-4">
+    <section className="flex flex-col gap-3 vidrio p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h2 className="font-display text-base font-semibold">Conexión con Relbase (API v2)</h2>
@@ -50,29 +50,29 @@ export function ConexionRelbase({
         {/* <a> y no <Link>: es una ruta de API que redirige a Relbase. */}
         <a
           href="/api/relbase/oauth/iniciar"
-          className="rounded-sm bg-teal px-5 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong"
+          className="rounded-lg bg-teal px-5 py-2 font-display text-sm font-medium text-on-accent transition-colors hover:bg-teal-strong"
         >
           {conexion.estado === "sin_conectar" ? "Conectar con Relbase" : "Reconectar"}
         </a>
       </div>
 
       {conectada && conexion.scopesFaltantes.length > 0 && (
-        <p className="rounded-sm bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
+        <p className="rounded-lg bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
           Faltan permisos: {conexion.scopesFaltantes.join(", ")}. Reconecta y acéptalos todos.
         </p>
       )}
       {conexion.ultimoError && (
-        <p className="rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
+        <p className="rounded-lg bg-error-bg px-3 py-2 text-sm text-error">
           Último error: {conexion.ultimoError}
         </p>
       )}
       {resultado === "conectado" && (
-        <p className="rounded-sm bg-valido-bg px-3 py-2 text-sm text-valido">
+        <p className="rounded-lg bg-valido-bg px-3 py-2 text-sm text-valido">
           Listo: Relbase quedó conectado.
         </p>
       )}
       {resultado === "error" && (
-        <p className="rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
+        <p className="rounded-lg bg-error-bg px-3 py-2 text-sm text-error">
           {MENSAJES_ERROR[motivo ?? ""] ?? "No se pudo conectar con Relbase. Vuelve a intentarlo."}
         </p>
       )}

@@ -1,7 +1,7 @@
 import "server-only";
 
 import Papa from "papaparse";
-import readXlsxFile from "read-excel-file/node";
+import { leerLibro, listaHojas } from "./libro";
 import type { ErrorParseo, FilaPedido, ResultadoParseo } from "./types";
 
 const ALIAS_CODIGO = ["codigo", "código", "sku", "codigosku", "codigo sku"];
@@ -43,6 +43,12 @@ function encontrarColumna(headers: string[], alias: string[]): number {
   return normalizados.findIndex((h) => alias.includes(h));
 }
 
+function letraColumna(i: number): string {
+  let s = "";
+  for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
+  return s;
+}
+
 function esFilaVacia(row: unknown[] | undefined): boolean {
   return !row || row.every((celda) => celda === null || celda === undefined || celda === "");
 }
@@ -71,8 +77,7 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
   if (idxCodigo === -1) {
     errores.push({
       fila: null,
-      mensaje:
-        "No se encontraron las columnas requeridas 'codigo' y 'cantidad' en el archivo.",
+      mensaje: `No se procesó el archivo: falta la columna «código» en la fila de títulos (fila ${headerIndex + 1}).`,
     });
     return { filas: [], errores };
   }
@@ -137,11 +142,32 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
         !COLUMNAS_NO_CENTRO.includes(normalizarHeader(nombre))
     );
 
+  // Una columna con cantidades y sin titulo no se puede asignar a ningun
+  // centro: ignorarla dejaria productos fuera de las guias sin avisar.
+  const anchoDatos = Math.max(headers.length, ...dataRows.map((r) => r?.length ?? 0));
+  const sinNombre: string[] = [];
+  for (let idx = 0; idx < anchoDatos; idx += 1) {
+    if ([idxCodigo, idxCategoria, idxNombre].includes(idx) || (headers[idx] ?? "").trim() !== "") continue;
+    const numeros = dataRows
+      .map((r) => r?.[idx])
+      .filter((v) => v != null && String(v).trim() !== "" && Number.isFinite(Number(v)))
+      .map(Number);
+    // Un correlativo (1, 2, 3...) sin titulo es la numeracion de las filas, no un centro.
+    const esCorrelativo = numeros.length > 1 && numeros.every((n, i) => i === 0 || n === numeros[i - 1] + 1);
+    if (numeros.length > 0 && !esCorrelativo) sinNombre.push(letraColumna(idx));
+  }
+  if (sinNombre.length > 0) {
+    errores.push({
+      fila: null,
+      mensaje: `No se procesó el archivo: ${sinNombre.length === 1 ? `la columna ${sinNombre[0]} trae` : `las columnas ${sinNombre.join(", ")} traen`} cantidades pero no ${sinNombre.length === 1 ? "tiene" : "tienen"} el nombre del centro en la fila de títulos (fila ${headerIndex + 1}). Escribe el nombre del centro y vuelve a subirlo.`,
+    });
+    return { filas: [], errores };
+  }
+
   if (columnasCentro.length === 0) {
     errores.push({
       fila: null,
-      mensaje:
-        "No se encontraron las columnas requeridas 'codigo' y 'cantidad' en el archivo.",
+      mensaje: `No se procesó el archivo: falta la columna «cantidad» o, si el pedido es por centro, una columna por centro con su nombre en la fila de títulos (fila ${headerIndex + 1}).`,
     });
     return { filas: [], errores };
   }
@@ -187,13 +213,31 @@ export async function parseArchivoPedidoCsv(buffer: Buffer): Promise<ResultadoPa
   return construirFilas(data);
 }
 
+/**
+ * Lee la primera hoja VISIBLE. Las ocultas nunca se procesan y las demas
+ * visibles tampoco (un pedido va en una hoja); en ambos casos se avisa cuales
+ * quedaron fuera, para que quien sube el archivo sepa que no se leyeron.
+ */
 export async function parseArchivoPedidoXlsx(buffer: Buffer): Promise<ResultadoParseo> {
-  const hojas = await readXlsxFile(buffer);
-  const primeraHoja = hojas[0];
-  if (!primeraHoja) {
+  const hojas = await leerLibro(buffer);
+  if (hojas.length === 0) {
     return { filas: [], errores: [{ fila: null, mensaje: "El archivo no tiene hojas." }] };
   }
-  return construirFilas(primeraHoja.data);
+  const visibles = hojas.filter((h) => !h.oculta);
+  const ocultas = hojas.filter((h) => h.oculta).map((h) => h.nombre);
+  const avisos: ErrorParseo[] = [];
+  if (ocultas.length > 0) {
+    avisos.push({ fila: null, tipo: "aviso", mensaje: `No se procesó ${listaHojas(ocultas)}: ${ocultas.length === 1 ? "está oculta" : "están ocultas"} en el Excel.` });
+  }
+  const [hoja, ...otras] = visibles;
+  if (!hoja) {
+    return { filas: [], errores: [{ fila: null, mensaje: "No se procesó el archivo: todas sus hojas están ocultas." }, ...avisos] };
+  }
+  if (otras.length > 0) {
+    avisos.push({ fila: null, tipo: "aviso", mensaje: `Se leyó solo la hoja «${hoja.nombre}». No se procesó ${listaHojas(otras.map((h) => h.nombre))}.` });
+  }
+  const resultado = construirFilas(hoja.data);
+  return { filas: resultado.filas, errores: [...resultado.errores, ...avisos] };
 }
 
 export async function parseArchivoPedido(
@@ -202,7 +246,10 @@ export async function parseArchivoPedido(
 ): Promise<ResultadoParseo> {
   const extension = nombreArchivo.split(".").pop()?.toLowerCase();
   if (extension === "csv") return parseArchivoPedidoCsv(buffer);
-  if (extension === "xlsx" || extension === "xls") return parseArchivoPedidoXlsx(buffer);
+  if (extension === "xlsx") return parseArchivoPedidoXlsx(buffer);
+  if (extension === "xls") {
+    return { filas: [], errores: [{ fila: null, mensaje: "No se procesó el archivo: es un Excel antiguo (.xls). Ábrelo y guárdalo como .xlsx." }] };
+  }
   return {
     filas: [],
     errores: [{ fila: null, mensaje: `Formato de archivo no soportado: .${extension}` }],

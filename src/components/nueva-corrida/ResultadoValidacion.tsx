@@ -1,6 +1,6 @@
 import { EstadoStamp } from "@/components/ui/EstadoStamp";
 import { GenerarGuiasForm } from "./GenerarGuiasForm";
-import type { EstadoPrevisualizacion } from "@/app/nueva-corrida/actions";
+import type { EstadoPrevisualizacion } from "@/app/(panel)/nueva-corrida/actions";
 
 type EstadoOk = Extract<EstadoPrevisualizacion, { status: "ok" }>;
 
@@ -28,7 +28,7 @@ export function ResultadoValidacion({ estado }: { estado: EstadoOk }) {
           <p className="text-sm text-ink-muted">
             {resumen.total} filas leidas
             {fuenteCatalogo === "local" && (
-              <span className="ml-2 rounded-sm bg-surface-muted px-1.5 py-0.5 text-xs">
+              <span className="ml-2 rounded-lg bg-surface-muted px-1.5 py-0.5 text-xs">
                 catálogo local (Supabase pendiente)
               </span>
             )}
@@ -51,15 +51,22 @@ export function ResultadoValidacion({ estado }: { estado: EstadoOk }) {
         </dl>
       </div>
 
-      {erroresArchivo.length > 0 && (
-        <ul className="flex flex-col gap-1 rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
-          {erroresArchivo.map((e, i) => (
+      {erroresArchivo.some((e) => e.tipo === "aviso") && (
+        <ul className="flex flex-col gap-1 rounded-lg bg-advertencia-bg px-3 py-2 text-sm text-advertencia">
+          {erroresArchivo.filter((e) => e.tipo === "aviso").map((e, i) => (
+            <li key={i}>{e.mensaje}</li>
+          ))}
+        </ul>
+      )}
+      {erroresArchivo.some((e) => e.tipo !== "aviso") && (
+        <ul className="flex flex-col gap-1 rounded-lg bg-error-bg px-3 py-2 text-sm text-error">
+          {erroresArchivo.filter((e) => e.tipo !== "aviso").map((e, i) => (
             <li key={i}>{e.fila ? `Fila ${e.fila}: ` : ""}{e.mensaje}</li>
           ))}
         </ul>
       )}
 
-      <div className="overflow-x-auto rounded-sm border border-line">
+      <div className="overflow-x-auto rounded-lg border border-line">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-line bg-surface-muted text-left text-xs tracking-wide text-ink-muted uppercase">
@@ -76,7 +83,7 @@ export function ResultadoValidacion({ estado }: { estado: EstadoOk }) {
             {filas.map((fila, i) => (
               <tr
                 key={`${fila.fila}-${fila.centro ?? ""}-${i}`}
-                className="border-b border-line last:border-0 odd:bg-surface even:bg-paper"
+                className="border-b border-line last:border-0 even:bg-surface-muted"
               >
                 <td className="px-3 py-2 font-mono text-ink-muted">{fila.fila}</td>
                 <td className="px-3 py-2 font-mono">{fila.codigo}</td>

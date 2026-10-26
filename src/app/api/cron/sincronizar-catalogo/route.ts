@@ -1,6 +1,6 @@
-import { timingSafeEqual } from "node:crypto";
 import { sincronizarCatalogoCompleto } from "@/lib/catalogo/sincronizar";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
+import { cronAutorizado } from "@/lib/cron/autorizar";
 
 /**
  * Sincronizacion automatica diaria del catalogo con Relbase (vercel.json >
@@ -12,18 +12,8 @@ export const maxDuration = 300;
 /** Una sincronizacion "en curso" mas vieja que esto se considera muerta. */
 const EN_CURSO_VIGENTE_MS = 10 * 60 * 1000;
 
-function autorizado(request: Request): boolean {
-  // Vercel manda "Authorization: Bearer <CRON_SECRET>" en cada invocacion.
-  const secreto = process.env.CRON_SECRET;
-  const recibido = request.headers.get("authorization") ?? "";
-  if (!secreto) return false;
-  const esperado = Buffer.from(`Bearer ${secreto}`);
-  const dado = Buffer.from(recibido);
-  return esperado.length === dado.length && timingSafeEqual(esperado, dado);
-}
-
 export async function GET(request: Request) {
-  if (!autorizado(request)) {
+  if (!cronAutorizado(request)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

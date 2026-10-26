@@ -2,7 +2,7 @@
 
 import { useActionState, useRef, useState, type DragEvent } from "react";
 import Link from "next/link";
-import { previsualizarPedidoAction, type EstadoPrevisualizacion } from "@/app/nueva-corrida/actions";
+import { previsualizarPedidoAction, type EstadoPrevisualizacion } from "@/app/(panel)/nueva-corrida/actions";
 import type { EmpresaOpcion } from "@/lib/empresas/consultar";
 import { ResultadoValidacion } from "./ResultadoValidacion";
 
@@ -31,7 +31,7 @@ export function NuevaCorridaForm({ empresas }: { empresas: EmpresaOpcion[] }) {
 
   return (
     <div className="flex flex-col gap-8">
-      <form action={formAction} className="flex flex-col gap-5 rounded-sm border border-line bg-surface p-5">
+      <form action={formAction} className="flex flex-col gap-5 vidrio p-5">
         <div>
           <p className="mb-2 text-xs tracking-wide text-ink-muted uppercase">Empresa</p>
           {empresas.length === 0 && (
@@ -49,10 +49,10 @@ export function NuevaCorridaForm({ empresas }: { empresas: EmpresaOpcion[] }) {
               return (
                 <label
                   key={empresa.codigo}
-                  className={`cursor-pointer rounded-sm border px-4 py-2 font-display text-sm font-medium transition-colors ${
+                  className={`cursor-pointer rounded-lg border px-4 py-2 font-display text-sm font-medium transition-colors ${
                     activo
-                      ? "border-teal bg-teal text-white"
-                      : "border-line bg-surface text-ink hover:border-teal"
+                      ? "border-teal bg-teal text-on-accent"
+                      : "border-line bg-paper text-ink hover:border-teal"
                   }`}
                 >
                   <input
@@ -81,7 +81,7 @@ export function NuevaCorridaForm({ empresas }: { empresas: EmpresaOpcion[] }) {
             }}
             onDragLeave={() => setArrastrando(false)}
             onDrop={handleDrop}
-            className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-sm border-2 border-dashed px-6 py-8 text-center transition-colors ${
+            className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors ${
               arrastrando ? "border-teal bg-teal/5" : "border-line bg-paper"
             }`}
           >
@@ -107,11 +107,27 @@ export function NuevaCorridaForm({ empresas }: { empresas: EmpresaOpcion[] }) {
           </label>
         </div>
 
+        <details className="rounded-lg border border-line bg-paper px-4 py-3 text-sm">
+          <summary className="cursor-pointer text-ink-muted hover:text-ink">¿Cómo armar el archivo?</summary>
+          <ul className="mt-3 flex flex-col gap-1.5 text-ink-muted">
+            <li>
+              <span className="text-ink">Un centro:</span> columnas <span className="text-ink">Código</span> y{" "}
+              <span className="text-ink">Cantidad</span>. El centro se escribe al generar.
+            </li>
+            <li>
+              <span className="text-ink">Varios centros:</span> columna <span className="text-ink">Código</span> y una columna
+              por centro, con el nombre del centro en la fila de títulos. Una columna con cantidades y sin nombre impide
+              procesar el archivo.
+            </li>
+            <li>Se lee solo la primera hoja visible. Las hojas ocultas no se procesan y se avisa cuáles eran.</li>
+          </ul>
+        </details>
+
         <div className="flex justify-end">
           <button
             type="submit"
             disabled={pending || !nombreArchivo}
-            className="rounded-sm bg-teal px-5 py-2 font-display text-sm font-medium text-white transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-teal px-5 py-2 font-display text-sm font-medium text-on-accent transition-colors hover:bg-teal-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? "Validando…" : "Validar pedido"}
           </button>
@@ -119,7 +135,7 @@ export function NuevaCorridaForm({ empresas }: { empresas: EmpresaOpcion[] }) {
       </form>
 
       {estado.status === "error" && (
-        <p role="alert" className="rounded-sm bg-error-bg px-3 py-2 text-sm text-error">
+        <p role="alert" className="rounded-lg bg-error-bg px-3 py-2 text-sm text-error">
           {estado.mensaje}
         </p>
       )}
