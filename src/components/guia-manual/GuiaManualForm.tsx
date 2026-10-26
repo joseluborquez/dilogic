@@ -213,6 +213,19 @@ export function GuiaManualForm({
   const cambiar = (uid: string, cambios: Partial<{ cantidad: string; precio: string; descripcion: string; eleccion: string }>) =>
     setLineas((ls) => ls.map((l) => (l.uid === uid ? ({ ...l, ...cambios } as Linea) : l)));
   const quitar = (uid: string) => setLineas((ls) => ls.filter((l) => l.uid !== uid));
+  /** Cambia el producto de una linea: la del listado guarda la eleccion; un generico agregado a mano pasa a ser ese producto. */
+  const elegirProducto = (uid: string, p: ProductoGuia) =>
+    setLineas((ls) =>
+      ls.map((l) =>
+        l.uid !== uid
+          ? l
+          : l.tipo === "listado"
+            ? { ...l, eleccion: p.codigo, precio: undefined, descripcion: undefined }
+            : { uid: l.uid, tipo: "producto", producto: p, cantidad: l.cantidad }
+      )
+    );
+  // Linea cuya descripcion de generico se esta escribiendo: debajo se sugieren productos.
+  const [sugerirPara, setSugerirPara] = useState<string | null>(null);
 
   // --- Listado del cliente ---------------------------------------------------
 
@@ -437,7 +450,8 @@ export function GuiaManualForm({
               nombreChofer: dato("nombreChofer"),
             },
             aprender: grupo.flatMap((x) =>
-              x.linea.tipo === "listado" && x.cruce
+              // Solo lo que escribio el cliente: en un listado de puros codigos el "texto" es el codigo y no se aprende.
+              x.linea.tipo === "listado" && x.cruce && x.linea.fila.texto.trim().toUpperCase() !== (x.linea.fila.codigo ?? "").trim().toUpperCase()
                 ? [
                     x.r!.esGenerico || !x.cruce.elegido
                       ? { texto: x.linea.fila.texto, codigo: PRODUCTO_GENERICO.codigo, productId: PRODUCTO_GENERICO.productId }
@@ -710,7 +724,8 @@ export function GuiaManualForm({
                 </button>
               </div>
             )}
-            <div className="overflow-x-auto rounded-lg border border-line">
+            {/* En pantallas anchas sin scroll propio: si no, la lista de sugerencias quedaria cortada dentro de la tabla. */}
+            <div className="overflow-x-auto rounded-lg border border-line lg:overflow-visible">
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-line bg-surface-muted text-left text-xs tracking-wide text-ink-muted uppercase">
@@ -744,23 +759,54 @@ export function GuiaManualForm({
                           )}
                           {l.tipo === "listado" && c && (
                             <div className="mb-1">
+                              <span className={ETIQUETA}>Producto (escribe para buscar)</span>
                               <BuscadorProducto
                                 actual={c.elegido}
                                 candidatos={c.candidatos.map((k) => k.producto)}
                                 sugerir={sugerir}
-                                onElegir={(p) => cambiar(l.uid, { eleccion: p.codigo })}
+                                onElegir={(p) => elegirProducto(l.uid, p)}
                                 onGenerico={() => cambiar(l.uid, { eleccion: GENERICO })}
                               />
                             </div>
                           )}
                           {x.r?.esGenerico ? (
                             <>
+                              <span className={ETIQUETA}>Descripción del genérico</span>
                               <input
                                 value={x.descripcion}
-                                onChange={(e) => cambiar(l.uid, { descripcion: e.target.value })}
-                                placeholder="Descripción del producto"
+                                onChange={(e) => {
+                                  cambiar(l.uid, { descripcion: e.target.value });
+                                  setSugerirPara(l.uid);
+                                }}
+                                onBlur={() => setTimeout(() => setSugerirPara((u) => (u === l.uid ? null : u)), 150)}
+                                placeholder="Qué producto es"
                                 className={`${CAMPO} w-full`}
                               />
+                              {sugerirPara === l.uid && x.descripcion.trim().length >= 3 && (() => {
+                                const opciones = sugerir(x.descripcion).slice(0, 5);
+                                return opciones.length === 0 ? null : (
+                                  <div className="mt-1 rounded-lg border border-line bg-paper p-1 text-sm">
+                                    <p className="px-2 py-1 text-xs text-ink-muted">¿Es uno de estos? Al elegirlo se carga con su precio.</p>
+                                    {opciones.map((o) => (
+                                      <button
+                                        key={o.producto.codigo}
+                                        type="button"
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => {
+                                          elegirProducto(l.uid, o.producto);
+                                          setSugerirPara(null);
+                                        }}
+                                        className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left hover:bg-surface-muted"
+                                      >
+                                        <span className="min-w-0 truncate">
+                                          {o.producto.nombre} <span className="font-mono text-xs text-ink-muted">{o.producto.codigo}</span>
+                                        </span>
+                                        <span className="shrink-0 font-mono">{o.producto.precio != null ? pesos(o.producto.precio) : "sin precio"}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
                               <span className="mt-1 block font-mono text-xs text-ink-muted">{PRODUCTO_GENERICO.codigo} · PRODUCTO GENERICO</span>
                             </>
                           ) : x.r ? (

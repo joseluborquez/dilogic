@@ -24,7 +24,11 @@ export async function cargarMemoria(): Promise<Recuerdo[]> {
   return data ?? [];
 }
 
-/** Guarda lo emitido: cada texto queda con el ultimo producto elegido y cuantas veces se ha usado. */
+/**
+ * Guarda lo emitido: cada texto queda con el ultimo producto elegido y cuantas
+ * veces se ha usado. Lanza si falla; quien emite guias lo ignora (la memoria
+ * nunca debe hacer fallar una guia ya emitida).
+ */
 export async function recordar(pares: { texto: string; codigo: string; productId: number | null }[], usuario: string | null): Promise<void> {
   const porClave = new Map<string, { texto: string; codigo: string; productId: number | null }>();
   for (const p of pares) {
@@ -33,10 +37,15 @@ export async function recordar(pares: { texto: string; codigo: string; productId
   }
   if (porClave.size === 0) return;
   const supabase = getSupabaseServiceClient();
-  const { data: previos, error } = await supabase.from("memoria_listados").select("texto, codigo, veces").in("texto", [...porClave.keys()]);
-  if (error) return;
-  const antes = new Map((previos ?? []).map((r) => [r.texto, r]));
-  await supabase.from("memoria_listados").upsert(
+  const claves = [...porClave.keys()];
+  // De a 50: cientos de textos en un solo filtro hacen una URL demasiado larga.
+  const antes = new Map<string, { codigo: string; veces: number }>();
+  for (let i = 0; i < claves.length; i += 50) {
+    const { data, error } = await supabase.from("memoria_listados").select("texto, codigo, veces").in("texto", claves.slice(i, i + 50));
+    if (error) throw new Error(`No se pudo leer la memoria: ${error.message}`);
+    for (const r of data ?? []) antes.set(r.texto, r);
+  }
+  const { error } = await supabase.from("memoria_listados").upsert(
     [...porClave.entries()].map(([clave, p]) => {
       const previo = antes.get(clave);
       return {
@@ -51,4 +60,5 @@ export async function recordar(pares: { texto: string; codigo: string; productId
       };
     })
   );
+  if (error) throw new Error(`No se pudo guardar la memoria: ${error.message}`);
 }

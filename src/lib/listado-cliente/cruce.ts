@@ -155,6 +155,8 @@ export interface IndiceCatalogo {
   porCodigo: Map<string, ProductoGuia>;
   /** Peso de cada palabra: las que aparecen en muchos productos valen menos. */
   peso: (w: Palabra) => number;
+  /** Raices que aparecen en algun nombre del catalogo: las palabras que distinguen productos. */
+  vocabulario: Set<string>;
 }
 
 export function indexarCatalogo(productos: ProductoGuia[]): IndiceCatalogo {
@@ -170,6 +172,7 @@ export function indexarCatalogo(productos: ProductoGuia[]): IndiceCatalogo {
     entradaDe: new Map(entradas.map((e) => [e.producto.codigo, e])),
     porCodigo: new Map(productos.map((p) => [p.codigo.toUpperCase(), p])),
     peso: (w) => Math.log(1 + total / (1 + (frecuencia.get(w.r) ?? 0))),
+    vocabulario: new Set(frecuencia.keys()),
   };
 }
 
@@ -344,6 +347,26 @@ function resolverConCercanos(
 }
 
 /**
+ * Palabras del pedido que distinguen productos en el catalogo ("vetada",
+ * "centro", "zero") y que el producto elegido no tiene: "chuleta vetada" no
+ * puede quedar en verde con "CHULETAS DE CERDO KG". Las que no aparecen en
+ * ningun nombre del catalogo ("procesada", marcas) no se reclaman.
+ */
+// Palabras que describen sin distinguir: "FIDEOS spaghetti" sigue siendo spaghetti, "asado de tira VACUNO" es el asado de tira.
+const NO_DISTINGUEN = new Set(
+  "fideo fideos vacuno vacunos liquido liquida concentrado congelado congelada congelados congeladas cong normal fresco fresca premium procesada procesado surtido surtida surtidos surtidas tipo nacional unidad entero filete bebida".split(" ").map(raiz)
+);
+
+export function palabrasNoCubiertas(texto: string, producto: ProductoGuia, indice: IndiceCatalogo): string[] {
+  const entrada = indice.entradaDe.get(producto.codigo);
+  if (!entrada) return [];
+  return palabras(normalizarTexto(texto))
+    .filter((w) => !/^\d/.test(w.r) && w.o.length >= 3 && indice.vocabulario.has(w.r) && !NO_DISTINGUEN.has(w.r))
+    .filter((w) => !entrada.palabras.some((p) => parecidoPalabra(w, p) > 0))
+    .map((w) => w.o);
+}
+
+/**
  * Arma la propuesta de una linea. `elegidoManual`: el producto que el usuario
  * eligio en pantalla (undefined = el sugerido; null = genérico). `busqueda`:
  * los candidatos ya calculados, para no repetir la busqueda en cada cambio.
@@ -370,7 +393,10 @@ export function cruzarFila(
   else if (genericoIndicado) elegido = null;
   else elegido = mejor && mejor.parecido >= PARECIDO_MINIMO ? mejor.producto : null;
 
+  // Un listado de solo codigos no trae el nombre del generico: hay que escribirlo.
+  const genericoSinNombre = genericoIndicado && fila.texto.trim().toUpperCase() === (fila.codigo ?? "").trim().toUpperCase();
   if (genericoIndicado) {
+    if (genericoSinNombre) dudas.push("Producto genérico: escribe qué producto es.");
     if (fila.precio == null) dudas.push("Va como producto genérico, como indica el listado: falta el precio.");
   } else if (!manual) {
     if (!elegido) {
@@ -383,6 +409,13 @@ export function cruzarFila(
       }
       if (tamanoDistinto.has(elegido.codigo)) dudas.push("El tamaño o formato no coincide con el del cliente.");
     }
+  }
+
+  // Variedad pedida que el producto no indica (vale tambien con codigo o memoria; no si lo eligio una persona aqui).
+  const textoDelCliente = fila.texto.trim().toUpperCase() !== (fila.codigo ?? "").trim().toUpperCase();
+  if (elegido && textoDelCliente && (!manual || porMemoria)) {
+    const faltan = palabrasNoCubiertas(fila.texto, elegido, indice);
+    if (faltan.length > 0) dudas.push(`Pidió «${faltan.join(" ")}»: el producto elegido no lo indica.`);
   }
 
   if (fila.cantidad == null || !(fila.cantidad > 0)) {
@@ -427,8 +460,8 @@ export function cruzarFila(
       ? {
           productId: PRODUCTO_GENERICO.productId,
           codigo: PRODUCTO_GENERICO.codigo,
-          nombre: fila.texto,
-          descripcion: fila.texto,
+          nombre: genericoSinNombre ? "" : fila.texto,
+          descripcion: genericoSinNombre ? "" : fila.texto,
           precio: fila.precio != null ? Math.round(fila.precio) : null,
           esGenerico: true,
           motivo: "genérico, como indica el listado",

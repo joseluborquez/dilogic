@@ -6,6 +6,8 @@ import {
 } from "@/lib/historial/consultar";
 import { HistorialSolicitudes } from "@/components/historial/HistorialSolicitudes";
 import { BuscadorHistorial } from "@/components/historial/BuscadorHistorial";
+import { GuiasManualesHistorial } from "@/components/historial/GuiasManualesHistorial";
+import { obtenerGuiasManuales } from "@/lib/historial/guias-manuales";
 import { requerirUsuario } from "@/lib/auth/sesion";
 
 // Depende de datos en vivo y de los filtros de la URL: nunca estatica.
@@ -31,9 +33,11 @@ export default async function HistorialPage({
   // Un operador solo ve lo que genero el mismo; el administrador ve todo.
   const usuarioId = usuario.rol === "admin" ? undefined : usuario.id;
 
-  const [{ solicitudes, totalSolicitudes, totalPaginas, hayFiltros }, empresas] = await Promise.all([
+  const [{ solicitudes, totalSolicitudes, totalPaginas, hayFiltros }, empresas, manuales] = await Promise.all([
     obtenerHistorial({ texto, empresa, desde, hasta, pagina, usuarioId }),
     obtenerEmpresasConHistorial(),
+    // Una guia manual mezcla empresas: con filtro de empresa no aplica.
+    empresa ? Promise.resolve(null) : obtenerGuiasManuales({ texto, desde, hasta, usuarioId }),
   ]);
 
   // Se conservan los filtros al cambiar de pagina.
@@ -79,6 +83,8 @@ export default async function HistorialPage({
           {totalPaginas > 1 && ` · mostrando ${primeraDeLaPagina}–${ultimaDeLaPagina}`}
         </p>
       )}
+
+      {manuales && pagina === 1 && <GuiasManualesHistorial guias={manuales} />}
 
       {solicitudes.length === 0 && hayFiltros ? (
         <div className="rounded-lg border border-dashed border-line px-6 py-10 text-center">

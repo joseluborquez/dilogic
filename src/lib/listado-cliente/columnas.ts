@@ -20,7 +20,8 @@ export interface Columnas {
 }
 
 const ALIAS = {
-  descripcion: ["producto", "productos", "descripcion", "detalle", "articulo", "nombre", "glosa", "insumo", "material", "nombre producto", "descripcion producto"],
+  // "Pedido ..." primero: en una propuesta ya armada es lo que escribio el cliente; "Producto ..." puede ser nuestro nombre.
+  descripcion: ["pedido", "producto", "productos", "descripcion", "detalle", "articulo", "nombre", "glosa", "insumo", "material", "nombre producto", "descripcion producto"],
   cantidad: ["cantidad", "cant", "cant.", "qty", "unidades", "solicitado", "pedido", "cantidad solicitada"],
   cantidadReal: ["cant real", "cantidad real", "cant despachada", "cantidad despachada"],
   codigo: ["codigo", "cod", "cod.", "sku", "codigo producto", "codigo sku"],
@@ -61,7 +62,7 @@ export function sugerirColumnas(filas: Celda[][]): Columnas {
   // Titulada "producto" pero con puros numeros (un correlativo): no sirve como descripcion.
   if (descripcion != null && !datos.some((f) => typeof f[descripcion!] === "string" && /[a-z]{3}/i.test(String(f[descripcion!])))) descripcion = null;
   const cantidadReal = buscar(cab, ALIAS.cantidadReal);
-  let cantidad = buscar(cab.map((c, i) => (i === cantidadReal ? null : c)), ALIAS.cantidad);
+  let cantidad = buscar(cab.map((c, i) => (i === cantidadReal || i === descripcion ? null : c)), ALIAS.cantidad);
   const codigo = buscar(cab, ALIAS.codigo);
   const unidad = buscar(cab, ALIAS.unidad);
   const precio = buscar(cab, ALIAS.precio);
@@ -112,7 +113,9 @@ const NO_ES_PRODUCTO = /^(total|totales|subtotal|suma|neto|iva|observaciones?|no
  * cliente solo llena la cantidad de lo que pide.
  */
 export function leerFilas(filas: Celda[][], col: Columnas, omitirSinCantidad = true): FilaListado[] {
-  if (col.descripcion == null) return [];
+  // Sin columna de nombre basta el codigo (listados "codigo | cantidad").
+  const colTexto = col.descripcion ?? col.codigo;
+  if (colTexto == null) return [];
   const texto = (f: Celda[], i: number | null) => (i == null || f[i] == null ? "" : String(f[i]).trim());
   return filas
     .map((f, r) => ({ f, r }))
@@ -123,7 +126,7 @@ export function leerFilas(filas: Celda[][], col: Columnas, omitirSinCantidad = t
     })
     .map(({ f, r, real }) => ({
       fila: r + 1,
-      texto: texto(f, col.descripcion),
+      texto: texto(f, colTexto),
       codigo: texto(f, col.codigo) || null,
       cantidad: real ?? (col.cantidad == null ? null : leerCantidad(f[col.cantidad])),
       cantidadOriginal: real != null ? texto(f, col.cantidadReal) : texto(f, col.cantidad),
