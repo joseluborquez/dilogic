@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { traerTodasLasFilas } from "@/lib/supabase/paginar";
 import { dividirEnLotes } from "@/lib/util/lotes";
+import { unificarCentros } from "./centros";
 
 /**
  * Indicadores de ventas para la pagina de inicio, calculados desde
@@ -69,6 +70,13 @@ export interface AgregadoPeriodo {
    * guias de un filtro sin contar dos veces la misma.
    */
   guiasPorSegmento: Record<string, number[]>;
+  /**
+   * Monto y guias por empresa CLIENTE de la guia (customer de Relbase: la guia de
+   * un centro de Yadran es de Yadran aunque lleve un codigo de Cermaq) y centro.
+   */
+  porCentro: Record<string, Record<string, { monto: number; guias: number }>>;
+  /** Totales por empresa cliente (suma de sus centros). */
+  porCliente: Record<string, { monto: number; guias: number }>;
 }
 
 const segmento = (grupo: string, familia: string | null) => `${grupo}|${familia ?? ""}`;
@@ -102,13 +110,35 @@ function grupoDe(empresa: string, codigo: string | null): GrupoEmpresa {
   return "OTROS";
 }
 
+/** grupo|centro -> totales, con los nombres del mismo centro juntados por empresa (lib/ventas/centros). */
+function juntarCentros(centros: Map<string, { monto: number; dtes: Set<number> }>): AgregadoPeriodo["porCentro"] {
+  const porGrupo = new Map<string, { nombre: string; monto: number; dtes: Set<number> }[]>();
+  for (const [k, v] of centros) {
+    const grupo = k.slice(0, k.indexOf("|"));
+    porGrupo.set(grupo, [...(porGrupo.get(grupo) ?? []), { nombre: k.slice(k.indexOf("|") + 1), ...v }]);
+  }
+  const salida: AgregadoPeriodo["porCentro"] = {};
+  for (const [grupo, lista] of porGrupo) {
+    const nombreDe = unificarCentros(lista.map((c) => ({ nombre: c.nombre, guias: c.dtes.size })));
+    const juntos = new Map<string, { monto: number; dtes: Set<number> }>();
+    for (const c of lista) {
+      const n = nombreDe.get(c.nombre) ?? c.nombre;
+      const j = juntos.get(n) ?? juntos.set(n, { monto: 0, dtes: new Set() }).get(n)!;
+      j.monto += c.monto;
+      for (const d of c.dtes) j.dtes.add(d);
+    }
+    salida[grupo] = Object.fromEntries([...juntos].map(([n, v]) => [n, { monto: v.monto, guias: v.dtes.size }]));
+  }
+  return salida;
+}
+
 /** Sin cache: para scripts y pruebas fuera de Next. */
 export async function calcularAgregado(desde: string, hasta: string): Promise<AgregadoPeriodo> {
   const supabase = getSupabaseServiceClient();
   const guias = await traerTodasLasFilas((d, h) =>
     supabase
       .from("ventas_guias")
-      .select("dte_id, fecha, anulada, contacto")
+      .select("dte_id, fecha, anulada, contacto, customer_id")
       .gte("fecha", desde)
       .lte("fecha", hasta)
       .order("dte_id")
@@ -118,6 +148,10 @@ export async function calcularAgregado(desde: string, hasta: string): Promise<Ag
   const anuladas = guias.filter((g) => g.anulada).length;
   const candidatas = guias.filter((g) => !g.anulada);
   const fechaPorGuia = new Map(candidatas.map((g) => [g.dte_id, g.fecha]));
+  const { data: empresas } = await supabase.from("empresas").select("codigo_interno, relbase_customer_id");
+  const empresaDeCliente = new Map((empresas ?? []).filter((e) => e.relbase_customer_id).map((e) => [Number(e.relbase_customer_id), e.codigo_interno]));
+  const clientePorGuia = new Map(candidatas.map((g) => [g.dte_id, empresaDeCliente.get(Number(g.customer_id)) ?? "OTROS"]));
+  const centroPorGuia = new Map(candidatas.map((g) => [g.dte_id, (g.contacto ?? "").trim().toUpperCase() || "SIN CENTRO"]));
   const binsPorContacto = new Set(candidatas.filter((g) => esBins(g.contacto)).map((g) => g.dte_id));
 
   const lotes = await Promise.all(
@@ -148,6 +182,7 @@ export async function calcularAgregado(desde: string, hasta: string): Promise<Ag
   let cantidad = 0;
   let monto = 0;
   const segmentos = new Map<string, Set<number>>();
+  const centros = new Map<string, { monto: number; dtes: Set<number> }>();
   for (const l of lineas) {
     if (bins.has(l.dte_id)) continue;
     const codigo = l.codigo ?? "(sin código)";
@@ -176,6 +211,10 @@ export async function calcularAgregado(desde: string, hasta: string): Promise<Ag
     p.dtes.add(l.dte_id);
     const seg = segmento(p.grupo, p.familia);
     (segmentos.get(seg) ?? segmentos.set(seg, new Set()).get(seg)!).add(l.dte_id);
+    const kc = `${clientePorGuia.get(l.dte_id) ?? "OTROS"}|${centroPorGuia.get(l.dte_id) ?? "SIN CENTRO"}`;
+    const c = centros.get(kc) ?? centros.set(kc, { monto: 0, dtes: new Set() }).get(kc)!;
+    c.monto += Number(l.monto_neto);
+    c.dtes.add(l.dte_id);
     // Precio a $1 = guia "sin valor": no es un precio de venta.
     if (precio > 1 && !sinComparacionDePrecio(l.codigo) && fecha >= p.fechaPrecio) {
       p.ultimoPrecio = precio;
@@ -204,6 +243,14 @@ export async function calcularAgregado(desde: string, hasta: string): Promise<Ag
       ultimoPrecio: p.ultimoPrecio,
     })),
     guiasPorSegmento: Object.fromEntries([...segmentos].map(([k, ids]) => [k, [...ids]])),
+    porCentro: juntarCentros(centros),
+    porCliente: [...centros].reduce<AgregadoPeriodo["porCliente"]>((acc, [k, v]) => {
+      const grupo = k.slice(0, k.indexOf("|"));
+      const t = (acc[grupo] ??= { monto: 0, guias: 0 });
+      t.monto += v.monto;
+      t.guias += v.dtes.size;
+      return acc;
+    }, {}),
   };
 }
 
@@ -212,7 +259,7 @@ export async function calcularAgregado(desde: string, hasta: string): Promise<Ag
  * invalida TAG_VENTAS). Recalcular en cada visita significaba traer ~10 mil
  * lineas por mes desde Supabase.
  */
-export const agregadoPeriodo = unstable_cache(calcularAgregado, ["ventas-agregado-v2"], {
+export const agregadoPeriodo = unstable_cache(calcularAgregado, ["ventas-agregado-v5"], {
   tags: [TAG_VENTAS],
   revalidate: 3600,
 });

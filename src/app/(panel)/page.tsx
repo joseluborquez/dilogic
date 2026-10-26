@@ -13,7 +13,6 @@ import {
   periodoDeComparacion,
   periodoDelMes,
   primeraFechaConVentas,
-  totalesFiltrados,
   ultimosMeses,
   type AgregadoPeriodo,
   type GrupoEmpresa,
@@ -23,8 +22,8 @@ import {
 import { juntarMismoProducto, unidadDeVenta, type FilaTop, type ParteTop } from "@/lib/ventas/mismo-producto";
 import { entero, numero, pesos, pesosCorto, textoVariacion, variacion } from "@/lib/util/formato";
 import { Bloque } from "@/components/inicio/Bloque";
-import { BarraFiltros, NavegacionVentas } from "@/components/inicio/Navegacion";
-import { BarrasReparto, GraficoMeses, Ranking, nombreLegible, type FilaBarra } from "@/components/inicio/Graficos";
+import { BarraFiltros, EnlaceVentas, NavegacionVentas } from "@/components/inicio/Navegacion";
+import { BarrasReparto, GraficoMeses, Ranking, nombreLegible, type BarraMes } from "@/components/inicio/Graficos";
 
 export const dynamic = "force-dynamic";
 
@@ -115,48 +114,44 @@ export default async function InicioPage({
     return s ? `/?${s}` : "/";
   };
   const nombre = usuario.nombre?.split(" ")[0];
+  const mesesGrafico: BarraMes[] = periodosGrafico.map((per, i) => {
+                const d = datosGrafico[i];
+                return {
+                  clave: per.mes,
+                  etiqueta: `${nombreMesCorto(per.mes)}${per.enCurso ? "*" : ""}`,
+                  valor: d ? d.monto : null,
+                  texto: d ? pesosCorto(d.monto) : "—",
+                  detalle: `${mayuscula(nombreMes(per.mes))}${per.enCurso ? `, del 1 al ${per.dia}` : ""}: ${d ? pesos(d.monto) : "sin datos"}`,
+                  href: enlace({ mes: per.mes }),
+                  activo: per.mes === mes,
+                };
+              });
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-2xl font-semibold">{nombre ? `Hola, ${nombre}` : "Ventas"}</h1>
-        <p className="text-sm text-ink-muted">Ventas con guías válidas en Relbase · montos netos, sin IVA</p>
-      </header>
-
       <NavegacionVentas
         barra={
-          <BarraFiltros
-            limpiar={empresa || familia ? enlace({ empresa: "", familia: "" }) : null}
-            filtros={[
-              {
-                nombre: "Mes",
-                activo: mes,
-                opciones: meses.map((m, i) => ({
-                  valor: m,
-                  etiqueta: `${mayuscula(nombreMes(m))}${i === 0 ? " (en curso)" : ""}`,
-                })),
-                hrefs: Object.fromEntries(meses.map((m) => [m, enlace({ mes: m })])),
-              },
-              {
-                nombre: "Empresa",
-                activo: empresa,
-                opciones: [
-                  { valor: "", etiqueta: "Todas las empresas" },
-                  ...EMPRESAS_FILTRO.map((e) => ({ valor: e, etiqueta: NOMBRE_GRUPO[e] })),
-                ],
-                hrefs: Object.fromEntries(["", ...EMPRESAS_FILTRO].map((e) => [e, enlace({ empresa: e })])),
-              },
-              {
-                nombre: "Familia",
-                activo: familia,
-                opciones: [
-                  { valor: "", etiqueta: "Todas las familias" },
-                  ...FAMILIAS.map((f) => ({ valor: f, etiqueta: NOMBRE_FAMILIA[f] })),
-                ],
-                hrefs: Object.fromEntries(["", ...FAMILIAS].map((f) => [f, enlace({ familia: f })])),
-              },
-            ]}
-          />
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <header className="flex flex-col gap-1">
+              <h1 className="font-display text-2xl font-semibold">{nombre ? `Hola, ${nombre}` : "Ventas"}</h1>
+              <p className="text-sm text-ink-muted">Montos netos, sin IVA</p>
+            </header>
+            <BarraFiltros
+              compacta
+              limpiar={empresa || familia ? enlace({ empresa: "", familia: "" }) : null}
+              filtros={[
+                {
+                  nombre: "Mes",
+                  activo: mes,
+                  opciones: meses.map((m, i) => ({
+                    valor: m,
+                    etiqueta: `${mayuscula(nombreMes(m))}${i === 0 ? " (en curso)" : ""}`,
+                  })),
+                  hrefs: Object.fromEntries(meses.map((m) => [m, enlace({ mes: m })])),
+                },
+              ]}
+            />
+          </div>
         }
       >
         {!datos ? (
@@ -168,71 +163,32 @@ export default async function InicioPage({
               comparacion={comparacion}
               datos={datos}
               datosComparacion={datosComparacion}
-              empresa={empresa}
               familia={familia}
+              hrefFamilia={(f) => enlace({ familia: f === familia ? "" : f })}
             />
 
-            <div className="grid gap-6 lg:grid-cols-5">
-              <div className="lg:col-span-3">
-                <Bloque
-                  titulo={`Monto neto por mes${textoFiltro(empresa, familia)}`}
-                  comoLeer={
-                    actual.enCurso || periodosGrafico.some((p) => p.enCurso)
-                      ? "* = mes en curso. Toca un mes para verlo."
-                      : "Toca un mes para verlo."
-                  }
-                >
-                  <GraficoMeses
-                    puntos={periodosGrafico.map((per, i) => {
-                      const d = datosGrafico[i];
-                      const t = d ? totalesFiltrados(d, empresa, familia) : null;
-                      return {
-                        clave: per.mes,
-                        etiqueta: `${nombreMesCorto(per.mes)}${per.enCurso ? "*" : ""}`,
-                        valor: t ? t.monto : null,
-                        texto: t ? pesosCorto(t.monto) : "—",
-                        detalle: `${mayuscula(nombreMes(per.mes))}${per.enCurso ? `, del 1 al ${per.dia}` : ""}: ${t ? pesos(t.monto) : "sin datos"}`,
-                        href: enlace({ mes: per.mes }),
-                        activo: per.mes === mes,
-                      };
-                    })}
-                  />
-                </Bloque>
-              </div>
-              <div className="flex flex-col gap-6 lg:col-span-2">
-                <Reparto
-                  titulo={`Por empresa${familia ? ` (${NOMBRE_FAMILIA[familia]})` : ""}`}
-                  datos={datos}
-                  datosComparacion={datosComparacion}
-                  partes={EMPRESAS_FILTRO.map((g) => ({
-                    clave: g,
-                    etiqueta: NOMBRE_GRUPO[g],
-                    href: enlace({ empresa: g === empresa ? "" : g }),
-                  }))}
-                  calza={(p, clave) => p.grupo === clave && (!familia || p.familia === familia)}
-                  activo={empresa}
-                />
-                <Reparto
-                  titulo={`Por familia${empresa ? ` (${NOMBRE_GRUPO[empresa]})` : ""}`}
-                  datos={datos}
-                  datosComparacion={datosComparacion}
-                  partes={FAMILIAS.map((f) => ({
-                    clave: f,
-                    etiqueta: NOMBRE_FAMILIA[f],
-                    href: enlace({ familia: f === familia ? "" : f }),
-                  }))}
-                  calza={(p, clave) => p.familia === clave && (!empresa || p.grupo === empresa)}
-                  activo={familia}
-                />
-              </div>
-            </div>
+            <Empresas
+              datos={datos}
+              datosComparacion={datosComparacion}
+              activa={empresa}
+              href={(g) => enlace({ empresa: g === empresa ? "" : g })}
+            />
+
+            {empresa && <Centros datos={datos} empresa={empresa as GrupoEmpresa} />}
 
             <TopProductos datos={datos} empresa={empresa} familia={familia} />
 
-            <h2 className="mt-4 font-display text-lg font-semibold text-ink-muted">Detalle en números</h2>
-            <MasVendidos datos={datos} empresa={empresa} familia={familia} />
-            <Precios datos={datos} anterior={datosAnterior} empresa={empresa} familia={familia} actual={actual} />
-            <MenosVendidos datos={datos} catalogo={catalogo} empresa={empresa} familia={familia} />
+            <details className="group flex flex-col gap-6">
+              <summary className="cursor-pointer text-sm text-ink-muted hover:text-teal">Más detalle: meses anteriores, cantidades, precios y menos vendidos</summary>
+              <div className="mt-6 flex flex-col gap-6">
+                <Bloque titulo="Comparación con meses anteriores" comoLeer="Total de cada mes · * = mes en curso">
+                  <GraficoMeses puntos={mesesGrafico} />
+                </Bloque>
+                <MasVendidos datos={datos} empresa={empresa} familia={familia} />
+                <Precios datos={datos} anterior={datosAnterior} empresa={empresa} familia={familia} actual={actual} />
+                <MenosVendidos datos={datos} catalogo={catalogo} empresa={empresa} familia={familia} />
+              </div>
+            </details>
           </>
         )}
       </NavegacionVentas>
@@ -240,147 +196,153 @@ export default async function InicioPage({
   );
 }
 
+/** Una tarjeta por empresa: monto, peso en el total y cambio. Tocarla despliega sus centros. */
+function Empresas({
+  datos,
+  datosComparacion,
+  activa,
+  href,
+}: {
+  datos: AgregadoPeriodo;
+  datosComparacion: AgregadoPeriodo | null;
+  activa: string;
+  href: (g: GrupoEmpresa) => string;
+}) {
+  const total = datos.monto || 1;
+  return (
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {EMPRESAS_FILTRO.map((g) => {
+        // Por cliente de la guia: la tarjeta cuadra con la suma de sus centros.
+        const monto = datos.porCliente[g]?.monto ?? 0;
+        const antes = datosComparacion ? (datosComparacion.porCliente?.[g]?.monto ?? 0) : null;
+        const cambio = antes ? variacion(monto, antes) : null;
+        const centros = Object.keys(datos.porCentro[g] ?? {}).length;
+        const esActiva = activa === g;
+        return (
+          <EnlaceVentas
+            key={g}
+            href={href(g)}
+            activo={esActiva}
+            className={`vidrio flex flex-col gap-1 p-4 transition-colors hover:border-teal ${esActiva ? "border-teal ring-1 ring-teal" : ""}`}
+          >
+            <span className="flex items-center justify-between text-sm">
+              <span className="font-medium">{NOMBRE_GRUPO[g]}</span>
+              <span className="text-xs text-ink-muted">{Math.round((monto / total) * 100)}%</span>
+            </span>
+            <span className="font-mono text-2xl font-semibold">{pesosCorto(monto)}</span>
+            <span className="flex items-center justify-between text-xs text-ink-muted">
+              <span>{centros} {centros === 1 ? "centro" : "centros"}</span>
+              {cambio != null && (
+                <span className={Math.round(cambio) === 0 ? "" : cambio > 0 ? "text-valido" : "text-error"}>{textoVariacion(cambio)}</span>
+              )}
+            </span>
+            <span className="mt-1 h-1 overflow-hidden rounded-full bg-surface-muted">
+              <span className="block h-full rounded-full bg-teal" style={{ width: `${Math.max(2, (monto / total) * 100)}%` }} />
+            </span>
+          </EnlaceVentas>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Montos por centro (contacto de la guia) de la empresa elegida. */
+function Centros({ datos, empresa }: { datos: AgregadoPeriodo; empresa: GrupoEmpresa }) {
+  const lista = Object.entries(datos.porCentro[empresa] ?? {}).sort((a, b) => b[1].monto - a[1].monto);
+  return (
+    <Bloque titulo={`Centros de ${NOMBRE_GRUPO[empresa]}`} comoLeer={`${lista.length} centros con despacho en el período`}>
+      {lista.length === 0 ? (
+        <p className="text-sm text-ink-muted">Sin despachos en el período.</p>
+      ) : (
+        // Dos columnas: con 20+ centros una sola lista obliga a bajar mucho. La escala es la misma en ambas.
+        <div className="grid gap-x-8 gap-y-3 lg:grid-cols-2">
+          {[lista.slice(0, Math.ceil(lista.length / 2)), lista.slice(Math.ceil(lista.length / 2))].map((mitad, i) => (
+            <BarrasReparto
+              key={i}
+              filas={mitad.map(([centro, v]) => ({
+                clave: centro,
+                etiqueta: nombreLegible(centro),
+                valor: v.monto,
+                texto: pesos(v.monto),
+                detalle: `${centro}: ${pesos(v.monto)} en ${v.guias} ${v.guias === 1 ? "guía" : "guías"}`,
+              }))}
+              maximo={lista[0][1].monto}
+            />
+          ))}
+        </div>
+      )}
+    </Bloque>
+  );
+}
+
 // ---------------------------------------------------------------------------
 
+const FAMILIA_CORTA: Record<string, string> = { AB: "Abarrotes", CC: "Carnes y cong.", FV: "Frutas y verduras", AS: "Aseo" };
+
+function Cambio({ v }: { v: number | null }) {
+  if (v == null) return null;
+  return <span className={Math.round(v) === 0 ? "text-ink-muted" : v > 0 ? "text-valido" : "text-error"}>{textoVariacion(v)}</span>;
+}
+
+/** Encabezado del mes (todas las empresas): el total en grande, tres datos en linea y la tendencia de 6 meses. */
 function Resumen({
   actual,
   comparacion,
   datos,
   datosComparacion,
-  empresa,
   familia,
+  hrefFamilia,
 }: {
   actual: Periodo;
   comparacion: Periodo;
   datos: AgregadoPeriodo;
   datosComparacion: AgregadoPeriodo | null;
-  empresa: string;
   familia: string;
+  hrefFamilia: (f: string) => string;
 }) {
-  const t = totalesFiltrados(datos, empresa, familia);
-  const c = datosComparacion ? totalesFiltrados(datosComparacion, empresa, familia) : null;
-  const vMonto = c ? variacion(t.monto, c.monto) : null;
-  const promedio = t.guias > 0 ? t.monto / t.guias : 0;
-  const promedioC = c && c.guias > 0 ? c.monto / c.guias : null;
-  const vs = `vs. ${soloMes(comparacion).slice(0, 3)}.`;
-  const filtro = textoFiltro(empresa, familia);
-
+  const c = datosComparacion;
+  const cambio = c ? variacion(datos.monto, c.monto) : null;
+  // Lo vendido por familia (todas las empresas); tocar una filtra el resto de la pagina.
+  const familias = FAMILIAS.map((f) => {
+    const monto = sumarMonto(datos, (p) => p.familia === f) ?? 0;
+    const antes = sumarMonto(c, (p) => p.familia === f);
+    return { f, monto, v: antes ? variacion(monto, antes) : null };
+  });
   return (
-    <section className="vidrio flex flex-col gap-4 p-5">
-      <p className="font-display text-xl">
-        {mayuscula(cuando(actual))}
-        {filtro && <span className="text-teal">{filtro}</span>}
-        {": "}
-        <strong className="text-teal">{pesos(t.monto)}</strong>
-        {vMonto != null && (
-          <span className="text-base text-ink-muted">
-            {" "}
-            ·{" "}
-            {Math.round(vMonto) === 0
-              ? "igual que"
-              : `${Math.abs(Math.round(vMonto))}% ${vMonto > 0 ? "más" : "menos"} que`}{" "}
-            el {nombrePeriodo(comparacion)}
-          </span>
-        )}
-      </p>
-      <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Cifra titulo="Monto neto" valor={pesosCorto(t.monto)} cambio={vMonto} vs={vs} />
-        <Cifra
-          titulo="Guías"
-          ayuda={empresa || familia ? "Guías válidas con al menos un producto del filtro" : "Guías válidas"}
-          valor={entero(t.guias)}
-          cambio={c ? variacion(t.guias, c.guias) : null}
-          vs={vs}
-        />
-        <Cifra
-          titulo="Promedio por guía"
-          ayuda="Monto neto dividido por las guías"
-          valor={pesosCorto(promedio)}
-          cambio={promedioC ? variacion(promedio, promedioC) : null}
-          vs={vs}
-        />
-        <Cifra
-          titulo="No cuentan"
-          ayuda="Anuladas en el SII y guías de transporte de bins, de todas las empresas: no son venta"
-          valor={entero(datos.anuladas + datos.binsExcluidas)}
-          nota={`${entero(datos.anuladas)} anuladas · ${entero(datos.binsExcluidas)} de bins`}
-        />
-      </dl>
+    <section className="vidrio p-6">
+      <div className="flex flex-col justify-between gap-5">
+        <div className="text-center" title={`${pesos(datos.monto)} · ${entero(datos.guias)} guías · vs. ${nombrePeriodo(comparacion)}`}>
+          <p className="text-sm text-ink-muted">Vendido {cuando(actual)}</p>
+          <p className="font-mono text-5xl font-semibold tracking-tight text-teal">{pesosCorto(datos.monto)}</p>
+          <p className="mt-1 text-sm">
+            <Cambio v={cambio} /> <span className="text-ink-muted">vs. {nombrePeriodo(comparacion)}</span>
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-y-3 border-t border-line pt-4 sm:grid-cols-4 sm:divide-x sm:divide-line">
+          {familias.map((x) => (
+            <EnlaceVentas
+              key={x.f}
+              href={hrefFamilia(x.f)}
+              activo={familia === x.f}
+              title={`${NOMBRE_FAMILIA[x.f]}: ${pesos(x.monto)}`}
+              className={`rounded-md px-3 text-center transition-colors hover:text-teal ${familia === x.f ? "text-teal" : ""}`}
+            >
+              <span className="block truncate text-xs text-ink-muted">{FAMILIA_CORTA[x.f] ?? NOMBRE_FAMILIA[x.f]}</span>
+              <span className="block font-mono text-lg font-semibold">{pesosCorto(x.monto)}</span>
+              <span className="block text-xs">
+                <Cambio v={x.v} />
+              </span>
+            </EnlaceVentas>
+          ))}
+        </div>
+      </div>
     </section>
-  );
-}
-
-function Cifra({
-  titulo,
-  valor,
-  cambio,
-  vs,
-  nota,
-  ayuda,
-}: {
-  titulo: string;
-  valor: string;
-  cambio?: number | null;
-  vs?: string;
-  nota?: string;
-  ayuda?: string;
-}) {
-  const color =
-    cambio == null || Math.round(cambio) === 0 ? "text-ink-muted" : cambio > 0 ? "text-valido" : "text-error";
-  return (
-    <div className="rounded-lg border border-line bg-paper px-3 py-2" title={ayuda}>
-      <dt className="text-xs text-ink-muted">{titulo}</dt>
-      <dd className="font-mono text-xl font-semibold">{valor}</dd>
-      {cambio != null && (
-        <dd className="text-xs text-ink-muted">
-          <span className={`font-mono font-medium ${color}`}>{textoVariacion(cambio)}</span> {vs}
-        </dd>
-      )}
-      {nota && <dd className="text-xs text-ink-muted">{nota}</dd>}
-    </div>
   );
 }
 
 function sumarMonto(a: AgregadoPeriodo | null, calza: (p: ProductoAgregado) => boolean): number | null {
   if (!a) return null;
   return a.productos.reduce((s, p) => (calza(p) ? s + p.monto : s), 0);
-}
-
-/** Barras de monto por empresa o por familia; tocar una barra filtra por ella. */
-function Reparto({
-  titulo,
-  datos,
-  datosComparacion,
-  partes,
-  calza,
-  activo,
-}: {
-  titulo: string;
-  datos: AgregadoPeriodo;
-  datosComparacion: AgregadoPeriodo | null;
-  partes: { clave: string; etiqueta: string; href: string }[];
-  calza: (p: ProductoAgregado, clave: string) => boolean;
-  activo: string;
-}) {
-  const filas: FilaBarra[] = partes.map((x) => {
-    const monto = sumarMonto(datos, (p) => calza(p, x.clave)) ?? 0;
-    const antes = sumarMonto(datosComparacion, (p) => calza(p, x.clave));
-    return {
-      clave: x.clave,
-      etiqueta: x.etiqueta,
-      valor: monto,
-      texto: pesosCorto(monto),
-      cambio: antes != null ? variacion(monto, antes) : null,
-      detalle: `${x.etiqueta}: ${pesos(monto)}`,
-      href: x.href,
-      activo: x.clave === activo,
-    };
-  });
-  return (
-    <Bloque titulo={titulo} comoLeer="Toca una barra para filtrar.">
-      <BarrasReparto filas={filas} hayActivo={Boolean(activo)} />
-    </Bloque>
-  );
 }
 
 /** Los 10 productos con mas monto, sumando el mismo producto de las tres empresas. */
@@ -390,8 +352,8 @@ function TopProductos({ datos, empresa, familia }: { datos: AgregadoPeriodo; emp
     .slice(0, 10);
   return (
     <Bloque
-      titulo={`Los 10 que más venden${textoFiltro(empresa, familia)}`}
-      comoLeer="Por monto neto. El mismo producto de varias empresas va sumado."
+      titulo={`Los que más recaudaron${textoFiltro(empresa, familia)}`}
+      comoLeer="Lo que más recaudó, por monto neto"
     >
       {filas.length === 0 ? (
         <p className="text-sm text-ink-muted">No hay ventas con estos filtros.</p>

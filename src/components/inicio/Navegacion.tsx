@@ -39,10 +39,10 @@ export interface Filtro {
 }
 
 /** Barra de filtros: un desplegable por filtro, en una sola fila. */
-export function BarraFiltros({ filtros, limpiar }: { filtros: Filtro[]; limpiar: string | null }) {
+export function BarraFiltros({ filtros, limpiar, compacta = false }: { filtros: Filtro[]; limpiar: string | null; compacta?: boolean }) {
   const ctx = useContext(Contexto);
   return (
-    <div className="vidrio flex flex-wrap items-center gap-3 px-4 py-3">
+    <div className={`flex flex-wrap items-center gap-3 ${compacta ? "" : "vidrio px-4 py-3"}`}>
       {filtros.map((f) => (
         <label key={f.nombre} className="flex min-w-0 flex-1 basis-40 flex-col gap-1 sm:flex-none sm:basis-auto">
           <span className="sr-only">{f.nombre}</span>

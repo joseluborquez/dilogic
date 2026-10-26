@@ -114,8 +114,8 @@ export interface FilaBarra {
 }
 
 /** Reparto por empresa o familia: nombre y monto en una linea, barra fina debajo. */
-export function BarrasReparto({ filas, hayActivo = false }: { filas: FilaBarra[]; hayActivo?: boolean }) {
-  const max = Math.max(1, ...filas.map((f) => f.valor));
+export function BarrasReparto({ filas, hayActivo = false, maximo }: { filas: FilaBarra[]; hayActivo?: boolean; maximo?: number }) {
+  const max = maximo ?? Math.max(1, ...filas.map((f) => f.valor));
   return (
     <ul className="flex flex-col gap-3">
       {filas.map((f) => (
