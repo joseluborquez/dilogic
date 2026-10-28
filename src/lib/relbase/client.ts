@@ -276,8 +276,12 @@ export interface CompraRelbase {
   conDetalle: boolean;
 }
 
-/** Solo lectura: compras de un proveedor (por RUT), todas las paginas. */
-export async function listarComprasProveedor(rut: string): Promise<CompraRelbase[]> {
+/**
+ * Solo lectura: compras de un proveedor (por RUT; Relbase ya filtra con
+ * `query`). Vienen de la mas nueva a la mas antigua (confirmado 28-oct-2026),
+ * asi que con `desde` (yyyy-mm-dd) se deja de pedir paginas al pasar esa fecha.
+ */
+export async function listarComprasProveedor(rut: string, desde?: string): Promise<CompraRelbase[]> {
   const cuerpo = rut.replace(/[^\dkK]/g, "").slice(0, -1);
   const compras: CompraRelbase[] = [];
   let pagina = 1;
@@ -302,6 +306,8 @@ export async function listarComprasProveedor(rut: string): Promise<CompraRelbase
       });
     }
     pagina += 1;
+    const ultima = String(lista.at(-1)?.start_date ?? "");
+    if (desde && ultima && ultima < desde) break;
   } while (pagina <= totalPaginas);
   return compras;
 }

@@ -2,7 +2,7 @@ import { TraspasoForm } from "@/components/traspaso/TraspasoForm";
 import { requerirAdmin } from "@/lib/auth/sesion";
 import { listarEmpresasActivas } from "@/lib/empresas/consultar";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
-import { comprasRecibidas, type CompraRecibida } from "@/lib/traspaso/compras";
+import { comprasRecibidas, proveedorEsencial, type CompraRecibida } from "@/lib/traspaso/compras";
 
 export const dynamic = "force-dynamic";
 // Emitir lee los PDF, consulta Relbase y espera el PDF de cada guia: con
@@ -12,25 +12,26 @@ export const maxDuration = 300;
 export default async function TraspasoPage() {
   // Se proponen la empresa y el centro del ultimo traspaso: casi siempre se
   // repiten (hoy, Yadran / PALVITAD). Lo que no depende entre si sale junto.
-  const [, empresas, { data: ultimo }] = await Promise.all([
+  const [, empresas, { data: ultimo }, proveedor] = await Promise.all([
     requerirAdmin(),
     listarEmpresasActivas(),
     getSupabaseServiceClient()
       .from("traspasos_factura")
-      .select("centro, empresa_id, proveedor_rut")
+      .select("centro, empresa_id")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    proveedorEsencial(),
   ]);
 
-  // Facturas recibidas en Relbase del proveedor del ultimo traspaso (hoy Ovando
-  // / Supermercado Edon): las que traen productos se eligen sin subir el PDF.
+  // Facturas recibidas en Relbase del proveedor esencial (hoy Ovando /
+  // Supermercado Edon): las que traen productos se eligen sin subir el PDF.
   const [{ data: empresaUltima }, recibidas] = await Promise.all([
     ultimo
       ? getSupabaseServiceClient().from("empresas").select("codigo_interno").eq("id", ultimo.empresa_id).maybeSingle()
       : Promise.resolve({ data: null }),
-    ultimo?.proveedor_rut
-      ? comprasRecibidas(ultimo.proveedor_rut).catch((): CompraRecibida[] | null => null)
+    proveedor
+      ? comprasRecibidas(proveedor).catch((): CompraRecibida[] | null => null)
       : Promise.resolve(null),
   ]);
 

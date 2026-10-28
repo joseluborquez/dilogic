@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { listarComprasProveedor, obtenerCompra } from "@/lib/relbase/client";
 import type { FacturaLeida, LineaFactura } from "./leer-factura";
@@ -91,28 +92,48 @@ export async function leerCompraRelbase(id: number): Promise<FacturaLeida & { pr
 }
 
 /**
+ * El proveedor esencial de los traspasos: el que tiene mas facturas
+ * traspasadas (hoy Ovando, el unico). Antes se tomaba el del ultimo traspaso,
+ * y un PDF suelto de otro proveedor cambiaba las facturas que se ofrecen.
+ */
+export async function proveedorEsencial(): Promise<string | null> {
+  const { data } = await getSupabaseServiceClient().from("traspasos_factura").select("proveedor_rut");
+  const conteo = new Map<string, number>();
+  for (const { proveedor_rut } of data ?? []) conteo.set(proveedor_rut, (conteo.get(proveedor_rut) ?? 0) + 1);
+  return [...conteo].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+}
+
+/**
+ * Cuantos productos trae una compra en Relbase. Guardado una hora: abrir cada
+ * factura en cada visita era casi todo lo que tardaba la pantalla (~5 s,
+ * 28-oct-2026). Si Relbase recibe despues el detalle de una que venia sin
+ * productos, se ve a lo mas una hora mas tarde.
+ */
+const lineasDeCompra = unstable_cache(
+  async (id: number) => ((await obtenerCompra(id)) as { products?: unknown[] }).products?.length ?? 0,
+  ["relbase-compra-lineas-v1"],
+  { revalidate: 3600 }
+);
+
+/**
  * Facturas recibidas de un proveedor en los ultimos dias, para elegirlas en
  * Traspaso de costos. Solo las no traspasadas se abren para ver si traen
- * productos (una llamada por factura).
+ * productos, todas a la vez (el cliente igual respeta el limite de Relbase).
  */
 export async function comprasRecibidas(rut: string): Promise<CompraRecibida[]> {
   const desde = new Date(Date.now() - DIAS_RECIENTES * 864e5).toISOString().slice(0, 10);
   const [compras, { data: hechas }] = await Promise.all([
-    listarComprasProveedor(rut),
+    listarComprasProveedor(rut, desde),
     getSupabaseServiceClient().from("traspasos_factura").select("folio, created_at").eq("proveedor_rut", rut),
   ]);
   const traspasadas = new Map((hechas ?? []).map((h) => [h.folio, h.created_at]));
   const recientes = compras.filter((c) => c.fecha >= desde).sort((a, b) => b.fecha.localeCompare(a.fecha));
 
-  const resultado: CompraRecibida[] = [];
-  for (const c of recientes) {
-    const traspasada = traspasadas.get(String(c.folio)) ?? null;
-    let lineas = 0;
-    if (!traspasada) {
-      const detalle = (await obtenerCompra(c.id)) as { products?: unknown[] };
-      lineas = detalle.products?.length ?? 0;
-    }
-    resultado.push({ id: c.id, folio: String(c.folio), fecha: c.fecha, neto: c.neto, total: c.total, lineas, traspasada });
-  }
-  return resultado;
+  return Promise.all(
+    recientes.map(async (c) => {
+      const traspasada = traspasadas.get(String(c.folio)) ?? null;
+      const lineas = traspasada ? 0 : await lineasDeCompra(c.id);
+      return { id: c.id, folio: String(c.folio), fecha: c.fecha, neto: c.neto, total: c.total, lineas, traspasada };
+    })
+  );
 }
