@@ -20,24 +20,43 @@ export interface ResumenUsuario {
 }
 
 /**
- * Perfiles con lo que ha generado cada uno. Es la vista que pidio el
- * administrador: quien esta emitiendo guias y cuantas.
+ * Perfiles con lo que ha generado cada uno, y las guias sin dueño. Es la vista
+ * que pidio el administrador: quien esta emitiendo guias y cuantas.
+ *
+ * Las tres lecturas salen juntas y las filas de guias se leen una sola vez:
+ * antes el conteo "sin usuario" volvia a bajar la tabla entera (31 mil filas,
+ * ~3,5 s la pagina, 28-oct-2026).
  */
-export async function obtenerResumenUsuarios(): Promise<ResumenUsuario[]> {
+export async function obtenerResumenUsuarios(): Promise<{ usuarios: ResumenUsuario[]; guiasSinUsuario: number }> {
   const supabase = getSupabaseServiceClient();
 
-  const { data: perfiles } = await supabase
-    .from("perfiles")
-    .select("id, email, nombre, rol, estado, created_at")
-    .order("created_at", { ascending: true });
-
-  const { data: corridas } = await supabase
-    .from("corridas")
-    .select("id, usuario_id, fecha_ejecucion");
+  const [{ data: perfiles }, { data: corridas }, filas] = await Promise.all([
+    supabase
+      .from("perfiles")
+      .select("id, email, nombre, rol, estado, created_at")
+      .order("created_at", { ascending: true }),
+    supabase.from("corridas").select("id, usuario_id, fecha_ejecucion"),
+    // Una guia son muchas filas (una por SKU): se cuentan documentos distintos
+    // por corrida + folio, igual que en el historial.
+    traerTodasLasFilas((desde, hasta) =>
+      supabase
+        .from("guias_generadas")
+        .select("corrida_id, folio_relbase, estado")
+        .is("eliminado_en", null)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(desde, hasta)
+    ),
+  ]);
 
   const corridasPorUsuario = new Map<string, { ids: string[]; ultima: string | null }>();
+  // Corridas anteriores a la autenticacion: no tienen usuario.
+  const corridasSinUsuario = new Set<string>();
   for (const corrida of corridas ?? []) {
-    if (!corrida.usuario_id) continue; // corridas anteriores a la autenticacion
+    if (!corrida.usuario_id) {
+      corridasSinUsuario.add(corrida.id);
+      continue;
+    }
     const actual = corridasPorUsuario.get(corrida.usuario_id) ?? { ids: [], ultima: null };
     actual.ids.push(corrida.id);
     if (!actual.ultima || (corrida.fecha_ejecucion ?? "") > actual.ultima) {
@@ -46,19 +65,8 @@ export async function obtenerResumenUsuarios(): Promise<ResumenUsuario[]> {
     corridasPorUsuario.set(corrida.usuario_id, actual);
   }
 
-  // Una guia son muchas filas (una por SKU): se cuentan documentos distintos
-  // por corrida + folio, igual que en el historial.
-  const filas = await traerTodasLasFilas((desde, hasta) =>
-    supabase
-      .from("guias_generadas")
-      .select("corrida_id, folio_relbase, estado")
-      .is("eliminado_en", null)
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .range(desde, hasta)
-  );
-
   const guiasPorCorrida = new Map<string, { emitidas: Set<string>; errores: Set<string> }>();
+  const foliosSinUsuario = new Set<string>();
   for (const fila of filas) {
     const actual = guiasPorCorrida.get(fila.corrida_id) ?? {
       emitidas: new Set<string>(),
@@ -66,13 +74,14 @@ export async function obtenerResumenUsuarios(): Promise<ResumenUsuario[]> {
     };
     if (fila.estado === "generada" && fila.folio_relbase) {
       actual.emitidas.add(fila.folio_relbase);
+      if (corridasSinUsuario.has(fila.corrida_id)) foliosSinUsuario.add(fila.folio_relbase);
     } else if (fila.estado === "error") {
       actual.errores.add(`${fila.corrida_id}`);
     }
     guiasPorCorrida.set(fila.corrida_id, actual);
   }
 
-  return (perfiles ?? []).map((p) => {
+  const usuarios = (perfiles ?? []).map((p) => {
     const suyas = corridasPorUsuario.get(p.id) ?? { ids: [], ultima: null };
     let guias = 0;
     let guiasConError = 0;
@@ -95,31 +104,6 @@ export async function obtenerResumenUsuarios(): Promise<ResumenUsuario[]> {
       ultimaActividad: suyas.ultima,
     };
   });
-}
 
-/** Guias emitidas antes de que existiera la autenticacion, sin dueño. */
-export async function contarGuiasSinUsuario(): Promise<number> {
-  const supabase = getSupabaseServiceClient();
-  const { data: corridas } = await supabase
-    .from("corridas")
-    .select("id")
-    .is("usuario_id", null);
-  if (!corridas || corridas.length === 0) return 0;
-
-  const ids = new Set(corridas.map((c) => c.id));
-  const filas = await traerTodasLasFilas((desde, hasta) =>
-    supabase
-      .from("guias_generadas")
-      .select("corrida_id, folio_relbase, estado")
-      .eq("estado", "generada")
-      .is("eliminado_en", null)
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .range(desde, hasta)
-  );
-
-  const folios = new Set(
-    filas.filter((f) => ids.has(f.corrida_id) && f.folio_relbase).map((f) => f.folio_relbase)
-  );
-  return folios.size;
+  return { usuarios, guiasSinUsuario: foliosSinUsuario.size };
 }

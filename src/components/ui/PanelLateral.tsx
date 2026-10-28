@@ -8,7 +8,6 @@ import {
   IconoInicio,
   IconoCatalogo,
   IconoEmpresas,
-  IconoGuia,
   IconoGuiaManual,
   IconoHistorial,
   IconoSalir,
@@ -27,7 +26,6 @@ interface Seccion {
 // puede viajar del servidor al cliente.
 const SECCIONES: Seccion[] = [
   { href: "/", titulo: "Inicio", icono: <IconoInicio /> },
-  { href: "/nueva-corrida", titulo: "Nueva corrida", icono: <IconoGuia /> },
   { href: "/guia-manual", titulo: "Guía manual", icono: <IconoGuiaManual /> },
   { href: "/historial", titulo: "Historial", icono: <IconoHistorial /> },
   { href: "/empresas", titulo: "Empresas", icono: <IconoEmpresas /> },

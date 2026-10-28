@@ -65,6 +65,6 @@ export async function requerirUsuario(): Promise<UsuarioSesion> {
 /** Exige ademas rol de administrador. */
 export async function requerirAdmin(): Promise<UsuarioSesion> {
   const usuario = await requerirUsuario();
-  if (usuario.rol !== "admin") redirect("/nueva-corrida?sinPermiso=1");
+  if (usuario.rol !== "admin") redirect("/");
   return usuario;
 }

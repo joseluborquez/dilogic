@@ -135,25 +135,3 @@ export function BarrasReparto({ filas, hayActivo = false, maximo }: { filas: Fil
     </ul>
   );
 }
-
-/** Ranking: una fila por producto (posicion, nombre, barra, monto). */
-export function Ranking({ filas }: { filas: FilaBarra[] }) {
-  const max = Math.max(1, ...filas.map((f) => f.valor));
-  return (
-    <ol className="flex flex-col divide-y divide-line">
-      {filas.map((f, i) => (
-        <li key={f.clave} title={f.detalle} className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-x-3 py-2.5 sm:grid-cols-[1.5rem_minmax(0,1fr)_minmax(0,30%)_7.5rem]">
-          <span className="font-mono text-xs text-ink-muted">{i + 1}</span>
-          <span className="min-w-0">
-            <span className="block truncate text-sm">{nombreLegible(f.etiqueta)}</span>
-            {f.nota && <span className="block truncate text-xs text-ink-muted">{f.nota}</span>}
-          </span>
-          <span className="hidden sm:block">
-            <Barra fraccion={f.valor / max} />
-          </span>
-          <span className="text-right font-mono text-sm">{f.texto}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}

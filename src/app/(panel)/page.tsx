@@ -22,8 +22,10 @@ import {
 import { juntarMismoProducto, unidadDeVenta, type FilaTop, type ParteTop } from "@/lib/ventas/mismo-producto";
 import { entero, numero, pesos, pesosCorto, textoVariacion, variacion } from "@/lib/util/formato";
 import { Bloque } from "@/components/inicio/Bloque";
+import { NuevaCorridaForm } from "@/components/nueva-corrida/NuevaCorridaForm";
+import { listarEmpresasActivas } from "@/lib/empresas/consultar";
 import { BarraFiltros, EnlaceVentas, NavegacionVentas } from "@/components/inicio/Navegacion";
-import { BarrasReparto, GraficoMeses, Ranking, nombreLegible, type BarraMes } from "@/components/inicio/Graficos";
+import { BarrasReparto, GraficoMeses, nombreLegible, type BarraMes } from "@/components/inicio/Graficos";
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +98,8 @@ export default async function InicioPage({
 
   // El grafico muestra los meses del selector, del mas antiguo al mas reciente.
   const periodosGrafico = [...meses].reverse().map((m) => periodoDelMes(m));
-  const [datos, datosComparacion, datosAnterior, catalogo, ...datosGrafico] = await Promise.all([
+  const [empresasCorrida, datos, datosComparacion, datosAnterior, catalogo, ...datosGrafico] = await Promise.all([
+    listarEmpresasActivas(),
     pedir(actual),
     pedir(comparacion),
     pedir(anteriorCompleto),
@@ -176,8 +179,6 @@ export default async function InicioPage({
 
             {empresa && <Centros datos={datos} empresa={empresa as GrupoEmpresa} />}
 
-            <TopProductos datos={datos} empresa={empresa} familia={familia} />
-
             <details className="group flex flex-col gap-6">
               <summary className="cursor-pointer text-sm text-ink-muted hover:text-teal">Más detalle: meses anteriores, cantidades, precios y menos vendidos</summary>
               <div className="mt-6 flex flex-col gap-6">
@@ -192,6 +193,17 @@ export default async function InicioPage({
           </>
         )}
       </NavegacionVentas>
+
+      {/* Fuera de NavegacionVentas: cambiar de mes no atenua ni reinicia una corrida a medio validar. */}
+      <section id="nueva-corrida" className="flex scroll-mt-6 flex-col gap-4">
+        <header className="flex flex-col gap-1">
+          <h2 className="font-display text-xl font-semibold">Crear guías automáticas</h2>
+          <p className="text-sm text-ink-muted">
+            Sube el pedido ya depurado, revisa la validación por fila y genera las guías en Relbase.
+          </p>
+        </header>
+        <NuevaCorridaForm empresas={empresasCorrida} />
+      </section>
     </div>
   );
 }
@@ -343,37 +355,6 @@ function Resumen({
 function sumarMonto(a: AgregadoPeriodo | null, calza: (p: ProductoAgregado) => boolean): number | null {
   if (!a) return null;
   return a.productos.reduce((s, p) => (calza(p) ? s + p.monto : s), 0);
-}
-
-/** Los 10 productos con mas monto, sumando el mismo producto de las tres empresas. */
-function TopProductos({ datos, empresa, familia }: { datos: AgregadoPeriodo; empresa: string; familia: string }) {
-  const filas = juntarMismoProducto(filtrar(datos.productos, empresa, familia))
-    .sort((a, b) => b.monto - a.monto)
-    .slice(0, 10);
-  return (
-    <Bloque
-      titulo={`Los que más recaudaron${textoFiltro(empresa, familia)}`}
-      comoLeer="Lo que más recaudó, por monto neto"
-    >
-      {filas.length === 0 ? (
-        <p className="text-sm text-ink-muted">No hay ventas con estos filtros.</p>
-      ) : (
-        <Ranking
-          filas={filas.map((f) => ({
-            clave: f.clave,
-            etiqueta: f.nombre,
-            nota: `${numero(f.cantidad)} ${f.unidad} · ${f.partes
-              .map((x) => NOMBRE_GRUPO[x.producto.grupo])
-              .filter((v, i, a) => a.indexOf(v) === i)
-              .join(", ")}`,
-            valor: f.monto,
-            texto: pesos(f.monto),
-            detalle: f.partes.map((x) => `${NOMBRE_GRUPO[x.producto.grupo]}: ${pesos(x.producto.monto)}`).join(" · "),
-          }))}
-        />
-      )}
-    </Bloque>
-  );
 }
 
 function filtrar(productos: ProductoAgregado[], empresa: string, familia: string) {

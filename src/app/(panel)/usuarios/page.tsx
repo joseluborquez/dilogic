@@ -1,15 +1,12 @@
 import { requerirAdmin } from "@/lib/auth/sesion";
-import { contarGuiasSinUsuario, obtenerResumenUsuarios } from "@/lib/auth/usuarios";
+import { obtenerResumenUsuarios } from "@/lib/auth/usuarios";
 import { ListaUsuarios } from "@/components/usuarios/ListaUsuarios";
 
 export const dynamic = "force-dynamic";
 
 export default async function UsuariosPage() {
   const admin = await requerirAdmin();
-  const [usuarios, guiasSinUsuario] = await Promise.all([
-    obtenerResumenUsuarios(),
-    contarGuiasSinUsuario(),
-  ]);
+  const { usuarios, guiasSinUsuario } = await obtenerResumenUsuarios();
 
   const totalGuias = usuarios.reduce((suma, u) => suma + u.guias, 0);
 
