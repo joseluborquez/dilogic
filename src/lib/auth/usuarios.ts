@@ -1,7 +1,6 @@
 import "server-only";
 
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
-import { traerTodasLasFilas } from "@/lib/supabase/paginar";
 import type { EstadoUsuario, RolUsuario } from "./sesion";
 
 export interface ResumenUsuario {
@@ -23,74 +22,40 @@ export interface ResumenUsuario {
  * Perfiles con lo que ha generado cada uno, y las guias sin dueño. Es la vista
  * que pidio el administrador: quien esta emitiendo guias y cuantas.
  *
- * Las tres lecturas salen juntas y las filas de guias se leen una sola vez:
- * antes el conteo "sin usuario" volvia a bajar la tabla entera (31 mil filas,
- * ~3,5 s la pagina, 28-oct-2026).
+ * El conteo lo hace la base (conteo_guias_por_corrida, migracion 0019): antes
+ * se bajaban todas las filas de guias, una por SKU (31 mil, ~3,4 s la pagina,
+ * 28-oct-2026), solo para contar folios distintos.
  */
 export async function obtenerResumenUsuarios(): Promise<{ usuarios: ResumenUsuario[]; guiasSinUsuario: number }> {
   const supabase = getSupabaseServiceClient();
 
-  const [{ data: perfiles }, { data: corridas }, filas] = await Promise.all([
+  const [{ data: perfiles }, { data: conteos, error }] = await Promise.all([
     supabase
       .from("perfiles")
       .select("id, email, nombre, rol, estado, created_at")
       .order("created_at", { ascending: true }),
-    supabase.from("corridas").select("id, usuario_id, fecha_ejecucion"),
-    // Una guia son muchas filas (una por SKU): se cuentan documentos distintos
-    // por corrida + folio, igual que en el historial.
-    traerTodasLasFilas((desde, hasta) =>
-      supabase
-        .from("guias_generadas")
-        .select("corrida_id, folio_relbase, estado")
-        .is("eliminado_en", null)
-        .order("created_at", { ascending: true })
-        .order("id", { ascending: true })
-        .range(desde, hasta)
-    ),
+    supabase.rpc("conteo_guias_por_corrida"),
   ]);
+  if (error) throw new Error(`No se pudo contar las guías por usuario: ${error.message}`);
 
-  const corridasPorUsuario = new Map<string, { ids: string[]; ultima: string | null }>();
-  // Corridas anteriores a la autenticacion: no tienen usuario.
-  const corridasSinUsuario = new Set<string>();
-  for (const corrida of corridas ?? []) {
-    if (!corrida.usuario_id) {
-      corridasSinUsuario.add(corrida.id);
+  const porUsuario = new Map<string, { solicitudes: number; guias: number; guiasConError: number; ultima: string | null }>();
+  let guiasSinUsuario = 0;
+  for (const c of conteos ?? []) {
+    // Corridas anteriores a la autenticacion: no tienen usuario.
+    if (!c.usuario_id) {
+      guiasSinUsuario += c.guias;
       continue;
     }
-    const actual = corridasPorUsuario.get(corrida.usuario_id) ?? { ids: [], ultima: null };
-    actual.ids.push(corrida.id);
-    if (!actual.ultima || (corrida.fecha_ejecucion ?? "") > actual.ultima) {
-      actual.ultima = corrida.fecha_ejecucion;
-    }
-    corridasPorUsuario.set(corrida.usuario_id, actual);
-  }
-
-  const guiasPorCorrida = new Map<string, { emitidas: Set<string>; errores: Set<string> }>();
-  const foliosSinUsuario = new Set<string>();
-  for (const fila of filas) {
-    const actual = guiasPorCorrida.get(fila.corrida_id) ?? {
-      emitidas: new Set<string>(),
-      errores: new Set<string>(),
-    };
-    if (fila.estado === "generada" && fila.folio_relbase) {
-      actual.emitidas.add(fila.folio_relbase);
-      if (corridasSinUsuario.has(fila.corrida_id)) foliosSinUsuario.add(fila.folio_relbase);
-    } else if (fila.estado === "error") {
-      actual.errores.add(`${fila.corrida_id}`);
-    }
-    guiasPorCorrida.set(fila.corrida_id, actual);
+    const actual = porUsuario.get(c.usuario_id) ?? { solicitudes: 0, guias: 0, guiasConError: 0, ultima: null };
+    actual.solicitudes += 1;
+    actual.guias += c.guias;
+    if (c.con_error) actual.guiasConError += 1;
+    if (!actual.ultima || (c.fecha_ejecucion ?? "") > actual.ultima) actual.ultima = c.fecha_ejecucion;
+    porUsuario.set(c.usuario_id, actual);
   }
 
   const usuarios = (perfiles ?? []).map((p) => {
-    const suyas = corridasPorUsuario.get(p.id) ?? { ids: [], ultima: null };
-    let guias = 0;
-    let guiasConError = 0;
-    for (const corridaId of suyas.ids) {
-      const conteo = guiasPorCorrida.get(corridaId);
-      guias += conteo?.emitidas.size ?? 0;
-      guiasConError += conteo?.errores.size ?? 0;
-    }
-
+    const suyas = porUsuario.get(p.id);
     return {
       id: p.id,
       email: p.email,
@@ -98,12 +63,12 @@ export async function obtenerResumenUsuarios(): Promise<{ usuarios: ResumenUsuar
       rol: p.rol as RolUsuario,
       estado: p.estado as EstadoUsuario,
       creadoEn: p.created_at,
-      solicitudes: suyas.ids.length,
-      guias,
-      guiasConError,
-      ultimaActividad: suyas.ultima,
+      solicitudes: suyas?.solicitudes ?? 0,
+      guias: suyas?.guias ?? 0,
+      guiasConError: suyas?.guiasConError ?? 0,
+      ultimaActividad: suyas?.ultima ?? null,
     };
   });
 
-  return { usuarios, guiasSinUsuario: foliosSinUsuario.size };
+  return { usuarios, guiasSinUsuario };
 }

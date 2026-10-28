@@ -14,8 +14,7 @@ const tiposTraslado = unstable_cache(obtenerTiposTraslado, ["relbase-tipos-trasl
 const formasPago = unstable_cache(listarFormasPago, ["relbase-formas-pago-v1"], { revalidate: 86400 });
 
 export default async function GuiaManualPage() {
-  await requerirUsuario();
-  const [productos, creados, memoria, tipos, formas] = await Promise.all([productosParaGuia(), productosCreados(), cargarMemoria(), tiposTraslado(), formasPago()]);
+  const [, productos, creados, memoria, tipos, formas] = await Promise.all([requerirUsuario(), productosParaGuia(), productosCreados(), cargarMemoria(), tiposTraslado(), formasPago()]);
   const desde = desdePrecios();
 
   return (

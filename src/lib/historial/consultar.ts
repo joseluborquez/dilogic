@@ -52,6 +52,9 @@ export const SOLICITUDES_POR_PAGINA = 25;
  */
 const MAX_FILAS_BUSQUEDA = 5000;
 
+/** Solicitudes por consulta de filas: ~3 x 330 filas, cabe en una pagina de 1000. */
+const CORRIDAS_POR_CONSULTA = 3;
+
 export interface FiltrosHistorial {
   /** Folio o centro, parcial. */
   texto?: string;
@@ -176,18 +179,31 @@ export async function obtenerHistorial(
   if (idsCorridas.length === 0) {
     return { ...vacio, totalSolicitudes, totalPaginas: Math.ceil(totalSolicitudes / SOLICITUDES_POR_PAGINA) };
   }
-  const filas = await traerTodasLasFilas((inicio, fin) =>
-    supabase
-      .from("guias_generadas")
-      .select(
-        "corrida_id, categoria, centro, folio_relbase, estado, cantidad, mensaje_error, fecha_generacion, created_at, pdf_path"
-      )
-      .in("corrida_id", idsCorridas)
-      .is("eliminado_en", null)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: true })
-      .range(inicio, fin)
+  // Una fila por SKU: 25 solicitudes son ~8 mil filas (28-oct-2026). Pedidas
+  // juntas salian en 3 tandas de paginas, una tras otra; por grupos de
+  // solicitudes salen todas a la vez. Cada solicitud cae entera en un grupo y
+  // con el mismo orden, que es lo unico que importa al agrupar abajo.
+  const grupos = Array.from({ length: Math.ceil(idsCorridas.length / CORRIDAS_POR_CONSULTA) }, (_, i) =>
+    idsCorridas.slice(i * CORRIDAS_POR_CONSULTA, (i + 1) * CORRIDAS_POR_CONSULTA)
   );
+  const filas = (
+    await Promise.all(
+      grupos.map((ids) =>
+        traerTodasLasFilas((inicio, fin) =>
+          supabase
+            .from("guias_generadas")
+            .select(
+              "corrida_id, categoria, centro, folio_relbase, estado, cantidad, mensaje_error, fecha_generacion, created_at, pdf_path"
+            )
+            .in("corrida_id", ids)
+            .is("eliminado_en", null)
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: true })
+            .range(inicio, fin)
+        )
+      )
+    )
+  ).flat();
 
   const empresas = await empresasListas();
   const empresaPorId = new Map((empresas ?? []).map((e) => [e.id, e]));
@@ -303,11 +319,10 @@ export async function obtenerEmpresasConHistorial(): Promise<
   { codigo: string; nombre: string }[]
 > {
   const supabase = getSupabaseServiceClient();
-  const { data: empresas } = await supabase
-    .from("empresas")
-    .select("id, nombre, codigo_interno")
-    .order("nombre");
-  const { data: corridas } = await supabase.from("corridas").select("empresa_id");
+  const [{ data: empresas }, { data: corridas }] = await Promise.all([
+    supabase.from("empresas").select("id, nombre, codigo_interno").order("nombre"),
+    supabase.from("corridas").select("empresa_id"),
+  ]);
 
   const conHistorial = new Set((corridas ?? []).map((c) => c.empresa_id));
   return (empresas ?? [])

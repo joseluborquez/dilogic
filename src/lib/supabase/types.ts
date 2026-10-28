@@ -315,6 +315,16 @@ export interface Database {
         Args: { p_segundos?: number };
         Returns: boolean;
       };
+      conteo_guias_por_corrida: {
+        Args: Record<string, never>;
+        Returns: {
+          corrida_id: string;
+          usuario_id: string | null;
+          fecha_ejecucion: string;
+          guias: number;
+          con_error: boolean;
+        }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

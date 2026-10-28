@@ -76,7 +76,6 @@ export default async function InicioPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const usuario = await requerirUsuario();
   const params = await searchParams;
 
   const meses = ultimosMeses(MESES_EN_SELECTOR);
@@ -92,7 +91,8 @@ export default async function InicioPage({
   const comparacion = periodoDeComparacion(actual);
   const anteriorCompleto = periodoDelMes(moverMes(mes, -1));
 
-  const primeraFecha = await primeraFechaConVentas();
+  // La sesion sale junto con la primera consulta: esperarla antes sumaba un viaje.
+  const [usuario, primeraFecha] = await Promise.all([requerirUsuario(), primeraFechaConVentas()]);
   const hayDatos = (p: Periodo) => primeraFecha != null && p.desde >= primeraFecha.slice(0, 8) + "01";
   const pedir = (p: Periodo) => (hayDatos(p) ? agregadoPeriodo(p.desde, p.hasta) : Promise.resolve(null));
 

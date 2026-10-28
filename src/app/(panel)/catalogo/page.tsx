@@ -6,8 +6,7 @@ import { UltimaSincronizacion } from "@/components/catalogo/UltimaSincronizacion
 export const dynamic = "force-dynamic";
 
 export default async function CatalogoPage() {
-  await requerirUsuario();
-  const ultima = await obtenerUltimaSincronizacion();
+  const [, ultima] = await Promise.all([requerirUsuario(), obtenerUltimaSincronizacion()]);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">

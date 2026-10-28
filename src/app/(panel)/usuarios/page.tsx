@@ -5,8 +5,9 @@ import { ListaUsuarios } from "@/components/usuarios/ListaUsuarios";
 export const dynamic = "force-dynamic";
 
 export default async function UsuariosPage() {
-  const admin = await requerirAdmin();
-  const { usuarios, guiasSinUsuario } = await obtenerResumenUsuarios();
+  // Juntas: la sesion no espera a los conteos ni al reves. Si no es admin,
+  // requerirAdmin redirige y los conteos no se muestran.
+  const [admin, { usuarios, guiasSinUsuario }] = await Promise.all([requerirAdmin(), obtenerResumenUsuarios()]);
 
   const totalGuias = usuarios.reduce((suma, u) => suma + u.guias, 0);
 
