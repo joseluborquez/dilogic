@@ -16,6 +16,7 @@ import {
   TYPE_TRANSFER_OTROS_TRASLADOS_NO_VENTA,
 } from "@/lib/relbase/types";
 import { guardarPdfGuia } from "@/lib/storage/guias-pdf";
+import { leerCompraRelbase } from "./compras";
 import { leerFacturaProveedor, type FacturaLeida } from "./leer-factura";
 import { armarTraspaso, type ResultadoTraspaso } from "./armar";
 
@@ -25,6 +26,7 @@ export const CODIGO_PRODUCTO_GENERICO = "O-PG-166053";
 export type EstadoFactura = "ok" | "aviso" | "error";
 
 export interface FacturaRevisada {
+  /** Nombre del PDF, o "Relbase" si se leyo de los documentos recibidos. */
   archivo: string;
   folio: string;
   proveedorRut: string | null;
@@ -55,21 +57,34 @@ export function normalizarRut(rut: string): string {
  * el Sub-Total), coincidir con la compra registrada en Relbase y no haber sido
  * traspasada antes. Es la misma revision que se repite al emitir: el
  * contenido de un DTE no se toma de lo que mando el navegador.
+ * Las facturas llegan como PDF o como id de una compra recibida en Relbase
+ * (de esas solo viaja el id: los productos se vuelven a pedir a Relbase).
  */
-export async function revisarFacturas(archivos: File[]): Promise<Revision> {
+export async function revisarFacturas(archivos: File[], compraIds: number[] = []): Promise<Revision> {
   const supabase = getSupabaseServiceClient();
   const revisadas: FacturaRevisada[] = [];
   const comprasPorRut = new Map<string, CompraRelbase[]>();
   const vistos = new Set<string>();
 
-  for (const archivo of archivos) {
+  const fuentes = [
+    ...compraIds.map((id) => ({ nombre: "Relbase", desdeRelbase: true, leer: () => leerCompraRelbase(id) })),
+    ...archivos.map((archivo) => ({
+      nombre: archivo.name,
+      desdeRelbase: false,
+      leer: async () => leerFacturaProveedor(new Uint8Array(await archivo.arrayBuffer())),
+    })),
+  ];
+
+  for (const fuente of fuentes) {
     let leida: FacturaLeida;
     try {
-      leida = await leerFacturaProveedor(new Uint8Array(await archivo.arrayBuffer()));
+      leida = await fuente.leer();
     } catch {
       revisadas.push({
-        archivo: archivo.name, folio: "", proveedorRut: null, fecha: null, lineas: 0, neto: 0, total: 0,
-        estado: "error", mensajes: ["No se pudo abrir el PDF."], leida: null,
+        archivo: fuente.nombre, folio: "", proveedorRut: null, fecha: null, lineas: 0, neto: 0, total: 0,
+        estado: "error",
+        mensajes: [fuente.desdeRelbase ? "No se pudo leer la factura desde Relbase." : "No se pudo abrir el PDF."],
+        leida: null,
       });
       continue;
     }
@@ -87,7 +102,7 @@ export async function revisarFacturas(archivos: File[]): Promise<Revision> {
       const clave = `${rut}|${leida.folio}`;
       if (vistos.has(clave)) {
         estado = "error";
-        mensajes.push("Esta factura viene repetida en los archivos subidos.");
+        mensajes.push("Esta factura viene repetida (en los PDF o también elegida desde Relbase).");
       }
       vistos.add(clave);
 
@@ -104,22 +119,25 @@ export async function revisarFacturas(archivos: File[]): Promise<Revision> {
         );
       }
 
-      if (!comprasPorRut.has(rut)) {
-        try {
-          comprasPorRut.set(rut, await listarComprasProveedor(rut));
-        } catch {
-          comprasPorRut.set(rut, []);
+      // Leida desde Relbase, ya es la compra registrada: solo el PDF se compara.
+      if (!fuente.desdeRelbase) {
+        if (!comprasPorRut.has(rut)) {
+          try {
+            comprasPorRut.set(rut, await listarComprasProveedor(rut));
+          } catch {
+            comprasPorRut.set(rut, []);
+          }
         }
-      }
-      const compra = comprasPorRut.get(rut)!.find((c) => String(c.folio) === leida.folio);
-      if (!compra) {
-        if (estado === "ok") estado = "aviso";
-        mensajes.push("No aparece como compra en Relbase: no se pudo comparar con el registro del SII.");
-      } else if (compra.neto !== leida.neto || compra.total !== leida.total) {
-        estado = "error";
-        mensajes.push(
-          `No calza con la compra registrada en Relbase (neto $${compra.neto.toLocaleString("es-CL")}, total $${compra.total.toLocaleString("es-CL")}).`
-        );
+        const compra = comprasPorRut.get(rut)!.find((c) => String(c.folio) === leida.folio);
+        if (!compra) {
+          if (estado === "ok") estado = "aviso";
+          mensajes.push("No aparece como compra en Relbase: no se pudo comparar con el registro del SII.");
+        } else if (compra.neto !== leida.neto || compra.total !== leida.total) {
+          estado = "error";
+          mensajes.push(
+            `No calza con la compra registrada en Relbase (neto $${compra.neto.toLocaleString("es-CL")}, total $${compra.total.toLocaleString("es-CL")}).`
+          );
+        }
       }
     } else if (estado === "ok") {
       estado = "error";
@@ -127,7 +145,7 @@ export async function revisarFacturas(archivos: File[]): Promise<Revision> {
     }
 
     revisadas.push({
-      archivo: archivo.name,
+      archivo: fuente.nombre,
       folio: leida.folio,
       proveedorRut: rut,
       fecha: leida.fecha,
@@ -173,12 +191,13 @@ function fechaHoyChile(): string {
  */
 export async function emitirTraspaso(params: {
   archivos: File[];
+  compraIds: number[];
   empresaCodigo: string;
   centro: string;
   idempotencyKey: string;
   usuario: { id: string; nombre: string | null; email: string };
 }): Promise<ResultadoEmision> {
-  const { archivos, empresaCodigo, idempotencyKey, usuario } = params;
+  const { archivos, compraIds, empresaCodigo, idempotencyKey, usuario } = params;
   const centro = params.centro.trim().toUpperCase();
   if (!centro) return { ok: false, mensaje: "Indica el centro / contacto de las guías." };
 
@@ -205,7 +224,7 @@ export async function emitirTraspaso(params: {
     };
   }
 
-  const revision = await revisarFacturas(archivos);
+  const revision = await revisarFacturas(archivos, compraIds);
   if (revision.facturas.some((f) => f.estado === "error")) {
     return { ok: false, mensaje: "Hay facturas con errores: quítalas o corrígelas antes de emitir.", revision };
   }

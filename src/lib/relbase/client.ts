@@ -306,6 +306,12 @@ export async function listarComprasProveedor(rut: string): Promise<CompraRelbase
   return compras;
 }
 
+/** Solo lectura: GET /compras/{id}, con sus productos. */
+export async function obtenerCompra(id: number): Promise<Record<string, unknown>> {
+  const json = await request<{ data: Record<string, unknown> }>(`/compras/${id}`);
+  return json.data;
+}
+
 /**
  * Solo lectura: una pagina del listado de guias de despacho (12 por pagina,
  * de la mas nueva a la mas antigua; confirmado 25-oct-2026). El listado no

@@ -24,6 +24,11 @@ function archivosDe(formData: FormData): File[] {
   return formData.getAll("facturas").filter((f): f is File => f instanceof File && f.size > 0);
 }
 
+/** Ids de compras recibidas en Relbase elegidas en pantalla (sus productos se piden de nuevo a Relbase). */
+function comprasDe(formData: FormData): number[] {
+  return [...new Set(formData.getAll("compras").map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+}
+
 /** Lee y valida las facturas; no emite nada. */
 export async function revisarTraspasoAction(
   _prev: EstadoRevision,
@@ -31,8 +36,11 @@ export async function revisarTraspasoAction(
 ): Promise<EstadoRevision> {
   await requerirAdmin();
   const archivos = archivosDe(formData);
-  if (archivos.length === 0) return { status: "error", mensaje: "Elige al menos una factura en PDF." };
-  const revision = await revisarFacturas(archivos);
+  const compras = comprasDe(formData);
+  if (archivos.length === 0 && compras.length === 0) {
+    return { status: "error", mensaje: "Elige al menos una factura (de Relbase o en PDF)." };
+  }
+  const revision = await revisarFacturas(archivos, compras);
   // Las lineas leidas no viajan al navegador: al emitir se vuelven a leer.
   const facturas: FacturaEnPantalla[] = revision.facturas.map((f) => ({
     archivo: f.archivo,
@@ -56,6 +64,7 @@ export async function emitirTraspasoAction(
   const usuario = await requerirAdmin();
   const resultado = await emitirTraspaso({
     archivos: archivosDe(formData),
+    compraIds: comprasDe(formData),
     empresaCodigo: String(formData.get("empresa") ?? ""),
     centro: String(formData.get("centro") ?? ""),
     idempotencyKey: String(formData.get("idempotencyKey") ?? ""),

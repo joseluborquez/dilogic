@@ -9,6 +9,7 @@ import {
   type EstadoRevision,
 } from "@/app/(panel)/traspaso/actions";
 import type { EmpresaOpcion } from "@/lib/empresas/consultar";
+import type { CompraRecibida } from "@/lib/traspaso/compras";
 import { descargarZipGuias } from "@/components/historial/descargar-zip";
 
 const REVISION_INICIAL: EstadoRevision = { status: "inicial" };
@@ -26,10 +27,13 @@ export function TraspasoForm({
   empresas,
   empresaInicial,
   centroInicial,
+  recibidas,
 }: {
   empresas: EmpresaOpcion[];
   empresaInicial: string;
   centroInicial: string;
+  /** null: no se pudo consultar Relbase (o aun no hay traspasos de los que saber el proveedor). */
+  recibidas: CompraRecibida[] | null;
 }) {
   const [revision, revisar, revisando] = useActionState(revisarTraspasoAction, REVISION_INICIAL);
   const [emision, emitir, emitiendo] = useActionState(emitirTraspasoAction, EMISION_INICIAL);
@@ -42,6 +46,10 @@ export function TraspasoForm({
   const [aviso, setAviso] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [archivosRevisados, setArchivosRevisados] = useState<string | null>(null);
+  // Facturas de Relbase elegidas: de partida, todas las que traen productos y no se han traspasado.
+  const [elegidas, setElegidas] = useState<number[]>(
+    () => (recibidas ?? []).filter((c) => c.lineas > 0 && !c.traspasada).map((c) => c.id)
+  );
   // Una clave por seleccion de archivos: reenviar el mismo traspaso no emite dos veces.
   const [idempotencyKey, setIdempotencyKey] = useState(nuevaClave);
   const [descargando, setDescargando] = useState(false);
@@ -73,7 +81,9 @@ export function TraspasoForm({
     startTransition(() => accion(datos));
   }
 
-  const revisionVigente = revision.status === "ok" && archivosRevisados === archivos;
+  // La revision vale para esta seleccion exacta: PDF + facturas de Relbase.
+  const seleccion = `${archivos}#${[...elegidas].sort().join(",")}`;
+  const revisionVigente = revision.status === "ok" && archivosRevisados === seleccion;
   const conErrores = revision.status === "ok" && revision.facturas.some((f) => f.estado === "error");
   const calculo = revision.status === "ok" ? revision.calculo : null;
   const puedeEmitir = revisionVigente && !conErrores && !!calculo && centro.trim() !== "" && !emitiendo;
@@ -87,9 +97,25 @@ export function TraspasoForm({
         className="flex flex-col gap-5 vidrio p-5"
       >
         <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+        {elegidas.map((id) => (
+          <input key={id} type="hidden" name="compras" value={id} />
+        ))}
+
+        {recibidas && (
+          <FacturasRelbase
+            recibidas={recibidas}
+            elegidas={elegidas}
+            alCambiar={(id, marcada) => {
+              setElegidas((l) => (marcada ? [...l, id] : l.filter((x) => x !== id)));
+              setIdempotencyKey(nuevaClave());
+            }}
+          />
+        )}
 
         <div className="flex flex-col gap-2">
-          <p className="text-xs tracking-wide text-ink-muted uppercase">Facturas del proveedor (PDF)</p>
+          <p className="text-xs tracking-wide text-ink-muted uppercase">
+            {recibidas ? "O súbelas en PDF (las que Relbase no trae con productos)" : "Facturas del proveedor (PDF)"}
+          </p>
           <label
             htmlFor="facturas"
             onDragOver={(e) => {
@@ -183,11 +209,11 @@ export function TraspasoForm({
           <button
             type="button"
             onClick={() => {
-              if (!archivos) {
-                setAviso("Primero elige las facturas en PDF (clic en el recuadro o arrástralas).");
+              if (!archivos && elegidas.length === 0) {
+                setAviso("Primero elige las facturas: márcalas en la lista de Relbase o sube los PDF.");
                 return;
               }
-              setArchivosRevisados(archivos);
+              setArchivosRevisados(seleccion);
               lanzar(revisar);
             }}
             disabled={revisando || emitido}
@@ -207,7 +233,7 @@ export function TraspasoForm({
           )}
         </div>
         {revision.status === "ok" && !revisionVigente && (
-          <p className="text-sm text-advertencia">Cambiaste los archivos: vuelve a revisarlos.</p>
+          <p className="text-sm text-advertencia">Cambiaste las facturas elegidas: vuelve a revisarlas.</p>
         )}
       </form>
 
@@ -233,8 +259,8 @@ export function TraspasoForm({
                 </tr>
               </thead>
               <tbody>
-                {revision.facturas.map((f) => (
-                  <tr key={f.archivo} className="border-b border-line align-top last:border-0">
+                {revision.facturas.map((f, i) => (
+                  <tr key={`${f.archivo}-${f.folio}-${i}`} className="border-b border-line align-top last:border-0">
                     <td className="px-3 py-2">
                       <span className="font-mono">{f.folio || "—"}</span>
                       <span className="block text-xs text-ink-muted">{f.archivo}</span>
@@ -362,6 +388,78 @@ export function TraspasoForm({
             </Link>
           </div>
         </section>
+      )}
+    </div>
+  );
+}
+
+const fechaCorta = (iso: string) => iso.split("-").reverse().join("-");
+
+/**
+ * Facturas recibidas en Relbase: a la vista solo las que se pueden traspasar;
+ * las ya traspasadas y las que Relbase trae sin productos quedan plegadas.
+ */
+function FacturasRelbase({
+  recibidas,
+  elegidas,
+  alCambiar,
+}: {
+  recibidas: CompraRecibida[];
+  elegidas: number[];
+  alCambiar: (id: number, marcada: boolean) => void;
+}) {
+  const usables = recibidas.filter((c) => c.lineas > 0 && !c.traspasada);
+  const sinProductos = recibidas.filter((c) => c.lineas === 0 && !c.traspasada);
+  const traspasadas = recibidas.filter((c) => c.traspasada);
+  const otras = [...sinProductos, ...traspasadas];
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs tracking-wide text-ink-muted uppercase">Facturas recibidas en Relbase</p>
+      {usables.length === 0 ? (
+        <p className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink-muted">
+          No hay facturas nuevas con productos en Relbase.
+        </p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-line rounded-lg border border-line bg-paper">
+          {usables.map((c) => (
+            <li key={c.id}>
+              <label className="grid cursor-pointer grid-cols-[auto_4.5rem_6rem_6rem_1fr] items-center gap-3 px-3 py-2 text-sm hover:bg-teal/5">
+                <input type="checkbox" checked={elegidas.includes(c.id)} onChange={(e) => alCambiar(c.id, e.target.checked)} />
+                <span className="font-mono">{c.folio}</span>
+                <span className="text-ink-muted">{fechaCorta(c.fecha)}</span>
+                <span className="text-right font-mono">{pesos(c.total)}</span>
+                <span className="text-right text-xs text-ink-muted">{c.lineas} productos</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+      {otras.length > 0 && (
+        <details className="text-xs text-ink-muted">
+          <summary className="cursor-pointer select-none">
+            {[
+              sinProductos.length > 0 && `${sinProductos.length} sin productos en Relbase (súbelas en PDF)`,
+              traspasadas.length > 0 && `${traspasadas.length} ya traspasadas`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </summary>
+          <ul className="mt-1 flex flex-col">
+            {otras.map((c) => (
+              <li key={c.id} className="grid grid-cols-[4.5rem_6rem_6rem_1fr] gap-3 px-3 py-0.5">
+                <span className="font-mono">{c.folio}</span>
+                <span>{fechaCorta(c.fecha)}</span>
+                <span className="text-right font-mono">{pesos(c.total)}</span>
+                <span>
+                  {c.traspasada
+                    ? `traspasada el ${new Date(c.traspasada).toLocaleDateString("es-CL", { timeZone: "America/Santiago" })}`
+                    : "sin productos: súbela en PDF"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </div>
   );
