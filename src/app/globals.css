@@ -185,22 +185,31 @@ body {
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: rgba(6, 16, 24, 0.62);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  backdrop-filter: blur(24px) saturate(150%);
+  /* Casi transparente y apenas desenfocado: el paisaje tiene que verse
+     detras (Hugo, 28-oct). Lo que da contraste al texto son las tarjetas. */
+  background: rgba(6, 16, 24, 0.22);
+  -webkit-backdrop-filter: blur(3px) saturate(130%);
+  backdrop-filter: blur(3px) saturate(130%);
 }
 /*
- * Dentro del panel las ventanas pasan a ser tarjetas claras sin desenfoque
+ * Dentro del panel las ventanas pasan a ser tarjetas oscuras sin desenfoque
  * propio (el panel ya desenfoca): vidrio sobre vidrio se veia turbio y pesaba
  * al hacer scroll. Lo que flota sobre la pagina (modales, barra de seleccion,
  * listas desplegables) conserva su vidrio para no quedar transparente.
  */
 .panel-contenido :is(.vidrio, .vidrio-lista):not(.fixed, .absolute, .fixed *) {
-  background-color: rgba(255, 255, 255, 0.04);
+  background-color: rgba(7, 18, 28, 0.52);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
 
 ::selection {
   background: rgba(79, 195, 180, 0.35);
+}
+
+/* El menu lateral, igual de liviano que el panel: el paisaje se ve tambien detras. */
+aside.vidrio {
+  background-color: rgba(6, 16, 24, 0.4);
+  -webkit-backdrop-filter: blur(6px) saturate(130%);
+  backdrop-filter: blur(6px) saturate(130%);
 }
