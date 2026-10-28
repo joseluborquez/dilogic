@@ -27,7 +27,7 @@ function Barra({ fraccion, atenuada }: { fraccion: number; atenuada?: boolean })
   return (
     <span className="block h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
       <span
-        className={`block h-full rounded-full bg-teal transition-opacity ${atenuada ? "opacity-35 group-hover:opacity-70" : ""}`}
+        className={`animar-llenar block h-full rounded-full bg-teal transition-opacity ${atenuada ? "opacity-35 group-hover:opacity-70" : ""}`}
         style={{ width: `${Math.max(1.5, fraccion * 100)}%` }}
       />
     </span>
@@ -85,7 +85,7 @@ export function GraficoMeses({ puntos }: { puntos: BarraMes[] }) {
             </span>
             <span className="flex w-full justify-center" style={{ height: AREA }}>
               <span
-                className={`mt-auto w-full max-w-10 rounded-t-md bg-teal transition-opacity ${p.activo ? "" : "opacity-35 group-hover:opacity-70"}`}
+                className={`animar-crecer mt-auto w-full max-w-10 rounded-t-md bg-teal transition-opacity ${p.activo ? "" : "opacity-35 group-hover:opacity-70"}`}
                 style={{ height: alto }}
               />
             </span>

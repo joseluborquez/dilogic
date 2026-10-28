@@ -17,7 +17,7 @@ export function Bloque({
   id?: string;
 }) {
   return (
-    <section id={id} className="vidrio flex flex-col gap-4 p-5">
+    <section id={id} className="vidrio animar-subir retraso-3 flex flex-col gap-4 p-5">
       <header className="flex flex-col gap-1">
         <h2 className="font-display text-lg font-semibold">{titulo}</h2>
         <p className="text-sm text-ink-muted">{comoLeer}</p>

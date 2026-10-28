@@ -211,7 +211,7 @@ function Empresas({
   const total = datos.monto || 1;
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      {EMPRESAS_FILTRO.map((g) => {
+      {EMPRESAS_FILTRO.map((g, i) => {
         // Por cliente de la guia: la tarjeta cuadra con la suma de sus centros.
         const monto = datos.porCliente[g]?.monto ?? 0;
         const antes = datosComparacion ? (datosComparacion.porCliente?.[g]?.monto ?? 0) : null;
@@ -223,7 +223,7 @@ function Empresas({
             key={g}
             href={href(g)}
             activo={esActiva}
-            className={`vidrio flex flex-col gap-1 p-4 transition-colors hover:border-teal ${esActiva ? "border-teal ring-1 ring-teal" : ""}`}
+            className={`vidrio animar-subir elevar retraso-${i + 1} flex flex-col gap-1 p-4 hover:border-teal ${esActiva ? "border-teal ring-1 ring-teal" : ""}`}
           >
             <span className="flex items-center justify-between text-sm">
               <span className="font-medium">{NOMBRE_GRUPO[g]}</span>
@@ -237,7 +237,7 @@ function Empresas({
               )}
             </span>
             <span className="mt-1 h-1 overflow-hidden rounded-full bg-surface-muted">
-              <span className="block h-full rounded-full bg-teal" style={{ width: `${Math.max(2, (monto / total) * 100)}%` }} />
+              <span className="animar-llenar block h-full rounded-full bg-teal" style={{ width: `${Math.max(2, (monto / total) * 100)}%` }} />
             </span>
           </EnlaceVentas>
         );
@@ -309,7 +309,7 @@ function Resumen({
     return { f, monto, v: antes ? variacion(monto, antes) : null };
   });
   return (
-    <section className="vidrio p-6">
+    <section className="vidrio animar-subir p-6">
       <div className="flex flex-col justify-between gap-5">
         <div className="text-center" title={`${pesos(datos.monto)} · ${entero(datos.guias)} guías · vs. ${nombrePeriodo(comparacion)}`}>
           <p className="text-sm text-ink-muted">Vendido {cuando(actual)}</p>

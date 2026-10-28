@@ -1008,7 +1008,7 @@ export function GuiaManualForm({
       </section>
 
       {confirmando && cliente && (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/50 px-4" role="dialog" aria-modal="true" aria-labelledby="confirmar-titulo">
+        <div className="animar-aparecer fixed inset-0 z-20 flex items-center justify-center bg-black/50 px-4" role="dialog" aria-modal="true" aria-labelledby="confirmar-titulo">
           <div className="vidrio flex w-full max-w-lg flex-col gap-4 p-6">
             <h2 id="confirmar-titulo" className="font-display text-lg font-semibold">
               {guias.length > 1 ? `¿Emitir estas ${guias.length} guías?` : "¿Emitir esta guía?"}

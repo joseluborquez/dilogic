@@ -392,7 +392,7 @@ function ConfirmarEliminacion({
 }) {
   return (
     <div
-      className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 px-6"
+      className="animar-aparecer fixed inset-0 z-20 flex items-center justify-center bg-black/40 px-6"
       onClick={onCancelar}
       onKeyDown={(e) => e.key === "Escape" && onCancelar()}
     >

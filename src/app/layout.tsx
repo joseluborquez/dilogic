@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Fondo } from "@/components/ui/Fondo";
 import "./globals.css";
 
 // Fuentes incluidas en el repo (licencia SIL OFL, subconjunto latin bajado de
@@ -46,7 +47,10 @@ export default function RootLayout({
       lang="es"
       className={`${display.variable} ${body.variable} ${data.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Fondo />
+        {children}
+      </body>
     </html>
   );
 }

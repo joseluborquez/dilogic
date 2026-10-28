@@ -89,57 +89,116 @@ body {
 }
 
 /*
- * Cielo fijo (no se mueve al hacer scroll). Cada estrella es una capa propia
- * que se repite con un tamano de baldosa distinto (primos entre si), asi la
- * repeticion no forma una grilla visible. Debajo, la aurora: manchas grandes y
- * difusas de verde-agua y azul petroleo.
+ * Fondo: cielo nocturno sobre la cordillera y el fiordo (components/ui/Fondo.tsx).
+ * Queda fijo al hacer scroll. El degradado baja de casi negro a verde petroleo
+ * en el horizonte; el buscador de precios baja a violeta.
  */
-body::before {
-  content: "";
+.fondo {
   position: fixed;
   inset: 0;
   z-index: -1;
+  overflow: hidden;
   pointer-events: none;
-  /* Capa propia: el cielo se pinta una vez y no en cada scroll. */
-  transform: translateZ(0);
-  background-color: var(--cielo);
-  background-image:
-    radial-gradient(1px 1px at 23px 41px, rgba(255, 255, 255, 0.9), transparent),
-    radial-gradient(1px 1px at 131px 17px, rgba(255, 255, 255, 0.7), transparent),
-    radial-gradient(1.5px 1.5px at 67px 149px, rgba(220, 255, 250, 0.85), transparent),
-    radial-gradient(1px 1px at 181px 97px, rgba(255, 255, 255, 0.6), transparent),
-    radial-gradient(1px 1px at 251px 199px, rgba(255, 255, 255, 0.5), transparent),
-    radial-gradient(2px 2px at 97px 263px, rgba(235, 250, 255, 0.9), transparent),
-    radial-gradient(1px 1px at 311px 59px, rgba(255, 255, 255, 0.55), transparent),
-    radial-gradient(1.5px 1.5px at 353px 331px, rgba(255, 255, 255, 0.7), transparent),
-    radial-gradient(1px 1px at 41px 389px, rgba(255, 255, 255, 0.45), transparent),
-    radial-gradient(2px 2px at 467px 211px, rgba(210, 255, 245, 0.8), transparent),
-    radial-gradient(1px 1px at 509px 457px, rgba(255, 255, 255, 0.5), transparent),
-    radial-gradient(2.5px 2.5px at 233px 571px, rgba(255, 255, 255, 0.85), transparent),
-    radial-gradient(ellipse 70% 45% at 18% 8%, rgba(38, 170, 150, 0.32), transparent 70%),
-    radial-gradient(ellipse 55% 60% at 88% 22%, rgba(16, 92, 120, 0.38), transparent 70%),
-    radial-gradient(ellipse 80% 35% at 55% 0%, rgba(79, 195, 180, 0.16), transparent 75%),
-    radial-gradient(ellipse 60% 50% at 30% 100%, rgba(12, 70, 92, 0.3), transparent 70%);
-  background-size:
-    157px 157px,
-    211px 211px,
-    263px 263px,
-    293px 293px,
-    331px 331px,
-    379px 379px,
-    419px 419px,
-    467px 467px,
-    509px 509px,
-    563px 563px,
-    613px 613px,
-    677px 677px,
-    100% 100%,
-    100% 100%,
-    100% 100%,
-    100% 100%;
-  background-repeat:
-    repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat,
-    no-repeat, no-repeat, no-repeat, no-repeat;
+  background: linear-gradient(180deg, #03060c 0%, #061423 34%, #0b2433 58%, #12384a 76%, #1d4f5c 90%, #275e64 100%);
+}
+.fondo svg {
+  position: absolute;
+  inset: 0;
+}
+.fondo-aurora {
+  position: absolute;
+  left: -20%;
+  top: 4%;
+  width: 140%;
+  height: 320px;
+  background:
+    radial-gradient(ellipse at 28% 50%, rgba(79, 195, 180, 0.26), transparent 62%),
+    radial-gradient(ellipse at 70% 38%, rgba(40, 130, 175, 0.24), transparent 60%);
+  filter: blur(34px);
+  animation: aurora 20s ease-in-out infinite;
+  will-change: transform;
+}
+.fondo-estrellas circle {
+  animation: brillo 4s ease-in-out infinite;
+}
+.fondo-estrellas circle:nth-child(3n) {
+  animation-duration: 5.5s;
+  animation-delay: 1.3s;
+}
+.fondo-estrellas circle:nth-child(4n) {
+  animation-duration: 3.2s;
+  animation-delay: 2.4s;
+}
+.fondo-luz {
+  animation: brillo 2.6s ease-in-out infinite;
+}
+
+/*
+ * Animaciones: solo transform y opacity (las hace la tarjeta grafica). Las de
+ * entrada corren al montarse el elemento, una vez: cambiar un filtro no las
+ * repite si el elemento sigue en pantalla.
+ */
+@keyframes brillo { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+@keyframes aurora { 0%, 100% { transform: translateX(-6%) scaleY(1); } 50% { transform: translateX(6%) scaleY(1.15); } }
+@keyframes subir { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes crecer { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes llenar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes trazo { from { stroke-dashoffset: 420; } to { stroke-dashoffset: 0; } }
+@keyframes deslizar { from { opacity: 0; transform: translateX(48px); } to { opacity: 1; transform: none; } }
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+
+.animar-subir { animation: subir 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.animar-crecer { transform-origin: bottom; animation: crecer 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both 0.3s; }
+.animar-llenar { transform-origin: left; animation: llenar 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both 0.3s; }
+.animar-trazo { stroke-dasharray: 420; animation: trazo 1.4s ease-out both 0.4s; }
+.animar-deslizar { animation: deslizar 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.animar-aparecer { animation: aparecer 0.3s ease both; }
+.retraso-1 { animation-delay: 0.08s; }
+.retraso-2 { animation-delay: 0.16s; }
+.retraso-3 { animation-delay: 0.24s; }
+.retraso-4 { animation-delay: 0.32s; }
+
+.elevar { transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+.elevar:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/*
+ * Panel de vidrio que envuelve el contenido, al lado del menu. El desenfoque va
+ * en un ::before y no en el panel: backdrop-filter en el panel lo volveria
+ * contenedor de los `position: fixed` de adentro (modales, barra de seleccion
+ * del historial) y quedarian atrapados en el. z-index: 0 crea el contexto para
+ * que el ::before quede detras del contenido.
+ */
+.panel-contenido {
+  position: relative;
+  z-index: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+}
+.panel-contenido::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(6, 16, 24, 0.62);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  backdrop-filter: blur(24px) saturate(150%);
+}
+/*
+ * Dentro del panel las ventanas pasan a ser tarjetas claras sin desenfoque
+ * propio (el panel ya desenfoca): vidrio sobre vidrio se veia turbio y pesaba
+ * al hacer scroll. Lo que flota sobre la pagina (modales, barra de seleccion,
+ * listas desplegables) conserva su vidrio para no quedar transparente.
+ */
+.panel-contenido :is(.vidrio, .vidrio-lista):not(.fixed, .absolute, .fixed *) {
+  background-color: rgba(255, 255, 255, 0.04);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 ::selection {

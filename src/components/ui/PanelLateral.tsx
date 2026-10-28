@@ -64,7 +64,7 @@ export function PanelLateral({
   const secciones = SECCIONES.filter((s) => esAdmin || !s.soloAdmin);
 
   return (
-    <aside className="vidrio mx-4 mt-4 flex flex-col gap-4 p-4 md:sticky md:top-4 md:m-4 md:h-[calc(100dvh-2rem)] md:w-60 md:shrink-0 md:gap-6 md:p-5">
+    <aside className="vidrio flex flex-col gap-4 p-4 md:sticky md:top-4 md:h-[calc(100dvh-2rem)] md:w-60 md:shrink-0 md:gap-6 md:p-5">
       <p className="font-display text-xs font-semibold tracking-[0.2em] text-teal uppercase">
         Dilogic · Guías
       </p>
