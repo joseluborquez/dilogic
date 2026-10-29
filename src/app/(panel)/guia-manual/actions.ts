@@ -1,5 +1,6 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import { requerirUsuario } from "@/lib/auth/sesion";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import {
@@ -249,6 +250,15 @@ const formatoRut = (rut: string) => {
   return `${l.slice(0, -1)}-${l.slice(-1)}`;
 };
 
+const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+const LLAVE_GUIA = new RegExp(`^${UUID}(-\\d{1,3}-${UUID})?$`, "i");
+
+/** Relbase recibe un UUID estable derivado de la llave de la guía (la llave completa mide ~75 caracteres). */
+const uuidDeLlave = (llave: string) => {
+  const h = createHash("sha256").update(llave).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+};
+
 const errorDeRelbase = (err: RelbaseApiError) => {
   const body = err.body as { error?: unknown; message?: unknown; meta?: { message?: unknown } } | undefined;
   const detalle = body?.error ?? body?.message ?? body?.meta?.message;
@@ -260,7 +270,8 @@ export async function emitirGuiaManualAction(pedida: GuiaPedida): Promise<Result
   const fallo = (mensaje: string, nuevaLlave = false): ResultadoEmision => ({ status: "error", mensaje, nuevaLlave });
 
   // --- Validaciones que no dependen de Relbase ---------------------------
-  if (!/^[0-9a-f-]{36}$/i.test(pedida.idempotencyKey ?? "")) return fallo("Falta la llave de emisión. Recarga la página.", true);
+  // Llave por guía: «<uuid del pedido>-<n° de guía>-<uuid de su primera línea>» (GuiaManualForm).
+  if (!LLAVE_GUIA.test(pedida.idempotencyKey ?? "")) return fallo("Falta la llave de emisión. Recarga la página.", true);
   if (!OPCIONES_PRECIO.some((o) => o.valor === pedida.opcion)) return fallo("Opción de precio inválida.");
   if (![1, 2, 3].includes(pedida.tipoDespacho)) return fallo("Elige el tipo de despacho: es obligatorio ante el SII.");
   if (!Array.isArray(pedida.lineas) || pedida.lineas.length === 0) return fallo("La guía no tiene productos.");
@@ -402,7 +413,7 @@ export async function emitirGuiaManualAction(pedida: GuiaPedida): Promise<Result
   }
 
   try {
-    const creada = await crearGuiaDespacho(payload, pedida.idempotencyKey);
+    const creada = await crearGuiaDespacho(payload, uuidDeLlave(pedida.idempotencyKey));
     const folio = String(creada.folio);
     await supabase
       .from("guias_manuales")
