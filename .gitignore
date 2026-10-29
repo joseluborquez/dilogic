@@ -39,6 +39,9 @@ env.local
 # vercel
 .vercel
 
+# permisos locales de Claude Code
+.claude/settings.local.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
