@@ -8,6 +8,8 @@ const ALIAS_CODIGO = ["codigo", "código", "sku", "codigosku", "codigo sku"];
 const ALIAS_CANTIDAD = ["cantidad", "cant"];
 const ALIAS_CATEGORIA = ["categoria", "categoría", "familia"];
 const ALIAS_NOMBRE = ["producto", "descripcion", "nombre", "detalle", "articulo"];
+// "Valor" o "neto" a secas suelen ser el total de la linea, no el precio unitario.
+const ALIAS_PRECIO = ["precio", "precio unitario", "precio neto", "valor unitario"];
 
 // En formato matriz cada columna es un centro de cultivo. Estas son las que
 // aparecen en archivos reales sin serlo: tomarlas como centro generaria una
@@ -71,6 +73,13 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
   const idxCantidad = encontrarColumna(headers, ALIAS_CANTIDAD);
   const idxCategoria = encontrarColumna(headers, ALIAS_CATEGORIA);
   const idxNombre = encontrarColumna(headers, ALIAS_NOMBRE);
+  const idxPrecio = encontrarColumna(headers, ALIAS_PRECIO);
+  const precioDe = (row: unknown[]): number | null => {
+    const v = idxPrecio !== -1 ? row[idxPrecio] : null;
+    if (v === null || v === undefined || String(v).trim() === "") return null;
+    const n = typeof v === "number" ? v : Number(String(v).replace(/[$.\s]/g, "").replace(",", "."));
+    return Number.isFinite(n) ? n : null;
+  };
   const nombreDe = (row: unknown[]): string | null =>
     idxNombre !== -1 && row[idxNombre] != null ? String(row[idxNombre]).trim() || null : null;
 
@@ -122,6 +131,7 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
         categoria,
         centro: null,
         nombreArchivo: nombreDe(row),
+        precioArchivo: precioDe(row),
       });
     });
 
@@ -138,6 +148,7 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
         idx !== idxCodigo &&
         idx !== idxCategoria &&
         idx !== idxNombre &&
+        idx !== idxPrecio &&
         nombre !== "" &&
         !COLUMNAS_NO_CENTRO.includes(normalizarHeader(nombre))
     );
@@ -147,7 +158,7 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
   const anchoDatos = Math.max(headers.length, ...dataRows.map((r) => r?.length ?? 0));
   const sinNombre: string[] = [];
   for (let idx = 0; idx < anchoDatos; idx += 1) {
-    if ([idxCodigo, idxCategoria, idxNombre].includes(idx) || (headers[idx] ?? "").trim() !== "") continue;
+    if ([idxCodigo, idxCategoria, idxNombre, idxPrecio].includes(idx) || (headers[idx] ?? "").trim() !== "") continue;
     const numeros = dataRows
       .map((r) => r?.[idx])
       .filter((v) => v != null && String(v).trim() !== "" && Number.isFinite(Number(v)))
@@ -200,7 +211,15 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
       }
       if (cantidad <= 0) continue; // 0 o negativo: no hay pedido de ese producto para ese centro
 
-      filas.push({ fila: numeroFila, codigo, cantidad, categoria, centro, nombreArchivo: nombreDe(row) });
+      filas.push({
+        fila: numeroFila,
+        codigo,
+        cantidad,
+        categoria,
+        centro,
+        nombreArchivo: nombreDe(row),
+        precioArchivo: precioDe(row),
+      });
     }
   });
 

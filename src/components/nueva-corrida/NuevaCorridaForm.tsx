@@ -119,6 +119,11 @@ export function NuevaCorridaForm({ empresas }: { empresas: EmpresaOpcion[] }) {
               por centro, con el nombre del centro en la fila de títulos. Una columna con cantidades y sin nombre impide
               procesar el archivo.
             </li>
+            <li>
+              <span className="text-ink">Productos fuera del catálogo:</span> código <span className="text-ink">GENERICO</span>,
+              el nombre en la columna <span className="text-ink">Producto</span> y el precio neto unitario en una columna{" "}
+              <span className="text-ink">Precio</span>. Salen como PRODUCTO GENERICO con ese nombre.
+            </li>
             <li>Se lee solo la primera hoja visible. Las hojas ocultas no se procesan y se avisa cuáles eran.</li>
           </ul>
         </details>

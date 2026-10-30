@@ -10,6 +10,9 @@ export interface FilaPedido {
   // Nombre del producto segun el archivo, si trae columna "producto",
   // "descripcion" o "nombre". Sirve para advertir un codigo equivocado.
   nombreArchivo?: string | null;
+  // Precio unitario segun la columna "precio" del archivo, si la trae. Solo
+  // lo usa el PRODUCTO GENERICO; el resto lleva el precio del catalogo.
+  precioArchivo?: number | null;
 }
 
 export interface ErrorParseo {

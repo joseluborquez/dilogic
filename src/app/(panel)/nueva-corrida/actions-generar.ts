@@ -11,6 +11,7 @@ import {
 } from "@/lib/relbase/types";
 import { guardarPdfGuia } from "@/lib/storage/guias-pdf";
 import { obtenerCatalogoEmpresa } from "@/lib/catalogo/validar";
+import { CATEGORIA_GENERICO, PRODUCTO_GENERICO, esCodigoGenerico } from "@/lib/catalogo/generico";
 import { armarGuias } from "@/lib/guias/armar";
 import { traerTodasLasFilas } from "@/lib/supabase/paginar";
 import { requerirUsuario } from "@/lib/auth/sesion";
@@ -27,6 +28,9 @@ interface FilaPedida {
   codigo: string;
   cantidad: number;
   centro: string | null;
+  /** Solo en el PRODUCTO GENERICO, que no esta en el catalogo: vienen del archivo. */
+  descripcion?: string | null;
+  precio?: number | null;
 }
 
 /** Fila ya resuelta contra el catalogo, lista para el payload de Relbase. */
@@ -81,6 +85,31 @@ async function resolverContraCatalogo(
     }
     if (!Number.isFinite(cantidad) || cantidad <= 0) {
       problemas.push(`${codigo}: cantidad inválida`);
+      continue;
+    }
+
+    if (esCodigoGenerico(codigo)) {
+      const descripcion = String(pedida.descripcion ?? "").trim();
+      const precio = Number(pedida.precio);
+      if (!descripcion) {
+        problemas.push(`fila ${pedida.fila}: producto genérico sin descripción`);
+        continue;
+      }
+      if (!Number.isInteger(precio) || precio <= 0) {
+        problemas.push(`fila ${pedida.fila}: producto genérico sin precio válido`);
+        continue;
+      }
+      filas.push({
+        fila: pedida.fila,
+        codigo: PRODUCTO_GENERICO.codigo,
+        cantidad,
+        centro: pedida.centro ?? null,
+        categoria: CATEGORIA_GENERICO,
+        productIdRelbase: PRODUCTO_GENERICO.productId,
+        precio,
+        // En el generico la descripcion es lo que se despacha de verdad.
+        descripcionUnidad: descripcion.slice(0, 1000),
+      });
       continue;
     }
 

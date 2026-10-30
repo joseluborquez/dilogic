@@ -10,12 +10,9 @@
  *   elegido como descripcion y su precio de los ultimos 3 meses.
  */
 import equivalencias from "./equivalencias.json";
+import { PRODUCTO_GENERICO } from "@/lib/catalogo/generico";
 
-export const PRODUCTO_GENERICO = {
-  productId: 8134289,
-  codigo: "O-PG-166053",
-  nombre: "PRODUCTO GENERICO",
-} as const;
+export { PRODUCTO_GENERICO };
 
 export type OpcionPrecio = "alto" | "bajo" | "CERQ" | "YDR" | "MTX";
 

@@ -3,6 +3,7 @@ import "server-only";
 import type { FilaPedido } from "@/lib/excel/types";
 import catalogoLocal from "./catalogo-seed.json";
 import { nombresCoinciden } from "./nombres";
+import { CATEGORIA_GENERICO, PRODUCTO_GENERICO, esCodigoGenerico } from "./generico";
 
 export type EstadoFila = "valido" | "advertencia" | "error";
 
@@ -131,6 +132,8 @@ export function validarFilas(filas: FilaPedido[], catalogo: CatalogoEmpresa["map
   const vistos = new Set<string>();
 
   return filas.map((fila) => {
+    if (esCodigoGenerico(fila.codigo)) return validarGenerico(fila, vistos);
+
     const mensajes: string[] = [];
     let estado: EstadoFila = "valido";
     const producto = catalogo.get(fila.codigo);
@@ -189,4 +192,45 @@ export function validarFilas(filas: FilaPedido[], catalogo: CatalogoEmpresa["map
       precio: producto?.precio ?? null,
     };
   });
+}
+
+/**
+ * El PRODUCTO GENERICO no esta en el catalogo: lo que se despacha lo dice el
+ * nombre del archivo (va como descripcion en la guia) y el precio lo pone
+ * quien arma el archivo, en la columna "precio".
+ */
+function validarGenerico(fila: FilaPedido, vistos: Set<string>): FilaValidada {
+  const mensajes: string[] = [];
+  let estado: EstadoFila = "valido";
+  const descripcion = fila.nombreArchivo?.trim() || null;
+  const precio = fila.precioArchivo ?? null;
+
+  if (!descripcion) {
+    estado = "error";
+    mensajes.push("El producto genérico necesita el nombre del producto (columna «producto»).");
+  }
+  if (precio == null || !Number.isInteger(precio) || precio <= 0) {
+    estado = "error";
+    mensajes.push("El producto genérico necesita un precio en pesos, sin decimales (columna «precio»).");
+  }
+
+  // Varios genericos por centro son normales: los distingue su descripcion.
+  const claveVisto = `${PRODUCTO_GENERICO.codigo}::${descripcion ?? ""}::${fila.centro ?? ""}`;
+  if (vistos.has(claveVisto)) {
+    if (estado !== "error") estado = "advertencia";
+    mensajes.push("Producto repetido en el archivo.");
+  }
+  vistos.add(claveVisto);
+
+  return {
+    ...fila,
+    codigo: PRODUCTO_GENERICO.codigo,
+    categoria: CATEGORIA_GENERICO,
+    estado,
+    mensajes,
+    descripcionProducto: descripcion,
+    descripcionUnidad: null,
+    productIdRelbase: PRODUCTO_GENERICO.productId,
+    precio,
+  };
 }

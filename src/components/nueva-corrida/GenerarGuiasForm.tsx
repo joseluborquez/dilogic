@@ -6,6 +6,7 @@ import { generarGuiasAction, type EstadoGeneracion } from "@/app/(panel)/nueva-c
 import type { FilaValidada } from "@/lib/catalogo/validar";
 import { descargarZipGuias } from "@/components/historial/descargar-zip";
 import { armarGuias } from "@/lib/guias/armar";
+import { PRODUCTO_GENERICO } from "@/lib/catalogo/generico";
 
 const ESTADO_INICIAL: EstadoGeneracion = { status: "inicial" };
 
@@ -66,12 +67,15 @@ export function GenerarGuiasForm({
 
   // Solo el pedido: el producto de Relbase, el precio y la categoria los
   // resuelve el servidor contra el catalogo (son el contenido de un DTE, no
-  // pueden depender de lo que viaje por el navegador).
+  // pueden depender de lo que viaje por el navegador). El generico es la
+  // excepcion: no esta en el catalogo, asi que su descripcion y precio son
+  // los del archivo.
   const filasParaGenerar = filas.map((f) => ({
     fila: f.fila,
     codigo: f.codigo,
     cantidad: f.cantidad,
     centro: f.centro,
+    ...(f.codigo === PRODUCTO_GENERICO.codigo ? { descripcion: f.descripcionProducto, precio: f.precio } : {}),
   }));
 
   return (
