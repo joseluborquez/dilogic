@@ -3,7 +3,8 @@ import "server-only";
 import { zipSync, strToU8 } from "fflate";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { traerTodasLasFilas } from "@/lib/supabase/paginar";
-import { descargarPdfGuia } from "@/lib/storage/guias-pdf";
+import { descargarPdfGuia, guardarPdfGuia } from "@/lib/storage/guias-pdf";
+import { obtenerPdfUrlDte } from "@/lib/relbase/client";
 import { dividirEnLotes, enLotes } from "@/lib/util/lotes";
 import { claveGuia, corridasDeClaves } from "./claves";
 import { construirNombreDescargaPdf, construirNombreZipSolicitud } from "./nombre-pdf";
@@ -34,6 +35,8 @@ interface GuiaParaZip {
   estado: "generada" | "error";
   mensajeError: string | null;
   pdfPath: string | null;
+  categoria: string | null;
+  dteId: number | null;
 }
 
 /** Todas las claves de guia (no eliminadas) de una solicitud. */
@@ -81,7 +84,7 @@ async function resolverGuias(
   const filas = await traerTodasLasFilas((desde, hasta) =>
     supabase
       .from("guias_generadas")
-      .select("corrida_id, folio_relbase, estado, categoria, centro, mensaje_error, pdf_path")
+      .select("corrida_id, folio_relbase, estado, categoria, centro, mensaje_error, pdf_path, dte_id_relbase")
       .in("corrida_id", corridas)
       .is("eliminado_en", null)
       .order("created_at", { ascending: true })
@@ -98,6 +101,7 @@ async function resolverGuias(
     const existente = porClave.get(clave);
     if (existente) {
       existente.pdfPath ??= fila.pdf_path;
+      existente.dteId ??= fila.dte_id_relbase;
       continue;
     }
     porClave.set(clave, {
@@ -108,10 +112,41 @@ async function resolverGuias(
       estado: fila.estado === "generada" ? "generada" : "error",
       mensajeError: fila.mensaje_error,
       pdfPath: fila.pdf_path,
+      categoria: fila.categoria,
+      dteId: fila.dte_id_relbase,
     });
   }
 
   return [...porClave.values()];
+}
+
+/**
+ * Pide de nuevo a Relbase el PDF de una guia emitida que quedo sin el, lo
+ * guarda en el bucket y anota la ruta en todas sus filas. null si Relbase aun
+ * no lo tiene o algo falla: la guia queda como faltante.
+ */
+async function recuperarPdf(guia: GuiaParaZip, empresaCodigo: string): Promise<Uint8Array | null> {
+  try {
+    const url = await obtenerPdfUrlDte(guia.dteId!, { intentos: 2 });
+    if (!url) return null;
+    const path = await guardarPdfGuia({
+      empresaCodigo,
+      categoria: guia.categoria,
+      centro: guia.centro,
+      folio: guia.folio!,
+      pdfUrl: url,
+    });
+    await getSupabaseServiceClient()
+      .from("guias_generadas")
+      .update({ pdf_path: path })
+      .eq("corrida_id", guia.corridaId)
+      .eq("folio_relbase", guia.folio!);
+    guia.pdfPath = path;
+    return await descargarPdfGuia(path);
+  } catch (err) {
+    console.error(`No se pudo recuperar el PDF del folio ${guia.folio}`, err);
+    return null;
+  }
 }
 
 /** Evita que dos guias con el mismo nombre se pisen dentro del ZIP. */
@@ -162,15 +197,23 @@ export async function construirZipGuias(
     .from("corridas")
     .select("id, empresa_id, archivo_original_nombre, fecha_ejecucion")
     .in("id", corridasIds);
-  const { data: empresas } = await supabase.from("empresas").select("id, nombre");
+  const { data: empresas } = await supabase.from("empresas").select("id, nombre, codigo_interno");
 
   const empresaPorId = new Map((empresas ?? []).map((e) => [e.id, e.nombre]));
+  const codigoEmpresaPorId = new Map((empresas ?? []).map((e) => [e.id, e.codigo_interno]));
   const corridaPorId = new Map((corridas ?? []).map((c) => [c.id, c]));
 
-  const descargadas = await enLotes(guias, DESCARGAS_EN_PARALELO, async (guia) => ({
-    guia,
-    bytes: guia.pdfPath ? await descargarPdfGuia(guia.pdfPath) : null,
-  }));
+  const descargadas = await enLotes(guias, DESCARGAS_EN_PARALELO, async (guia) => {
+    let bytes = guia.pdfPath ? await descargarPdfGuia(guia.pdfPath) : null;
+    // Al generar, Relbase a veces aun no tiene listo el PDF y la guia queda sin
+    // el. Minutos despues ya esta: se pide de nuevo aca, se guarda y entra al
+    // ZIP, en vez de entregar una descarga incompleta.
+    if (!bytes && guia.estado === "generada" && guia.dteId != null && guia.folio) {
+      const empresaCodigo = codigoEmpresaPorId.get(corridaPorId.get(guia.corridaId)?.empresa_id ?? "");
+      bytes = await recuperarPdf(guia, empresaCodigo ?? "sin-empresa");
+    }
+    return { guia, bytes };
+  });
 
   const archivos: Record<string, Uint8Array> = {};
   const usados = new Set<string>();
@@ -205,6 +248,18 @@ export async function construirZipGuias(
       usados
     );
     archivos[nombre] = bytes;
+  }
+
+  // Todo o nada: una guia emitida sin su PDF no se entrega en un ZIP a medias
+  // (habria que ir a buscarla a Relbase a mano). Las que fallaron al emitir
+  // no tienen PDF por definicion y solo se informan.
+  const sinPdfEmitidas = descargadas.filter(({ guia, bytes }) => !bytes && guia.estado === "generada");
+  if (sinPdfEmitidas.length > 0) {
+    throw new ErrorZip(
+      `Relbase aún no entrega el PDF de ${sinPdfEmitidas.length} guía(s) (folio ${sinPdfEmitidas
+        .map(({ guia }) => guia.folio ?? "?")
+        .join(", ")}). No se descargó nada para no entregar un ZIP incompleto: espera un minuto y vuelve a descargar.`
+    );
   }
 
   if (faltantes.length > 0) {
