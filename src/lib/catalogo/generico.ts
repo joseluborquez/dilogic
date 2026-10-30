@@ -11,7 +11,10 @@ export const PRODUCTO_GENERICO = {
   nombre: "PRODUCTO GENERICO",
 } as const;
 
-/** Categoria con que el generico entra a las guias de una corrida: viaja con los abarrotes. */
+/**
+ * Categoria del generico en la revision. Al repartir en guias toma la
+ * principal de su centro (ver lib/guias/armar.ts).
+ */
 export const CATEGORIA_GENERICO = "AB";
 
 const ALIAS_CODIGO_GENERICO = new Set(["o-pg-166053", "generico", "producto generico"]);
