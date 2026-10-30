@@ -1,0 +1,9 @@
+{
+  "_nota": "Codigos que se despachan con un nombre de pedido que calza con OTRO producto del catalogo, revisados y aceptados por Hugo. La validacion no los bloquea ni advierte. Clave: codigo; valor: nombres del pedido aceptados para ese codigo.",
+  "YDR_AB_204": [
+    "CALDO COSTILLA"
+  ],
+  "YDR_FV_100": [
+    "CAJA AISLAPOL (70 LIBRAS)"
+  ]
+}

@@ -3,6 +3,7 @@ import "server-only";
 import type { FilaPedido } from "@/lib/excel/types";
 import catalogoLocal from "./catalogo-seed.json";
 import { nombresCoinciden } from "./nombres";
+import crucesAceptados from "./cruces-aceptados.json";
 import { CATEGORIA_GENERICO, PRODUCTO_GENERICO, esCodigoGenerico } from "./generico";
 
 export type EstadoFila = "valido" | "advertencia" | "error";
@@ -160,15 +161,30 @@ export function validarFilas(filas: FilaPedido[], catalogo: CatalogoEmpresa["map
       producto &&
       estado !== "error" &&
       fila.nombreArchivo &&
+      !esCruceAceptado(fila.codigo, fila.nombreArchivo) &&
       !nombresCoinciden(fila.nombreArchivo, producto.nombreRelbase) &&
       !nombresCoinciden(fila.nombreArchivo, producto.descripcion)
     ) {
-      estado = "advertencia";
-      mensajes.push(
-        `El archivo dice "${fila.nombreArchivo}", pero este codigo es "${
-          producto.nombreRelbase ?? producto.descripcion
-        }". Revisa que el codigo sea el correcto.`
-      );
+      const nombreCodigo = producto.nombreRelbase ?? producto.descripcion;
+      // Si el nombre calza con OTRO producto del catalogo, no es una
+      // diferencia de redaccion sino un codigo cruzado (ej. la planilla de
+      // Yadran trae CARBON con el codigo de TOALLA CHEF): la guia saldria con
+      // otro producto y otro precio, asi que se bloquea.
+      const otros = productosConNombre(catalogo, fila.nombreArchivo, fila.codigo);
+      if (otros.length > 0) {
+        estado = "error";
+        mensajes.push(
+          `El archivo dice "${fila.nombreArchivo}", pero el codigo ${fila.codigo} es "${nombreCodigo}". Ese nombre corresponde a ${otros
+            .slice(0, 3)
+            .map(([sku, p]) => `${sku} "${p.nombreRelbase ?? p.descripcion}"`)
+            .join(" o ")}: corrige el codigo en el archivo.`
+        );
+      } else {
+        estado = "advertencia";
+        mensajes.push(
+          `El archivo dice "${fila.nombreArchivo}", pero este codigo es "${nombreCodigo}". Revisa que el codigo sea el correcto.`
+        );
+      }
     }
 
     // La clave incluye el centro: un mismo codigo pedido por varios centros
@@ -192,6 +208,29 @@ export function validarFilas(filas: FilaPedido[], catalogo: CatalogoEmpresa["map
       precio: producto?.precio ?? null,
     };
   });
+}
+
+/** Codigo pedido con un nombre que ya se reviso y se despacha asi a proposito (ver cruces-aceptados.json). */
+function esCruceAceptado(codigo: string, nombre: string): boolean {
+  const aceptados = (crucesAceptados as Record<string, string | string[]>)[codigo];
+  return Array.isArray(aceptados) && aceptados.some((a) => nombresCoinciden(nombre, a));
+}
+
+/** Productos pedibles del catalogo (salvo `excluir`) cuyo nombre calza con `nombre`. */
+function productosConNombre(
+  catalogo: CatalogoEmpresa["mapa"],
+  nombre: string,
+  excluir: string
+): [string, ProductoCatalogoResumen][] {
+  return [...catalogo].filter(
+    ([sku, p]) =>
+      sku !== excluir &&
+      p.activo &&
+      p.productIdRelbase != null &&
+      // nombresCoinciden da por buena una comparacion con nombre vacio.
+      ((!!p.nombreRelbase && nombresCoinciden(nombre, p.nombreRelbase)) ||
+        (!!p.descripcion && nombresCoinciden(nombre, p.descripcion)))
+  );
 }
 
 /**
