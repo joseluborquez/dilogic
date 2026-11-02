@@ -6,9 +6,9 @@ import type { RelbaseCrearDtePayload } from "./types";
  * siempre los mismos (definido por Hugo el 02-11-2026, igual que el folio
  * 41076): destino SIEMPRE Aysen (direccion "Aysén", ciudad 38 y comuna 310
  * Aysen en Relbase; las direcciones de los clientes son de otras comunas), sin carro, salida = momento de
- * emision y llegada el mismo dia. Patente, transportista y chofer NO se
- * marcan "no se cuenta" (Hugo, 02-11-2026: asi el PDF no imprime las lineas
- * "SIN INFORMACION"). Si Relbase los exigiera, responde 422 sin emitir.
+ * emision y llegada el mismo dia. Patente, transportista y chofer van como
+ * "no se cuenta": vacios Relbase responde 422 (probado 02-11-2026, corrida
+ * GUAPO), asi que el PDF imprime "SIN INFORMACION" en esas lineas.
  */
 export type DatosTraslado = Pick<
   RelbaseCrearDtePayload,
@@ -19,6 +19,10 @@ export type DatosTraslado = Pick<
   | "departure_date"
   | "departure_time"
   | "arrival_date"
+  | "number_plate_unavailable"
+  | "shipper_rut_unavailable"
+  | "driver_rut_unavailable"
+  | "driver_name_unavailable"
 >;
 
 /** Fecha (AAAA-MM-DD) y hora (HH:MM:SS) actuales en Chile, no en la zona del servidor (UTC en Vercel). */
@@ -47,6 +51,10 @@ export function datosTrasladoFijos(ahora: Date = new Date()): DatosTraslado {
     dispatch_city_id: DESTINO_AYSEN.city_id,
     dispatch_commune_id: DESTINO_AYSEN.commune_id,
     trailer_plate_status: "no_trailer",
+    number_plate_unavailable: true,
+    shipper_rut_unavailable: true,
+    driver_rut_unavailable: true,
+    driver_name_unavailable: true,
     departure_date: fecha,
     departure_time: hora,
     arrival_date: fecha,
