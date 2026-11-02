@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition, type DragEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type DragEvent, type ReactNode } from "react";
 import {
   buscarClientesAction,
   buscarOtrosProductosAction,
@@ -181,6 +181,15 @@ export function GuiaManualForm({
   const [emitidas, setEmitidas] = useState<Emitida[]>([]);
   const [errorEmision, setErrorEmision] = useState<string | null>(null);
   const [terminado, setTerminado] = useState(false);
+
+  // Si hay una guía a medio armar (o a medio emitir), el navegador pregunta antes de recargar o cerrar la pestaña.
+  const sinTerminar = !terminado && (lineas.length > 0 || leido !== null || emitidas.length > 0);
+  useEffect(() => {
+    if (!sinTerminar) return;
+    const avisar = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", avisar);
+    return () => window.removeEventListener("beforeunload", avisar);
+  }, [sinTerminar]);
 
   function buscarCliente() {
     setAviso(null);

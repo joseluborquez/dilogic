@@ -43,27 +43,25 @@ export async function GET(request: Request) {
 
   const supabase = getSupabaseServiceClient();
 
-  // Un operador solo puede abrir los PDF de sus propias corridas.
-  if (usuario.rol !== "admin") {
-    const { data: duena } = await supabase
-      .from("corridas")
-      .select("usuario_id")
-      .eq("id", corrida)
-      .maybeSingle();
-    if (!duena || duena.usuario_id !== usuario.id) {
-      return new Response("No tienes acceso a esa guia.", { status: 403 });
-    }
-  }
+  // La corrida (dueña y empresa) y la guía dependen solo de los parámetros: se piden a la vez.
+  const [{ data: corridaRow }, { data: guia }] = await Promise.all([
+    supabase.from("corridas").select("usuario_id, empresa_id").eq("id", corrida).maybeSingle(),
+    supabase
+      .from("guias_generadas")
+      .select("pdf_path, centro")
+      .eq("corrida_id", corrida)
+      .eq("folio_relbase", folio)
+      .is("eliminado_en", null)
+      .not("pdf_path", "is", null)
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
-  const { data: guia } = await supabase
-    .from("guias_generadas")
-    .select("pdf_path, centro, corrida_id")
-    .eq("corrida_id", corrida)
-    .eq("folio_relbase", folio)
-    .is("eliminado_en", null)
-    .not("pdf_path", "is", null)
-    .limit(1)
-    .maybeSingle();
+  // Un operador solo puede abrir los PDF de sus propias corridas. Va antes del 404 para no
+  // revelar a un tercero qué guías existen.
+  if (usuario.rol !== "admin" && (!corridaRow || corridaRow.usuario_id !== usuario.id)) {
+    return new Response("No tienes acceso a esa guia.", { status: 403 });
+  }
 
   if (!guia?.pdf_path) {
     return new Response("Esa guía no tiene PDF guardado.", { status: 404 });
@@ -71,11 +69,6 @@ export async function GET(request: Request) {
 
   let nombreDescarga: string | undefined;
   if (modo === "descargar") {
-    const { data: corridaRow } = await supabase
-      .from("corridas")
-      .select("empresa_id")
-      .eq("id", guia.corrida_id)
-      .maybeSingle();
     const { data: empresa } = corridaRow
       ? await supabase.from("empresas").select("nombre").eq("id", corridaRow.empresa_id).maybeSingle()
       : { data: null };

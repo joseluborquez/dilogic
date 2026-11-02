@@ -56,7 +56,7 @@ export function BuscadorProducto({
             elegir(opciones[0].producto);
           }
         }}
-        className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-teal focus:outline-none"
+        className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-teal focus-visible:outline-2 focus-visible:outline-teal"
       />
       {abierto && (
         <ul id={id} role="listbox" className="vidrio absolute z-10 mt-1 max-h-80 w-full min-w-80 overflow-y-auto p-1 text-sm">

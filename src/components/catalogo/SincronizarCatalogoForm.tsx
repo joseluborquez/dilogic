@@ -144,7 +144,7 @@ export function SincronizarCatalogoForm() {
         <div className="flex flex-col gap-1">
           <div className="h-2 w-full overflow-hidden rounded-full bg-surface-muted">
             <div
-              className="h-full bg-teal transition-all"
+              className="h-full bg-teal transition-[width]"
               style={{ width: `${Math.min(100, (estado.paginaActual / estado.totalPages) * 100)}%` }}
             />
           </div>
