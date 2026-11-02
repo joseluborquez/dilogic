@@ -1,5 +1,6 @@
 "use server";
 
+import { datosTrasladoFijos } from "@/lib/relbase/traslado";
 import { createHash } from "node:crypto";
 import { requerirUsuario } from "@/lib/auth/sesion";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
@@ -362,6 +363,9 @@ export async function emitirGuiaManualAction(pedida: GuiaPedida): Promise<Result
     commune_id: cliente.commune_id,
     contact: pedida.contacto.trim().slice(0, 100),
     products: productos,
+    // Valores fijos de traslado (destino = direccion del cliente); lo que se
+    // escriba abajo (otra direccion de despacho, patente, chofer) los reemplaza.
+    ...datosTrasladoFijos({ address: cliente.address, city_id: cliente.city_id, commune_id: cliente.commune_id }),
     ...(pedida.formaPagoId != null ? { type_payment_id: pedida.formaPagoId } : {}),
     ...(despacho
       ? {
@@ -370,10 +374,10 @@ export async function emitirGuiaManualAction(pedida: GuiaPedida): Promise<Result
           ...(despacho.commune_id ? { dispatch_commune_id: despacho.commune_id } : {}),
         }
       : {}),
-    ...(t.patente ? { number_plate: t.patente.replace(/[\s.-]/g, "").toUpperCase() } : { number_plate_unavailable: true }),
-    ...(t.rutTransportista ? { shipper_rut: formatoRut(t.rutTransportista) } : { shipper_rut_unavailable: true }),
-    ...(t.rutChofer ? { driver_rut: formatoRut(t.rutChofer) } : { driver_rut_unavailable: true }),
-    ...(t.nombreChofer ? { driver_name: t.nombreChofer.trim().slice(0, 100) } : { driver_name_unavailable: true }),
+    ...(t.patente ? { number_plate: t.patente.replace(/[\s.-]/g, "").toUpperCase(), number_plate_unavailable: false } : {}),
+    ...(t.rutTransportista ? { shipper_rut: formatoRut(t.rutTransportista), shipper_rut_unavailable: false } : {}),
+    ...(t.rutChofer ? { driver_rut: formatoRut(t.rutChofer), driver_rut_unavailable: false } : {}),
+    ...(t.nombreChofer ? { driver_name: t.nombreChofer.trim().slice(0, 100), driver_name_unavailable: false } : {}),
   };
 
   // --- Registro previo: un segundo envio con la misma llave no emite otra ---

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { datosTrasladoFijos } from "@/lib/relbase/traslado";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import {
   buscarProductoPorCodigo,
@@ -303,6 +304,11 @@ export async function emitirTraspaso(params: {
           city_id: empresa.dispatch_city_id ?? 0,
           commune_id: empresa.dispatch_commune_id ?? 0,
           contact: centro,
+          ...datosTrasladoFijos({
+            address: empresa.dispatch_address ?? "",
+            city_id: empresa.dispatch_city_id ?? 0,
+            commune_id: empresa.dispatch_commune_id ?? 0,
+          }),
           products: guia.lineas.map((l) => ({
             product_id: generico.id,
             price: l.precio,

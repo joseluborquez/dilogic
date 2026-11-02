@@ -1,5 +1,6 @@
 "use server";
 
+import { datosTrasladoFijos } from "@/lib/relbase/traslado";
 import { createHash } from "node:crypto";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { crearGuiaDespacho, obtenerPdfUrlDte, RelbaseApiError } from "@/lib/relbase/client";
@@ -399,6 +400,7 @@ export async function generarGuiasAction(
             city_id: destino.cityId,
             commune_id: destino.communeId,
             contact: centro,
+            ...datosTrasladoFijos({ address: destino.address, city_id: destino.cityId, commune_id: destino.communeId }),
             products: lote.map((f) => ({
               product_id: f.productIdRelbase,
               price: f.precio,

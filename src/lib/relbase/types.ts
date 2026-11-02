@@ -79,6 +79,12 @@ export interface RelbaseCrearDtePayload {
   shipper_rut_unavailable?: boolean;
   driver_rut_unavailable?: boolean;
   driver_name_unavailable?: boolean;
+  // Obligatorios desde el 01-11-2026 (ver relbase/traslado.ts).
+  trailer_plate?: string;
+  trailer_plate_status?: "with_trailer_plate" | "no_trailer" | "trailer_plate_unknown";
+  departure_date?: string; // AAAA-MM-DD
+  departure_time?: string; // HH:MM:SS
+  arrival_date?: string; // AAAA-MM-DD
 }
 
 /** Cliente de Relbase (GET /clientes/{id}); solo los campos que usa la app. */
