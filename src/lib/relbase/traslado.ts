@@ -4,7 +4,8 @@ import type { RelbaseCrearDtePayload } from "./types";
  * Datos de despacho y transporte que Relbase exige en toda guia desde el
  * 01-11-2026 (Res. Ex. N°154/2025): sin ellos responde 422. Dilogic usa
  * siempre los mismos (definido por Hugo el 02-11-2026, igual que el folio
- * 41076): destino = direccion del documento, sin carro, salida = momento de
+ * 41076): destino SIEMPRE Aysen (direccion "Aysén", ciudad 38 y comuna 310
+ * Aysen en Relbase; las direcciones de los clientes son de otras comunas), sin carro, salida = momento de
  * emision y llegada el mismo dia. Patente, transportista y chofer NO se
  * marcan "no se cuenta" (Hugo, 02-11-2026: asi el PDF no imprime las lineas
  * "SIN INFORMACION"). Si Relbase los exigiera, responde 422 sin emitir.
@@ -36,15 +37,15 @@ function ahoraEnChile(ahora: Date): { fecha: string; hora: string } {
   return { fecha: `${v("year")}-${v("month")}-${v("day")}`, hora: `${v("hour")}:${v("minute")}:${v("second")}` };
 }
 
-export function datosTrasladoFijos(
-  destino: { address: string; city_id: number; commune_id: number },
-  ahora: Date = new Date()
-): DatosTraslado {
+/** Destino fijo de todas las guias (ids confirmados con GET /ciudades y /comunas, 02-11-2026). */
+export const DESTINO_AYSEN = { address: "Aysén", city_id: 38, commune_id: 310 } as const;
+
+export function datosTrasladoFijos(ahora: Date = new Date()): DatosTraslado {
   const { fecha, hora } = ahoraEnChile(ahora);
   return {
-    dispatch_address: destino.address,
-    dispatch_city_id: destino.city_id,
-    dispatch_commune_id: destino.commune_id,
+    dispatch_address: DESTINO_AYSEN.address,
+    dispatch_city_id: DESTINO_AYSEN.city_id,
+    dispatch_commune_id: DESTINO_AYSEN.commune_id,
     trailer_plate_status: "no_trailer",
     departure_date: fecha,
     departure_time: hora,

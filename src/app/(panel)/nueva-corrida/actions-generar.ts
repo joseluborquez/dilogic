@@ -400,7 +400,7 @@ export async function generarGuiasAction(
             city_id: destino.cityId,
             commune_id: destino.communeId,
             contact: centro,
-            ...datosTrasladoFijos({ address: destino.address, city_id: destino.cityId, commune_id: destino.communeId }),
+            ...datosTrasladoFijos(),
             products: lote.map((f) => ({
               product_id: f.productIdRelbase,
               price: f.precio,

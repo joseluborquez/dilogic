@@ -363,9 +363,9 @@ export async function emitirGuiaManualAction(pedida: GuiaPedida): Promise<Result
     commune_id: cliente.commune_id,
     contact: pedida.contacto.trim().slice(0, 100),
     products: productos,
-    // Valores fijos de traslado (destino = direccion del cliente); lo que se
+    // Valores fijos de traslado (destino Aysen); lo que se
     // escriba abajo (otra direccion de despacho, patente, chofer) los reemplaza.
-    ...datosTrasladoFijos({ address: cliente.address, city_id: cliente.city_id, commune_id: cliente.commune_id }),
+    ...datosTrasladoFijos(),
     ...(pedida.formaPagoId != null ? { type_payment_id: pedida.formaPagoId } : {}),
     ...(despacho
       ? {
