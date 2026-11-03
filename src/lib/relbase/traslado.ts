@@ -44,7 +44,21 @@ function ahoraEnChile(ahora: Date): { fecha: string; hora: string } {
 /** Destino fijo de todas las guias (ids confirmados con GET /ciudades y /comunas, 02-11-2026). */
 export const DESTINO_AYSEN = { address: "Aysén", city_id: 38, commune_id: 310 } as const;
 
-export function datosTrasladoFijos(ahora: Date = new Date()): DatosTraslado {
+/**
+ * 03-11-2026: Relbase (soporte, 02-11-2026) movio la exigencia de estos datos
+ * al 01-05-2027 (Res. Ex. SII N°144) y ya no bloquea la emision, ni por web ni
+ * por API. Hugo decidio no enviarlos, para que el PDF no imprima el bloque
+ * "SIN INFORMACION". La guia queda solo con despacho por cuenta del receptor
+ * (type_dispatch 1) y traslado 6, que cada llamador pone aparte.
+ * Antes del 01-05-2027 hay que volver a enviarlos: basta con devolver
+ * datosTrasladoCompletos() aqui.
+ */
+export function datosTrasladoFijos(): Partial<DatosTraslado> {
+  return {};
+}
+
+/** Formato completo del 02-11-2026 (folio 41076), para cuando vuelva a ser obligatorio. */
+export function datosTrasladoCompletos(ahora: Date = new Date()): DatosTraslado {
   const { fecha, hora } = ahoraEnChile(ahora);
   return {
     dispatch_address: DESTINO_AYSEN.address,

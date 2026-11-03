@@ -405,14 +405,6 @@ export function GuiaManualForm({
     if (x.r?.esGenerico && !x.descripcion.trim()) problemas.push(`Línea ${i + 1}: el genérico necesita descripción.`);
   });
   if (!tipoDespacho) problemas.push("Elige el tipo de despacho.");
-  for (const [k, nombre] of [
-    ["patente", "la patente"],
-    ["rutTransportista", "el RUT del transportista"],
-    ["rutChofer", "el RUT del chofer"],
-    ["nombreChofer", "el nombre del chofer"],
-  ] as const) {
-    if (!transporte[k].noDisponible && !transporte[k].valor.trim()) problemas.push(`Escribe ${nombre} o marca «no se cuenta con este dato».`);
-  }
 
   function descargarRevision() {
     if (!opcion || !archivo) return;
@@ -959,7 +951,7 @@ export function GuiaManualForm({
           </label>
         </div>
         <div className="flex flex-col gap-3 border-t border-line pt-4">
-          <p className="text-sm text-ink-muted">Transporte: escribe cada dato o marca que no se cuenta con él.</p>
+          <p className="text-sm text-ink-muted">Transporte (opcional): escribe solo los datos que tengas. Relbase no los exige hasta el 01-05-2027.</p>
           <div className="grid gap-4 sm:grid-cols-2">
             {(
               [
@@ -977,15 +969,6 @@ export function GuiaManualForm({
                   onChange={(e) => setTransporte((t) => ({ ...t, [k]: { ...t[k], valor: e.target.value } }))}
                   className={`${CAMPO} disabled:opacity-40`}
                 />
-                <label className="flex items-center gap-2 text-xs text-ink-muted">
-                  <input
-                    type="checkbox"
-                    checked={transporte[k].noDisponible}
-                    onChange={(e) => setTransporte((t) => ({ ...t, [k]: { valor: "", noDisponible: e.target.checked } }))}
-                    className="accent-[var(--teal)]"
-                  />
-                  No se cuenta con este dato
-                </label>
               </div>
             ))}
           </div>
