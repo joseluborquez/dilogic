@@ -6,7 +6,6 @@ import {
 } from "@/lib/historial/consultar";
 import { HistorialSolicitudes } from "@/components/historial/HistorialSolicitudes";
 import { BuscadorHistorial } from "@/components/historial/BuscadorHistorial";
-import { GuiasManualesHistorial } from "@/components/historial/GuiasManualesHistorial";
 import { obtenerGuiasManuales } from "@/lib/historial/guias-manuales";
 import { requerirUsuario } from "@/lib/auth/sesion";
 
@@ -33,12 +32,21 @@ export default async function HistorialPage({
   // Un operador solo ve lo que genero el mismo; el administrador ve todo.
   const usuarioId = usuario.rol === "admin" ? undefined : usuario.id;
 
-  const [{ solicitudes, totalSolicitudes, totalPaginas, hayFiltros }, empresas, manuales] = await Promise.all([
+  const [{ solicitudes, totalSolicitudes, totalPaginas, hayFiltros, fechaPaginaAnterior }, empresas] = await Promise.all([
     obtenerHistorial({ texto, empresa, desde, hasta, pagina, usuarioId }),
     obtenerEmpresasConHistorial(),
-    // Una guia manual mezcla empresas: con filtro de empresa no aplica.
-    empresa ? Promise.resolve(null) : obtenerGuiasManuales({ texto, desde, hasta, usuarioId }),
   ]);
+  // Guias manuales del mismo tramo de tiempo que esta pagina, para intercalarlas por fecha: desde la solicitud mas
+  // antigua de la pagina (en la ultima, todas las anteriores) hasta donde empieza la pagina anterior.
+  // Una guia manual mezcla empresas: con filtro de empresa no aplica.
+  const masAntigua = pagina < totalPaginas ? solicitudes.at(-1)?.fecha ?? undefined : undefined;
+  const manuales = empresa
+    ? []
+    : await obtenerGuiasManuales({
+        texto, desde, hasta, usuarioId,
+        desdeMomento: masAntigua,
+        antesDe: pagina > 1 ? fechaPaginaAnterior ?? undefined : undefined,
+      });
 
   // Se conservan los filtros al cambiar de pagina.
   const enlacePagina = (destino: number) => {
@@ -84,16 +92,14 @@ export default async function HistorialPage({
         </p>
       )}
 
-      {manuales && pagina === 1 && <GuiasManualesHistorial guias={manuales} />}
-
-      {solicitudes.length === 0 && hayFiltros ? (
+      {solicitudes.length === 0 && manuales.length === 0 && hayFiltros ? (
         <div className="rounded-lg border border-dashed border-line px-6 py-10 text-center">
           <p className="text-sm text-ink-muted">
             Ninguna solicitud coincide con la búsqueda. Prueba con menos filtros o revisa el folio.
           </p>
         </div>
       ) : (
-        <HistorialSolicitudes solicitudes={solicitudes} puedeEliminar={usuario.rol === "admin"} />
+        <HistorialSolicitudes solicitudes={solicitudes} manuales={manuales} puedeEliminar={usuario.rol === "admin"} />
       )}
 
       {totalPaginas > 1 && (

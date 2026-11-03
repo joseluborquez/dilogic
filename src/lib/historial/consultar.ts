@@ -76,6 +76,11 @@ export interface ResultadoHistorial {
   totalPaginas: number;
   totalSolicitudes: number;
   hayFiltros: boolean;
+  /**
+   * Fecha de la solicitud mas antigua de la pagina anterior (null en la primera). Con ella el Historial ubica las
+   * guias manuales entre las solicitudes sin que una caiga entre dos paginas y no se vea en ninguna.
+   */
+  fechaPaginaAnterior: string | null;
 }
 
 /**
@@ -113,6 +118,7 @@ export async function obtenerHistorial(
     totalPaginas: 0,
     totalSolicitudes: 0,
     hayFiltros,
+    fechaPaginaAnterior: null,
   };
 
   // Sale en paralelo con lo demas: solo el filtro por empresa necesita esperarla.
@@ -136,6 +142,7 @@ export async function obtenerHistorial(
   const desde = (pagina - 1) * SOLICITUDES_POR_PAGINA;
   let corridas: { id: string; empresa_id: string; archivo_original_nombre: string; fecha_ejecucion: string }[] = [];
   let totalSolicitudes = 0;
+  let fechaPaginaAnterior: string | null = null;
 
   // La busqueda por folio/centro vive en las guias, pero la unidad que se
   // pagina es la solicitud: primero se resuelve que solicitudes la contienen.
@@ -162,16 +169,22 @@ export async function obtenerHistorial(
       return { ...vacio, totalSolicitudes, totalPaginas: Math.ceil(totalSolicitudes / SOLICITUDES_POR_PAGINA) };
     }
 
-    const { data } = await consulta.in("id", idsPagina);
+    // Con la ultima de la pagina anterior, para saber donde termina.
+    const idAnterior = desde > 0 ? ids[desde - 1] : null;
+    const { data } = await consulta.in("id", idAnterior ? [idAnterior, ...idsPagina] : idsPagina);
     // Se respeta el orden por relevancia temporal de `ids`, no el que
     // devuelva Postgres.
     const porId = new Map((data ?? []).map((c) => [c.id, c]));
     corridas = idsPagina.map((id) => porId.get(id)).filter((c) => c !== undefined);
+    if (idAnterior) fechaPaginaAnterior = porId.get(idAnterior)?.fecha_ejecucion ?? null;
   } else {
+    // Desde una antes: la ultima de la pagina anterior marca donde termina.
     const { data, count } = await consulta
       .order("fecha_ejecucion", { ascending: false })
-      .range(desde, desde + SOLICITUDES_POR_PAGINA - 1);
+      .order("id", { ascending: true })
+      .range(Math.max(0, desde - 1), desde + SOLICITUDES_POR_PAGINA - 1);
     corridas = data ?? [];
+    if (desde > 0) fechaPaginaAnterior = corridas.shift()?.fecha_ejecucion ?? null;
     totalSolicitudes = count ?? 0;
   }
 
@@ -311,6 +324,7 @@ export async function obtenerHistorial(
     totalSolicitudes,
     totalPaginas: Math.ceil(totalSolicitudes / SOLICITUDES_POR_PAGINA),
     hayFiltros,
+    fechaPaginaAnterior,
   };
 }
 

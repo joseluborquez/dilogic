@@ -71,6 +71,8 @@ export async function emitirTraspasoAction(
     usuario,
   });
   revalidatePath("/historial");
+  // La lista de traspasos anteriores de esta misma pantalla.
+  revalidatePath("/traspaso");
   // La revision completa (con lineas) no hace falta en pantalla.
   if (!resultado.ok && resultado.revision) {
     return { status: "listo", ok: false, mensaje: resultado.mensaje };

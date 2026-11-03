@@ -1,4 +1,6 @@
 import { TraspasoForm } from "@/components/traspaso/TraspasoForm";
+import { TraspasosAnteriores } from "@/components/traspaso/TraspasosAnteriores";
+import { traspasosAnteriores } from "@/lib/traspaso/anteriores";
 import { requerirAdmin } from "@/lib/auth/sesion";
 import { listarEmpresasActivas } from "@/lib/empresas/consultar";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
@@ -26,13 +28,14 @@ export default async function TraspasoPage() {
 
   // Facturas recibidas en Relbase del proveedor esencial (hoy Ovando /
   // Supermercado Edon): las que traen productos se eligen sin subir el PDF.
-  const [{ data: empresaUltima }, recibidas] = await Promise.all([
+  const [{ data: empresaUltima }, recibidas, anteriores] = await Promise.all([
     ultimo
       ? getSupabaseServiceClient().from("empresas").select("codigo_interno").eq("id", ultimo.empresa_id).maybeSingle()
       : Promise.resolve({ data: null }),
     proveedor
       ? comprasRecibidas(proveedor).catch((): CompraRecibida[] | null => null)
       : Promise.resolve(null),
+    traspasosAnteriores(),
   ]);
 
   return (
@@ -55,6 +58,8 @@ export default async function TraspasoPage() {
         centroInicial={ultimo?.centro ?? ""}
         recibidas={recibidas}
       />
+
+      <TraspasosAnteriores traspasos={anteriores} />
     </div>
   );
 }

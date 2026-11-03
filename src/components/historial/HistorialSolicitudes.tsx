@@ -6,9 +6,13 @@ import { eliminarGuiasAction } from "@/app/(panel)/historial/actions";
 import { AccionIconoBoton, AccionIconoEnlace } from "@/components/ui/AccionIcono";
 import { IconoDescargar, IconoEliminar, IconoVer } from "@/components/ui/iconos";
 import { descargarZipGuias } from "./descargar-zip";
+import { GuiasManualesHistorial } from "./GuiasManualesHistorial";
+import type { GuiaManualHistorial } from "@/lib/historial/guias-manuales";
 
 interface Props {
   solicitudes: SolicitudAgrupada[];
+  /** Guias manuales del mismo tramo de tiempo: se intercalan por fecha con las solicitudes. */
+  manuales: GuiaManualHistorial[];
   /** Solo los administradores pueden sacar guias del historial. */
   puedeEliminar: boolean;
 }
@@ -30,7 +34,7 @@ function plural(n: number, singular: string, plural_: string): string {
   return `${n} ${n === 1 ? singular : plural_}`;
 }
 
-export function HistorialSolicitudes({ solicitudes, puedeEliminar }: Props) {
+export function HistorialSolicitudes({ solicitudes, manuales, puedeEliminar }: Props) {
   const [seleccion, setSeleccion] = useState<ReadonlySet<string>>(new Set());
   const [porEliminar, setPorEliminar] = useState<string[] | null>(null);
   const [descargando, setDescargando] = useState<string | null>(null); // clave de la accion en curso
@@ -117,7 +121,25 @@ export function HistorialSolicitudes({ solicitudes, puedeEliminar }: Props) {
     });
   }
 
-  if (solicitudes.length === 0) {
+  // Todo en orden de fecha, de lo mas reciente a lo mas antiguo; las guias manuales seguidas van en un bloque.
+  const bloques = useMemo(() => {
+    const items = [
+      ...solicitudes.map((s) => ({ fecha: s.fecha ?? "", solicitud: s })),
+      ...manuales.map((m) => ({ fecha: m.fecha, manual: m })),
+    ].sort((a, b) => b.fecha.localeCompare(a.fecha));
+    const res: ({ tipo: "solicitud"; solicitud: SolicitudAgrupada } | { tipo: "manuales"; guias: GuiaManualHistorial[] })[] = [];
+    for (const it of items) {
+      if ("solicitud" in it && it.solicitud) res.push({ tipo: "solicitud", solicitud: it.solicitud });
+      else if ("manual" in it && it.manual) {
+        const ultimo = res.at(-1);
+        if (ultimo?.tipo === "manuales") ultimo.guias.push(it.manual);
+        else res.push({ tipo: "manuales", guias: [it.manual] });
+      }
+    }
+    return res;
+  }, [solicitudes, manuales]);
+
+  if (solicitudes.length === 0 && manuales.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-line px-6 py-10 text-center">
         <p className="text-sm text-ink-muted">Todavía no se ha generado ninguna guía.</p>
@@ -138,7 +160,10 @@ export function HistorialSolicitudes({ solicitudes, puedeEliminar }: Props) {
         </p>
       )}
 
-      {solicitudes.map((solicitud) => {
+      {bloques.map((bloque) => {
+        if (bloque.tipo === "manuales")
+          return <GuiasManualesHistorial key={`m-${bloque.guias[0].id}`} guias={bloque.guias} />;
+        const { solicitud } = bloque;
         const claves = solicitud.guias.map((g) => g.clave);
         const seleccionadas = claves.filter((c) => seleccion.has(c)).length;
         const todas = seleccionadas === claves.length && claves.length > 0;

@@ -1,5 +1,4 @@
 import type { GuiaManualHistorial } from "@/lib/historial/guias-manuales";
-import { GUIAS_MANUALES_A_MOSTRAR } from "@/lib/historial/guias-manuales";
 
 const pesos = (n: number) =>
   new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(Math.round(n));
@@ -12,23 +11,23 @@ const ESTADO = {
   error: { texto: "No se emitió", clase: "bg-error-bg text-error" },
 } as const;
 
-/** Guias emitidas desde "Guia manual": no salen de una corrida, asi que van en su propia lista. */
+/**
+ * Guias emitidas desde "Guia manual": no salen de una corrida. El Historial las intercala por fecha con las
+ * solicitudes; las seguidas van juntas en un bloque.
+ */
 export function GuiasManualesHistorial({ guias }: { guias: GuiaManualHistorial[] }) {
   return (
-    <section className="vidrio flex flex-col gap-3 p-5">
-      <header>
-        <h2 className="font-display text-lg font-semibold">Guías manuales</h2>
-        <p className="text-sm text-ink-muted">
-          Emitidas desde Guía manual. Se muestran las últimas {GUIAS_MANUALES_A_MOSTRAR}.
-        </p>
+    <section className="vidrio-lista overflow-hidden">
+      <header className="border-b border-line bg-surface-muted px-3 py-2.5">
+        <p className="text-xs tracking-widest text-ink-muted uppercase">Guía manual</p>
+        <h2 className="font-display text-base font-semibold">
+          {guias.length === 1 ? "1 guía manual" : `${guias.length} guías manuales`}
+        </h2>
       </header>
-      {guias.length === 0 ? (
-        <p className="text-sm text-ink-muted">No hay guías manuales con estos filtros.</p>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-line">
+      <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-line bg-surface-muted text-left text-xs tracking-wide text-ink-muted uppercase">
+              <tr className="border-b border-line text-left text-xs tracking-wide text-ink-muted uppercase">
                 <th className="px-3 py-2">Fecha</th>
                 <th className="px-3 py-2">Folio</th>
                 <th className="px-3 py-2">Cliente</th>
@@ -60,8 +59,7 @@ export function GuiasManualesHistorial({ guias }: { guias: GuiaManualHistorial[]
               ))}
             </tbody>
           </table>
-        </div>
-      )}
+      </div>
     </section>
   );
 }

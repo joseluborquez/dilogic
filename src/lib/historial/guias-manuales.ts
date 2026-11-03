@@ -15,24 +15,36 @@ export interface GuiaManualHistorial {
   error: string | null;
 }
 
-export const GUIAS_MANUALES_A_MOSTRAR = 50;
+/** Tope por pagina del Historial (hoy hay pocas: son la excepcion). */
+const MAXIMO = 200;
 
 /**
- * Las ultimas guias manuales que cumplen los filtros del Historial (texto =
- * folio o cliente; fechas por dia de emision). Un operador ve solo las suyas.
+ * Las guias manuales que cumplen los filtros del Historial (texto = folio o
+ * cliente; fechas por dia de emision). Un operador ve solo las suyas.
+ * desdeMomento / antesDe acotan al tramo de tiempo de la pagina que se muestra,
+ * para intercalarlas por fecha con las solicitudes.
  */
-export async function obtenerGuiasManuales(filtros: { texto?: string; desde?: string; hasta?: string; usuarioId?: string }): Promise<GuiaManualHistorial[]> {
+export async function obtenerGuiasManuales(filtros: {
+  texto?: string;
+  desde?: string;
+  hasta?: string;
+  usuarioId?: string;
+  desdeMomento?: string;
+  antesDe?: string;
+}): Promise<GuiaManualHistorial[]> {
   // Mismo cuidado que el historial de corridas: el texto entra a un or(...ilike...).
   const texto = (filtros.texto ?? "").trim().replace(/[^\p{L}\p{N}\s.\-_/]/gu, "").slice(0, 60).trim();
   let consulta = getSupabaseServiceClient()
     .from("guias_manuales")
     .select("id, created_at, folio, dte_id, cliente_nombre, monto_neto, usuario, estado, mensaje_error")
     .order("created_at", { ascending: false })
-    .limit(GUIAS_MANUALES_A_MOSTRAR);
+    .limit(MAXIMO);
   if (texto) consulta = consulta.or(`folio.ilike.%${texto}%,cliente_nombre.ilike.%${texto}%`);
   if (filtros.desde) consulta = consulta.gte("created_at", `${filtros.desde}T00:00:00`);
   if (filtros.hasta) consulta = consulta.lte("created_at", `${filtros.hasta}T23:59:59`);
   if (filtros.usuarioId) consulta = consulta.eq("usuario_id", filtros.usuarioId);
+  if (filtros.desdeMomento) consulta = consulta.gte("created_at", filtros.desdeMomento);
+  if (filtros.antesDe) consulta = consulta.lt("created_at", filtros.antesDe);
   const { data } = await consulta;
   return (data ?? []).map((g) => ({
     id: g.id,
