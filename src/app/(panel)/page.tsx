@@ -1,59 +1,30 @@
-import { unstable_cache } from "next/cache";
-import { agregadoDeHoy } from "@/lib/ventas/hoy";
 import { requerirUsuario } from "@/lib/auth/sesion";
-import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import {
   FAMILIAS,
   NOMBRE_FAMILIA,
   NOMBRE_GRUPO,
-  TAG_VENTAS,
-  agregadoPeriodo,
-  juntarAgregados,
-  moverMes,
   nombreMes,
   nombreMesCorto,
   periodoDeComparacion,
   periodoDelMes,
-  primeraFechaConVentas,
   ultimosMeses,
   type AgregadoPeriodo,
   type GrupoEmpresa,
   type Periodo,
   type ProductoAgregado,
 } from "@/lib/ventas/indicadores";
-import { juntarMismoProducto, unidadDeVenta, type FilaTop, type ParteTop } from "@/lib/ventas/mismo-producto";
-import { entero, numero, pesos, pesosCorto, textoVariacion, variacion } from "@/lib/util/formato";
+import { crearPedidorDeVentas } from "@/lib/ventas/con-hoy";
+import { pesos, textoVariacion, variacion } from "@/lib/util/formato";
 import { Bloque } from "@/components/inicio/Bloque";
 import { NuevaCorridaForm } from "@/components/nueva-corrida/NuevaCorridaForm";
 import { listarEmpresasActivas } from "@/lib/empresas/consultar";
 import { EnlaceVentas, NavegacionVentas, SelectorMes } from "@/components/inicio/Navegacion";
-import { BarrasReparto, GraficoMeses, nombreLegible, type BarraMes } from "@/components/inicio/Graficos";
+import { BarrasReparto, nombreLegible } from "@/components/inicio/Graficos";
 
 export const dynamic = "force-dynamic";
 
 const MESES_EN_SELECTOR = 6;
 const EMPRESAS_FILTRO: GrupoEmpresa[] = ["CERQ", "MTX", "YDR", "OTROS"];
-/** Fuera de rankings, precios y menos vendidos (ver lib/ventas/indicadores.ts). */
-const FUERA_DE_RANKINGS = new Set<GrupoEmpresa>(["AMS", "GENERICO"]);
-
-const catalogoVigente = unstable_cache(
-  async () => {
-    const { data } = await getSupabaseServiceClient()
-      .from("productos_catalogo")
-      .select("sku, descripcion, nombre_relbase, familia")
-      .eq("activo", true)
-      .order("sku")
-      .range(0, 4999);
-    return (data ?? []).map((p) => ({
-      codigo: p.sku,
-      nombre: p.nombre_relbase ?? p.descripcion ?? p.sku,
-      grupo: p.sku.split("_")[0] as GrupoEmpresa,
-      familia: p.familia,
-    }));
-  },
-  ["catalogo-vigente-v1"],
-  { tags: [TAG_VENTAS], revalidate: 3600 },
-);
 
 function primerValor(v: string | string[] | undefined): string {
   return (Array.isArray(v) ? v[0] : v)?.trim() ?? "";
@@ -80,61 +51,26 @@ export default async function InicioPage({
   const empresa = EMPRESAS_FILTRO.includes(primerValor(params.empresa) as GrupoEmpresa)
     ? (primerValor(params.empresa) as GrupoEmpresa)
     : "";
-  const familia = (FAMILIAS as readonly string[]).includes(primerValor(params.familia))
-    ? primerValor(params.familia)
-    : "";
 
   const actual = periodoDelMes(mes);
   const comparacion = periodoDeComparacion(actual);
-  const anteriorCompleto = periodoDelMes(moverMes(mes, -1));
 
   // La sesion sale junto con la primera consulta: esperarla antes sumaba un viaje.
-  const [, primeraFecha] = await Promise.all([requerirUsuario(), primeraFechaConVentas()]);
-  const hayDatos = (p: Periodo) => primeraFecha != null && p.desde >= primeraFecha.slice(0, 8) + "01";
-  // Lo de hoy se sincroniza recien manana: para el mes en curso se suma leido
-  // de Relbase (lib/ventas/hoy). Si Relbase no responde, queda lo sincronizado.
-  const deHoy = agregadoDeHoy().catch(() => null);
-  const pedir = async (p: Periodo) => {
-    const base = hayDatos(p) ? await agregadoPeriodo(p.desde, p.hasta) : null;
-    if (!p.enCurso) return base;
-    const hoy = await deHoy;
-    if (!hoy) return base;
-    return base ? juntarAgregados(base, hoy) : hoy;
-  };
-
-  // El grafico muestra los meses del selector, del mas antiguo al mas reciente.
-  const periodosGrafico = [...meses].reverse().map((m) => periodoDelMes(m));
-  const [empresasCorrida, datos, datosComparacion, datosAnterior, catalogo, ...datosGrafico] = await Promise.all([
+  const [, pedir] = await Promise.all([requerirUsuario(), crearPedidorDeVentas()]);
+  const [empresasCorrida, datos, datosComparacion] = await Promise.all([
     listarEmpresasActivas(),
     pedir(actual),
     pedir(comparacion),
-    pedir(anteriorCompleto),
-    catalogoVigente(),
-    ...periodosGrafico.map(pedir),
   ]);
 
   const enlace = (cambios: Record<string, string>) => {
     const q = new URLSearchParams();
-    const valores = { mes, empresa, familia, ...cambios };
+    const valores = { mes, empresa, ...cambios };
     if (valores.mes && valores.mes !== meses[0]) q.set("mes", valores.mes);
     if (valores.empresa) q.set("empresa", valores.empresa);
-    if (valores.familia) q.set("familia", valores.familia);
     const s = q.toString();
     return s ? `/?${s}` : "/";
   };
-  const mesesGrafico: BarraMes[] = periodosGrafico.map((per, i) => {
-                const d = datosGrafico[i];
-                return {
-                  clave: per.mes,
-                  etiqueta: `${nombreMesCorto(per.mes)}${per.enCurso ? "*" : ""}`,
-                  valor: d ? d.monto : null,
-                  texto: d ? pesosCorto(d.monto) : "—",
-                  detalle: `${mayuscula(nombreMes(per.mes))}${per.enCurso ? `, del 1 al ${per.dia}` : ""}: ${d ? pesos(d.monto) : "sin datos"}`,
-                  href: enlace({ mes: per.mes }),
-                  activo: per.mes === mes,
-                };
-              });
-
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6">
       <NavegacionVentas
@@ -161,8 +97,6 @@ export default async function InicioPage({
               actual={actual}
               datos={datos}
               datosComparacion={datosComparacion}
-              familia={familia}
-              hrefFamilia={(f) => enlace({ familia: f === familia ? "" : f })}
             />
 
             <Empresas
@@ -174,17 +108,6 @@ export default async function InicioPage({
 
             {empresa && <Centros datos={datos} empresa={empresa as GrupoEmpresa} />}
 
-            <details className="group flex flex-col gap-6">
-              <summary className="cursor-pointer text-sm text-ink-muted hover:text-teal">Más detalle: meses anteriores, cantidades, precios y menos vendidos</summary>
-              <div className="mt-6 flex flex-col gap-6">
-                <Bloque titulo="Comparación con meses anteriores" comoLeer="Total de cada mes · * = mes en curso">
-                  <GraficoMeses puntos={mesesGrafico} />
-                </Bloque>
-                <MasVendidos datos={datos} empresa={empresa} familia={familia} />
-                <Precios datos={datos} anterior={datosAnterior} empresa={empresa} familia={familia} actual={actual} />
-                <MenosVendidos datos={datos} catalogo={catalogo} empresa={empresa} familia={familia} />
-              </div>
-            </details>
           </>
         )}
       </NavegacionVentas>
@@ -293,17 +216,13 @@ function Resumen({
   actual,
   datos,
   datosComparacion,
-  familia,
-  hrefFamilia,
 }: {
   actual: Periodo;
   datos: AgregadoPeriodo;
   datosComparacion: AgregadoPeriodo | null;
-  familia: string;
-  hrefFamilia: (f: string) => string;
 }) {
   const c = datosComparacion;
-  // Lo vendido por familia (todas las empresas); tocar una filtra el resto de la pagina.
+  // Lo vendido por familia (todas las empresas). El detalle por familia esta en Reportes.
   const familias = FAMILIAS.map((f) => {
     const monto = sumarMonto(datos, (p) => p.familia === f) ?? 0;
     const antes = sumarMonto(c, (p) => p.familia === f);
@@ -320,19 +239,13 @@ function Resumen({
         </div>
         <div className="grid grid-cols-2 gap-y-3 border-t border-line pt-4 sm:grid-cols-4 sm:divide-x sm:divide-line">
           {familias.map((x) => (
-            <EnlaceVentas
-              key={x.f}
-              href={hrefFamilia(x.f)}
-              activo={familia === x.f}
-              title={`${NOMBRE_FAMILIA[x.f]}: ${pesos(x.monto)}`}
-              className={`rounded-md px-3 text-center transition-colors hover:text-teal ${familia === x.f ? "text-teal" : ""}`}
-            >
+            <div key={x.f} title={`${NOMBRE_FAMILIA[x.f]}: ${pesos(x.monto)}`} className="px-3 text-center">
               <span className="block truncate text-xs text-ink-muted">{FAMILIA_CORTA[x.f] ?? NOMBRE_FAMILIA[x.f]}</span>
               <span className="block font-display text-lg font-semibold tabular-nums">{pesos(x.monto)}</span>
               <span className="block text-xs">
                 <Cambio v={x.v} />
               </span>
-            </EnlaceVentas>
+            </div>
           ))}
         </div>
       </div>
@@ -345,275 +258,3 @@ function sumarMonto(a: AgregadoPeriodo | null, calza: (p: ProductoAgregado) => b
   return a.productos.reduce((s, p) => (calza(p) ? s + p.monto : s), 0);
 }
 
-function filtrar(productos: ProductoAgregado[], empresa: string, familia: string) {
-  return productos.filter(
-    (p) => !FUERA_DE_RANKINGS.has(p.grupo) && (!empresa || p.grupo === empresa) && (!familia || p.familia === familia),
-  );
-}
-
-function textoFiltro(empresa: string, familia: string): string {
-  const partes = [empresa && NOMBRE_GRUPO[empresa as GrupoEmpresa], familia && NOMBRE_FAMILIA[familia]].filter(Boolean);
-  return partes.length ? ` (${partes.join(", ")})` : "";
-}
-
-const TH = "px-3 py-2 text-left text-xs font-medium tracking-wide text-ink-muted uppercase";
-const TD = "px-3 py-2 align-top";
-
-function MasVendidos({ datos, empresa, familia }: { datos: AgregadoPeriodo; empresa: string; familia: string }) {
-  const filas = juntarMismoProducto(filtrar(datos.productos, empresa, familia));
-  const porCantidad = [...filas].sort((a, b) => b.cantidad - a.cantidad).slice(0, 10);
-  const porMonto = [...filas].sort((a, b) => b.monto - a.monto).slice(0, 10);
-
-  return (
-    <Bloque
-      titulo={`Más vendidos${textoFiltro(empresa, familia)}`}
-      comoLeer={
-        empresa
-          ? "Top 10 por cantidad y por monto neto."
-          : "Top 10 por cantidad y por monto neto. El mismo producto de varias empresas va sumado, convertido a un mismo formato."
-      }
-    >
-      {filas.length === 0 ? (
-        <p className="text-sm text-ink-muted">No hay ventas con estos filtros.</p>
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <TablaTop titulo="Por cantidad" filas={porCantidad} etiqueta="Cantidad" modo="cantidad" />
-          <TablaTop titulo="Por monto" filas={porMonto} etiqueta="Monto neto" modo="monto" />
-        </div>
-      )}
-    </Bloque>
-  );
-}
-
-function TablaTop({
-  titulo,
-  filas,
-  etiqueta,
-  modo,
-}: {
-  titulo: string;
-  filas: FilaTop[];
-  etiqueta: string;
-  modo: "cantidad" | "monto";
-}) {
-  const repetida = (f: FilaTop, grupo: GrupoEmpresa) => f.partes.filter((x) => x.producto.grupo === grupo).length > 1;
-  const detalle = (f: FilaTop, x: ParteTop) => {
-    const quien = repetida(f, x.producto.grupo) ? x.producto.codigo : NOMBRE_GRUPO[x.producto.grupo];
-    if (modo === "monto") return `${quien} ${pesos(x.producto.monto)}`;
-    const convertido = Math.abs(x.equivalente - x.producto.cantidad) > 1e-6;
-    return `${quien} ${numero(x.equivalente)}${convertido ? ` (${numero(x.producto.cantidad)} ${x.unidad})` : ""}`;
-  };
-  return (
-    <div className="flex flex-col gap-2">
-      <h3 className="text-sm font-medium">{titulo}</h3>
-      <div className="overflow-x-auto rounded-lg border border-line">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-line bg-surface-muted">
-              <th className={TH}>#</th>
-              <th className={TH}>Producto</th>
-              <th className={`${TH} text-right`}>{etiqueta}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filas.map((f, i) => (
-              <tr key={f.clave} className="border-b border-line last:border-0 even:bg-surface-muted">
-                <td className={`${TD} font-mono text-ink-muted`}>{i + 1}</td>
-                <td className={TD}>
-                  <span className="block">{nombreLegible(f.nombre)}</span>
-                  <span className="font-mono text-xs text-ink-muted">
-                    {f.partes.length > 1
-                      ? f.partes.map((x) => detalle(f, x)).join(" · ")
-                      : `${f.partes[0].producto.codigo} · ${NOMBRE_GRUPO[f.partes[0].producto.grupo]}`}
-                  </span>
-                </td>
-                <td className={`${TD} text-right font-mono whitespace-nowrap`}>
-                  {modo === "monto" ? (
-                    pesos(f.monto)
-                  ) : (
-                    <>
-                      {numero(f.cantidad)} <span className="text-xs text-ink-muted">{f.unidad}</span>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-const MENOS_VENDIDOS_A_MOSTRAR = 20;
-
-function MenosVendidos({
-  datos,
-  catalogo,
-  empresa,
-  familia,
-}: {
-  datos: AgregadoPeriodo;
-  catalogo: {
-    codigo: string;
-    nombre: string;
-    grupo: GrupoEmpresa;
-    familia: string | null;
-  }[];
-  empresa: string;
-  familia: string;
-}) {
-  const vendido = new Map(datos.productos.map((p) => [p.codigo, p.cantidad]));
-  const vigentes = catalogo
-    .filter((p) => (!empresa || p.grupo === empresa) && (!familia || p.familia === familia))
-    .map((p) => ({ ...p, cantidad: vendido.get(p.codigo) ?? 0 }))
-    .sort((a, b) => a.cantidad - b.cantidad || a.codigo.localeCompare(b.codigo));
-  const sinVenta = vigentes.filter((p) => p.cantidad === 0).length;
-
-  return (
-    <Bloque
-      titulo={`Menos vendidos${textoFiltro(empresa, familia)}`}
-      comoLeer={`Los ${MENOS_VENDIDOS_A_MOSTRAR} productos vigentes con menos despacho. 0 = no salió en ninguna guía.`}
-    >
-      {empresa === "OTROS" ? (
-        <p className="text-sm text-ink-muted">
-          «Otros» no tiene catálogo propio en la app: elige Cermaq, Multiexport o Yadran.
-        </p>
-      ) : (
-        <>
-          <p className="text-sm">
-            <strong className="font-mono">{entero(sinVenta)}</strong> de {entero(vigentes.length)} productos vigentes no
-            se vendieron en el período.
-          </p>
-          <div className="overflow-x-auto rounded-lg border border-line">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-line bg-surface-muted">
-                  <th className={TH}>Producto</th>
-                  <th className={TH}>Empresa</th>
-                  <th className={`${TH} text-right`}>Cantidad</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vigentes.slice(0, MENOS_VENDIDOS_A_MOSTRAR).map((p) => (
-                  <tr key={p.codigo} className="border-b border-line last:border-0 even:bg-surface-muted">
-                    <td className={TD}>
-                      <span className="block">{p.nombre}</span>
-                      <span className="font-mono text-xs text-ink-muted">{p.codigo}</span>
-                    </td>
-                    <td className={TD}>{NOMBRE_GRUPO[p.grupo] ?? p.grupo}</td>
-                    <td className={`${TD} text-right font-mono`}>
-                      {numero(p.cantidad)}{" "}
-                      <span className="text-xs text-ink-muted">{unidadDeVenta(p.nombre, p.cantidad)}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-    </Bloque>
-  );
-}
-
-interface FilaPrecio extends ProductoAgregado {
-  antes: number | null;
-}
-
-function TablaPrecios({
-  filas,
-  conAntes,
-  mesAnterior,
-}: {
-  filas: FilaPrecio[];
-  conAntes: boolean;
-  mesAnterior: string;
-}) {
-  return (
-    <div className="overflow-x-auto rounded-lg border border-line">
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-line bg-surface-muted">
-            <th className={TH}>Producto</th>
-            <th className={TH}>Empresa</th>
-            {conAntes && <th className={`${TH} text-right`}>Precio en {mesAnterior}</th>}
-            <th className={`${TH} text-right`}>Precio actual</th>
-            {conAntes && <th className={`${TH} text-right`}>Cambio</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {filas.map((p) => (
-            <tr key={p.codigo} className="border-b border-line last:border-0 even:bg-surface-muted">
-              <td className={TD}>
-                <span className="block">{p.nombre}</span>
-                <span className="font-mono text-xs text-ink-muted">{p.codigo}</span>
-              </td>
-              <td className={TD}>{NOMBRE_GRUPO[p.grupo]}</td>
-              {conAntes && <td className={`${TD} text-right font-mono`}>{p.antes != null ? pesos(p.antes) : "—"}</td>}
-              <td className={`${TD} text-right font-mono`}>{pesos(p.ultimoPrecio!)}</td>
-              {conAntes && (
-                <td className={`${TD} text-right font-mono`}>
-                  {p.antes != null ? textoVariacion(variacion(p.ultimoPrecio!, p.antes)) : "nuevo"}
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function Precios({
-  datos,
-  anterior,
-  empresa,
-  familia,
-  actual,
-}: {
-  datos: AgregadoPeriodo;
-  anterior: AgregadoPeriodo | null;
-  empresa: string;
-  familia: string;
-  actual: Periodo;
-}) {
-  const previo = new Map((anterior?.productos ?? []).map((p) => [p.codigo, p.ultimoPrecio]));
-  const conPrecio = filtrar(datos.productos, empresa, familia)
-    .filter((p) => p.ultimoPrecio != null)
-    .map((p) => ({ ...p, antes: previo.get(p.codigo) ?? null }))
-    .sort((a, b) => a.grupo.localeCompare(b.grupo) || a.nombre.localeCompare(b.nombre));
-  const cambios = conPrecio
-    .filter((p) => p.antes != null && p.antes !== p.ultimoPrecio)
-    .map((p) => ({ ...p, v: variacion(p.ultimoPrecio!, p.antes!) ?? 0 }))
-    .sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
-  const mesAnterior = nombreMes(moverMes(actual.mes, -1)).split(" ")[0];
-
-  return (
-    <Bloque
-      titulo={`Precios${textoFiltro(empresa, familia)}`}
-      comoLeer={`Último precio cobrado vs. ${mesAnterior}; solo los que cambiaron.`}
-    >
-      {cambios.length === 0 ? (
-        <p className="text-sm text-ink-muted">Ningún producto cambió de precio respecto de {mesAnterior}.</p>
-      ) : (
-        <>
-          <p className="text-sm">
-            <strong className="font-mono">{entero(cambios.length)}</strong> productos cambiaron de precio:{" "}
-            {entero(cambios.filter((c) => c.v > 0).length)} subieron y {entero(cambios.filter((c) => c.v < 0).length)}{" "}
-            bajaron.
-          </p>
-          <TablaPrecios filas={cambios} conAntes mesAnterior={mesAnterior} />
-        </>
-      )}
-      <details className="group">
-        <summary className="cursor-pointer text-sm text-teal hover:underline">
-          Ver el precio actual de los {entero(conPrecio.length)} productos vendidos
-        </summary>
-        <div className="mt-3">
-          <TablaPrecios filas={conPrecio} conAntes={false} mesAnterior={mesAnterior} />
-        </div>
-      </details>
-    </Bloque>
-  );
-}

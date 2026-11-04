@@ -9,16 +9,33 @@ import {
   type GuiaReporte,
 } from "@/lib/reportes/datos";
 import { fechaTexto } from "@/lib/reportes/excel";
-import { hoyChile, moverMes } from "@/lib/ventas/indicadores";
-import { entero, pesos } from "@/lib/util/formato";
+import {
+  FAMILIAS,
+  NOMBRE_FAMILIA,
+  hoyChile,
+  moverMes,
+  nombreMes,
+  nombreMesCorto,
+  periodoDelMes,
+  ultimosMeses,
+} from "@/lib/ventas/indicadores";
+import { crearPedidorDeVentas } from "@/lib/ventas/con-hoy";
+import { entero, pesos, pesosCorto } from "@/lib/util/formato";
 import { Bloque } from "@/components/inicio/Bloque";
-import { EnlaceVentas, NavegacionVentas } from "@/components/inicio/Navegacion";
+import { EnlaceVentas, NavegacionVentas, SelectorMes } from "@/components/inicio/Navegacion";
+import { GraficoMeses, type BarraMes } from "@/components/inicio/Graficos";
 import { Calendario } from "@/components/reportes/Calendario";
+import { MasVendidos, MenosVendidos, Precios, catalogoVigente } from "@/components/ventas/Detalle";
 
 export const dynamic = "force-dynamic";
 
 /** Meses hacia atras que muestra el calendario. */
 const MESES_ATRAS = 6;
+/** Meses del grafico y del selector de mes del detalle de ventas. */
+const MESES_EN_SELECTOR = 6;
+
+const mayuscula = (t: string) => t.replace(/^./, (c) => c.toUpperCase());
+const FAMILIA_CORTA: Record<string, string> = { AB: "Abarrotes", CC: "Carnes y cong.", FV: "Frutas y verduras", AS: "Aseo" };
 
 type Params = { [key: string]: string | string[] | undefined };
 const valor = (p: Params, k: string) => ((Array.isArray(p[k]) ? p[k]![0] : p[k]) as string | undefined)?.trim() ?? "";
@@ -29,24 +46,56 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
     ? (valor(params, "empresa") as EmpresaReporte)
     : "CERQ";
 
-  const [, guias] = await Promise.all([
+  // Detalle de ventas (antes en «Más detalle» del inicio), de la empresa elegida.
+  const meses = ultimosMeses(MESES_EN_SELECTOR);
+  const mes = meses.includes(valor(params, "mes")) ? valor(params, "mes") : meses[0];
+  const familia = (FAMILIAS as readonly string[]).includes(valor(params, "familia")) ? valor(params, "familia") : "";
+  const actual = periodoDelMes(mes);
+  const periodosGrafico = [...meses].reverse().map((m) => periodoDelMes(m));
+
+  const [, guias, pedir, catalogo] = await Promise.all([
     requerirUsuario(),
     guiasDeEmpresa(empresa, `${moverMes(hoyChile().slice(0, 7), -MESES_ATRAS)}-01`),
+    crearPedidorDeVentas(),
+    catalogoVigente(),
+  ]);
+  const [datos, datosAnterior, ...datosGrafico] = await Promise.all([
+    pedir(actual),
+    pedir(periodoDelMes(moverMes(mes, -1))),
+    ...periodosGrafico.map(pedir),
   ]);
 
   const desde = valor(params, "desde");
   const hasta = valor(params, "hasta");
   const periodo = rango(desde, hasta);
 
-  /** href con la empresa y el periodo dados ("" borra). */
-  const enlace = (d: string, h: string) => {
+  /** href con la empresa, el periodo, el mes y la familia dados ("" borra). */
+  const enlaceCon = (c: { d?: string; h?: string; mes?: string; familia?: string }) => {
+    const v = { d: desde, h: hasta, mes, familia, ...c };
     const q = new URLSearchParams();
     if (empresa !== "CERQ") q.set("empresa", empresa);
-    if (d) q.set("desde", d);
-    if (h) q.set("hasta", h);
+    if (v.d) q.set("desde", v.d);
+    if (v.h) q.set("hasta", v.h);
+    if (v.mes && v.mes !== meses[0]) q.set("mes", v.mes);
+    if (v.familia) q.set("familia", v.familia);
     const s = q.toString();
     return s ? `/reportes?${s}` : "/reportes";
   };
+  const enlace = (d: string, h: string) => enlaceCon({ d, h });
+
+  const montoEmpresa = (a: typeof datos) => (a ? (a.porCliente[empresa]?.monto ?? 0) : null);
+  const mesesGrafico: BarraMes[] = periodosGrafico.map((per, i) => {
+    const m = montoEmpresa(datosGrafico[i]);
+    return {
+      clave: per.mes,
+      etiqueta: `${nombreMesCorto(per.mes)}${per.enCurso ? "*" : ""}`,
+      valor: m,
+      texto: m != null ? pesosCorto(m) : "—",
+      detalle: `${mayuscula(nombreMes(per.mes))}${per.enCurso ? `, del 1 al ${per.dia}` : ""}: ${m != null ? pesos(m) : "sin datos"}`,
+      href: enlaceCon({ mes: per.mes }),
+      activo: per.mes === mes,
+    };
+  });
 
   const dias: Record<string, number> = {};
   for (const g of guias) dias[g.fecha] = (dias[g.fecha] ?? 0) + 1;
@@ -120,6 +169,45 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
               Descargar Excel
             </a>
           </div>
+        )}
+
+        <header className="mt-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+          <h2 className="font-display text-2xl font-semibold">
+            Ventas de {NOMBRE_EMPRESA_REPORTE[empresa]} en {nombreMes(mes).split(" ")[0]}
+          </h2>
+          <SelectorMes
+            meses={[...meses].reverse().map((m) => ({
+              valor: m,
+              etiqueta: nombreMesCorto(m),
+              nombre: mayuscula(nombreMes(m)),
+              href: enlaceCon({ mes: m }),
+            }))}
+            activo={mes}
+          />
+        </header>
+        <nav aria-label="Familia" className="flex flex-wrap items-baseline gap-4 text-sm">
+          {["", ...FAMILIAS].map((f) => (
+            <EnlaceVentas
+              key={f || "todas"}
+              href={enlaceCon({ familia: f })}
+              activo={familia === f}
+              className={`rounded-sm transition-colors ${familia === f ? "font-semibold text-ink" : "text-ink-muted hover:text-teal"}`}
+            >
+              {f ? (FAMILIA_CORTA[f] ?? NOMBRE_FAMILIA[f]) : "Todas las familias"}
+            </EnlaceVentas>
+          ))}
+        </nav>
+        <Bloque titulo="Comparación con meses anteriores" comoLeer="Total de cada mes · * = mes en curso">
+          <GraficoMeses puntos={mesesGrafico} />
+        </Bloque>
+        {!datos ? (
+          <div className="vidrio p-6 text-sm text-ink-muted">Todavía no hay ventas cargadas para {nombreMes(mes)}.</div>
+        ) : (
+          <>
+            <MasVendidos datos={datos} empresa={empresa} familia={familia} />
+            <Precios datos={datos} anterior={datosAnterior} empresa={empresa} familia={familia} actual={actual} />
+            <MenosVendidos datos={datos} catalogo={catalogo} empresa={empresa} familia={familia} />
+          </>
         )}
       </NavegacionVentas>
     </div>

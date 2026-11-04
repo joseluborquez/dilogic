@@ -28,11 +28,11 @@ interface Seccion {
 const SECCIONES: Seccion[] = [
   { href: "/", titulo: "Inicio", icono: <IconoInicio /> },
   { href: "/guia-manual", titulo: "Guía manual", icono: <IconoGuiaManual /> },
-  { href: "/historial", titulo: "Historial", icono: <IconoHistorial /> },
+  { href: "/traspaso", titulo: "Traspaso de costos", icono: <IconoTraspaso />, soloAdmin: true },
   { href: "/reportes", titulo: "Reportes", icono: <IconoReportes /> },
+  { href: "/historial", titulo: "Historial", icono: <IconoHistorial /> },
   { href: "/empresas", titulo: "Empresas", icono: <IconoEmpresas /> },
   { href: "/catalogo", titulo: "Catálogo", icono: <IconoCatalogo /> },
-  { href: "/traspaso", titulo: "Traspaso de costos", icono: <IconoTraspaso />, soloAdmin: true },
   { href: "/usuarios", titulo: "Usuarios", icono: <IconoUsuarios />, soloAdmin: true },
 ];
 
