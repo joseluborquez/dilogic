@@ -951,7 +951,7 @@ export function GuiaManualForm({
           </label>
         </div>
         <div className="flex flex-col gap-3 border-t border-line pt-4">
-          <p className="text-sm text-ink-muted">Transporte (opcional): escribe solo los datos que tengas. Relbase no los exige hasta el 01-05-2027.</p>
+          <p className="text-sm text-ink-muted">Transporte (opcional): si no tienes un dato, deja la casilla en blanco; no escribas «sin datos».</p>
           <div className="grid gap-4 sm:grid-cols-2">
             {(
               [

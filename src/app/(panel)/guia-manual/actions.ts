@@ -201,7 +201,7 @@ export interface LineaPedida {
   precio: number;
 }
 
-/** null en un dato de transporte = "no se cuenta con este dato". */
+/** Datos de transporte opcionales: null o "" = no se envia a Relbase (03-11-2026). */
 export interface Transporte {
   patente: string | null;
   rutTransportista: string | null;
@@ -280,21 +280,14 @@ export async function emitirGuiaManualAction(pedida: GuiaPedida): Promise<Result
     return fallo(`Relbase acepta hasta ${MAX_PRODUCTOS_POR_GUIA} productos por guía; esta tiene ${pedida.lineas.length}.`);
   }
   const t = pedida.transporte;
-  for (const [valor, nombre] of [
-    [t.patente, "la patente"],
-    [t.rutTransportista, "el RUT del transportista"],
-    [t.rutChofer, "el RUT del chofer"],
-    [t.nombreChofer, "el nombre del chofer"],
-  ] as const) {
-    if (valor !== null && !valor.trim()) return fallo(`Escribe ${nombre} o marca que no se cuenta con ese dato.`);
-  }
+  // Transporte opcional desde el 03-11-2026: una casilla en blanco simplemente no se envia a Relbase.
   for (const [rut, nombre] of [
     [t.rutTransportista, "del transportista"],
     [t.rutChofer, "del chofer"],
   ] as const) {
-    if (rut && !rutValido(rut)) return fallo(`El RUT ${nombre} no es válido (revisa el dígito verificador).`);
+    if (rut && !rutValido(rut)) return fallo(`El RUT ${nombre} no es válido. Si no lo tienes, deja la casilla en blanco.`);
   }
-  if (t.patente && !/^[A-Z0-9]{4,8}$/i.test(t.patente.replace(/[\s.-]/g, ""))) return fallo("La patente no parece válida.");
+  if (t.patente && !/^[A-Z0-9]{4,8}$/i.test(t.patente.replace(/[\s.-]/g, ""))) return fallo("La patente no parece válida. Si no la tienes, deja la casilla en blanco.");
 
   // --- Lo que se revisa contra Relbase y el catalogo -----------------------
   const conexion = await obtenerEstadoConexion();
