@@ -97,8 +97,8 @@ export function totalesFiltrados(datos: AgregadoPeriodo, empresa: string, famili
   return { monto, guias: guias.size };
 }
 
-const esBins = (contacto: string | null) => /\bBINS\b/i.test(contacto ?? "");
-const esCodigoBins = (codigo: string | null) => /^O-TB-/i.test(codigo ?? "");
+export const esBins = (contacto: string | null) => /\bBINS\b/i.test(contacto ?? "");
+export const esCodigoBins = (codigo: string | null) => /^O-TB-/i.test(codigo ?? "");
 const esAms = (codigo: string | null) => /^(ANU-)?AMS[_-]/i.test(codigo ?? "");
 /** Clientes cuyos precios no se comparan. */
 const sinComparacionDePrecio = (codigo: string | null) => /^TTF[_-]/i.test(codigo ?? "");
@@ -145,32 +145,68 @@ export async function calcularAgregado(desde: string, hasta: string): Promise<Ag
       .range(d, h)
   );
 
+  const candidatas = guias.filter((g) => !g.anulada);
+  const [empresaDeCliente, lotes] = await Promise.all([
+    empresasPorCliente(),
+    Promise.all(
+      dividirEnLotes(
+        candidatas.map((g) => g.dte_id),
+        150
+      ).map((ids) =>
+        traerTodasLasFilas((d, h) =>
+          supabase
+            .from("ventas_lineas")
+            .select("dte_id, linea, codigo, nombre, empresa, familia, cantidad, precio, monto_neto")
+            .in("dte_id", ids)
+            .order("dte_id")
+            .order("linea")
+            .range(d, h)
+        )
+      )
+    ),
+  ]);
+  return agregar(desde, hasta, guias, lotes.flat(), empresaDeCliente);
+}
+
+export interface GuiaParaAgregar {
+  dte_id: number;
+  fecha: string;
+  anulada: boolean;
+  contacto: string | null;
+  customer_id: number | null;
+}
+
+export interface LineaParaAgregar {
+  dte_id: number;
+  codigo: string | null;
+  nombre: string | null;
+  empresa: string;
+  familia: string | null;
+  cantidad: number;
+  precio: number;
+  monto_neto: number;
+}
+
+/** relbase_customer_id -> codigo interno (CERQ, MTX, YDR...). Unas pocas filas. */
+export async function empresasPorCliente(): Promise<Map<number, string>> {
+  const { data: empresas } = await getSupabaseServiceClient().from("empresas").select("codigo_interno, relbase_customer_id");
+  return new Map((empresas ?? []).filter((e) => e.relbase_customer_id).map((e) => [Number(e.relbase_customer_id), e.codigo_interno]));
+}
+
+/** El calculo de los indicadores, igual para lo sincronizado (Supabase) y lo de hoy (Relbase). */
+export function agregar(
+  desde: string,
+  hasta: string,
+  guias: GuiaParaAgregar[],
+  lineas: LineaParaAgregar[],
+  empresaDeCliente: Map<number, string>
+): AgregadoPeriodo {
   const anuladas = guias.filter((g) => g.anulada).length;
   const candidatas = guias.filter((g) => !g.anulada);
   const fechaPorGuia = new Map(candidatas.map((g) => [g.dte_id, g.fecha]));
-  const { data: empresas } = await supabase.from("empresas").select("codigo_interno, relbase_customer_id");
-  const empresaDeCliente = new Map((empresas ?? []).filter((e) => e.relbase_customer_id).map((e) => [Number(e.relbase_customer_id), e.codigo_interno]));
   const clientePorGuia = new Map(candidatas.map((g) => [g.dte_id, empresaDeCliente.get(Number(g.customer_id)) ?? "OTROS"]));
   const centroPorGuia = new Map(candidatas.map((g) => [g.dte_id, (g.contacto ?? "").trim().toUpperCase() || "SIN CENTRO"]));
   const binsPorContacto = new Set(candidatas.filter((g) => esBins(g.contacto)).map((g) => g.dte_id));
-
-  const lotes = await Promise.all(
-    dividirEnLotes(
-      candidatas.map((g) => g.dte_id),
-      150
-    ).map((ids) =>
-      traerTodasLasFilas((d, h) =>
-        supabase
-          .from("ventas_lineas")
-          .select("dte_id, linea, codigo, nombre, empresa, familia, cantidad, precio, monto_neto")
-          .in("dte_id", ids)
-          .order("dte_id")
-          .order("linea")
-          .range(d, h)
-      )
-    )
-  );
-  const lineas = lotes.flat();
 
   const bins = new Set(binsPorContacto);
   for (const l of lineas) if (esCodigoBins(l.codigo)) bins.add(l.dte_id);
@@ -251,6 +287,60 @@ export async function calcularAgregado(desde: string, hasta: string): Promise<Ag
       t.guias += v.dtes.size;
       return acc;
     }, {}),
+  };
+}
+
+/**
+ * Junta dos agregados de guias distintas (lo sincronizado + lo de hoy). Los
+ * centros se vuelven a unificar por nombre; el ultimo precio es el de `b`.
+ */
+export function juntarAgregados(a: AgregadoPeriodo, b: AgregadoPeriodo): AgregadoPeriodo {
+  const productos = new Map(a.productos.map((p) => [p.codigo, { ...p }]));
+  for (const p of b.productos) {
+    const x = productos.get(p.codigo);
+    if (!x) productos.set(p.codigo, { ...p });
+    else {
+      x.cantidad += p.cantidad;
+      x.monto += p.monto;
+      x.guias += p.guias;
+      x.ultimoPrecio = p.ultimoPrecio ?? x.ultimoPrecio;
+    }
+  }
+  const guiasPorSegmento = { ...a.guiasPorSegmento };
+  for (const [k, ids] of Object.entries(b.guiasPorSegmento)) guiasPorSegmento[k] = [...(guiasPorSegmento[k] ?? []), ...ids];
+
+  const porCentro: AgregadoPeriodo["porCentro"] = {};
+  for (const grupo of new Set([...Object.keys(a.porCentro), ...Object.keys(b.porCentro)])) {
+    const lista = [a.porCentro[grupo] ?? {}, b.porCentro[grupo] ?? {}].flatMap((m) => Object.entries(m).map(([nombre, v]) => ({ nombre, ...v })));
+    const nombreDe = unificarCentros(lista.map((c) => ({ nombre: c.nombre, guias: c.guias })));
+    const juntos: Record<string, { monto: number; guias: number }> = {};
+    for (const c of lista) {
+      const j = (juntos[nombreDe.get(c.nombre) ?? c.nombre] ??= { monto: 0, guias: 0 });
+      j.monto += c.monto;
+      j.guias += c.guias;
+    }
+    porCentro[grupo] = juntos;
+  }
+  const porCliente: AgregadoPeriodo["porCliente"] = {};
+  for (const m of [a.porCliente, b.porCliente])
+    for (const [g, v] of Object.entries(m)) {
+      const t = (porCliente[g] ??= { monto: 0, guias: 0 });
+      t.monto += v.monto;
+      t.guias += v.guias;
+    }
+
+  return {
+    desde: a.desde,
+    hasta: a.hasta > b.hasta ? a.hasta : b.hasta,
+    guias: a.guias + b.guias,
+    anuladas: a.anuladas + b.anuladas,
+    binsExcluidas: a.binsExcluidas + b.binsExcluidas,
+    cantidad: a.cantidad + b.cantidad,
+    monto: a.monto + b.monto,
+    productos: [...productos.values()],
+    guiasPorSegmento,
+    porCentro,
+    porCliente,
   };
 }
 

@@ -72,6 +72,51 @@ export function BarraFiltros({ filtros, limpiar, compacta = false }: { filtros: 
   );
 }
 
+/**
+ * Los meses escritos en una linea, del mas antiguo al actual. El elegido va en
+ * tinta; los demas en gris. Reemplaza al desplegable (Hugo, 03-11: se veia feo).
+ */
+export function SelectorMes({
+  meses,
+  activo,
+}: {
+  meses: { valor: string; etiqueta: string; nombre: string; href: string }[];
+  activo: string;
+}) {
+  const ctx = useContext(Contexto);
+  return (
+    <nav aria-label="Mes" className="relative flex items-baseline gap-4 text-sm">
+      {meses.map((m) => {
+        const elegido = m.valor === activo;
+        return (
+          <a
+            key={m.valor}
+            href={m.href}
+            title={m.nombre}
+            aria-current={elegido ? "page" : undefined}
+            onClick={(e) => {
+              if (!ctx || e.metaKey || e.ctrlKey || e.shiftKey) return;
+              e.preventDefault();
+              ctx.navegar(m.href);
+            }}
+            className={`rounded-sm capitalize transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal ${
+              elegido ? "font-semibold text-ink" : "text-ink-muted hover:text-teal"
+            }`}
+          >
+            {m.etiqueta}
+          </a>
+        );
+      })}
+      {/* Fuera del flujo: asi el ultimo mes queda justo en el borde derecho de los recuadros. */}
+      <span
+        className={`absolute top-1/2 -left-5 h-2 w-2 -translate-y-1/2 rounded-full bg-teal transition-opacity ${ctx?.pendiente ? "animate-pulse opacity-100" : "opacity-0"}`}
+        aria-hidden
+      />
+      <span className="sr-only" aria-live="polite">{ctx?.pendiente ? "Actualizando" : ""}</span>
+    </nav>
+  );
+}
+
 /** Enlace que navega dentro de la transicion (las barras de los graficos). */
 export function EnlaceVentas({ href, className, title, children, activo }: { href: string; className?: string; title?: string; children: ReactNode; activo?: boolean }) {
   const ctx = useContext(Contexto);
@@ -85,4 +130,9 @@ export function EnlaceVentas({ href, className, title, children, activo }: { hre
       {children}
     </a>
   );
+}
+
+/** Navegar dentro de la transicion desde otros componentes (calendario de reportes). */
+export function useNavegarVentas(): { navegar: (href: string) => void; pendiente: boolean } | null {
+  return useContext(Contexto);
 }

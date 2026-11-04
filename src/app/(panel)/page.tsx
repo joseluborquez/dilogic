@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { agregadoDeHoy } from "@/lib/ventas/hoy";
 import { requerirUsuario } from "@/lib/auth/sesion";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import {
@@ -7,6 +8,7 @@ import {
   NOMBRE_GRUPO,
   TAG_VENTAS,
   agregadoPeriodo,
+  juntarAgregados,
   moverMes,
   nombreMes,
   nombreMesCorto,
@@ -24,7 +26,7 @@ import { entero, numero, pesos, pesosCorto, textoVariacion, variacion } from "@/
 import { Bloque } from "@/components/inicio/Bloque";
 import { NuevaCorridaForm } from "@/components/nueva-corrida/NuevaCorridaForm";
 import { listarEmpresasActivas } from "@/lib/empresas/consultar";
-import { BarraFiltros, EnlaceVentas, NavegacionVentas } from "@/components/inicio/Navegacion";
+import { EnlaceVentas, NavegacionVentas, SelectorMes } from "@/components/inicio/Navegacion";
 import { BarrasReparto, GraficoMeses, nombreLegible, type BarraMes } from "@/components/inicio/Graficos";
 
 export const dynamic = "force-dynamic";
@@ -64,11 +66,6 @@ function cuando(p: Periodo): string {
   return p.completo ? `en ${soloMes(p)}` : `del 1 al ${p.dia} de ${soloMes(p)}`;
 }
 
-/** Para comparar: "1 al 25 de septiembre" / "septiembre completo". */
-function nombrePeriodo(p: Periodo): string {
-  return p.completo ? `${soloMes(p)} completo` : `1 al ${p.dia} de ${soloMes(p)}`;
-}
-
 const mayuscula = (t: string) => t.replace(/^./, (c) => c.toUpperCase());
 
 export default async function InicioPage({
@@ -92,9 +89,18 @@ export default async function InicioPage({
   const anteriorCompleto = periodoDelMes(moverMes(mes, -1));
 
   // La sesion sale junto con la primera consulta: esperarla antes sumaba un viaje.
-  const [usuario, primeraFecha] = await Promise.all([requerirUsuario(), primeraFechaConVentas()]);
+  const [, primeraFecha] = await Promise.all([requerirUsuario(), primeraFechaConVentas()]);
   const hayDatos = (p: Periodo) => primeraFecha != null && p.desde >= primeraFecha.slice(0, 8) + "01";
-  const pedir = (p: Periodo) => (hayDatos(p) ? agregadoPeriodo(p.desde, p.hasta) : Promise.resolve(null));
+  // Lo de hoy se sincroniza recien manana: para el mes en curso se suma leido
+  // de Relbase (lib/ventas/hoy). Si Relbase no responde, queda lo sincronizado.
+  const deHoy = agregadoDeHoy().catch(() => null);
+  const pedir = async (p: Periodo) => {
+    const base = hayDatos(p) ? await agregadoPeriodo(p.desde, p.hasta) : null;
+    if (!p.enCurso) return base;
+    const hoy = await deHoy;
+    if (!hoy) return base;
+    return base ? juntarAgregados(base, hoy) : hoy;
+  };
 
   // El grafico muestra los meses del selector, del mas antiguo al mas reciente.
   const periodosGrafico = [...meses].reverse().map((m) => periodoDelMes(m));
@@ -116,7 +122,6 @@ export default async function InicioPage({
     const s = q.toString();
     return s ? `/?${s}` : "/";
   };
-  const nombre = usuario.nombre?.split(" ")[0];
   const mesesGrafico: BarraMes[] = periodosGrafico.map((per, i) => {
                 const d = datosGrafico[i];
                 return {
@@ -134,36 +139,26 @@ export default async function InicioPage({
     <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6">
       <NavegacionVentas
         barra={
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <header className="flex flex-col gap-1">
-              <h1 className="font-display text-2xl font-semibold">{nombre ? `Hola, ${nombre}` : "Ventas"}</h1>
-              <p className="text-sm text-ink-muted">Montos netos, sin IVA</p>
-            </header>
-            <BarraFiltros
-              compacta
-              limpiar={empresa || familia ? enlace({ empresa: "", familia: "" }) : null}
-              filtros={[
-                {
-                  nombre: "Mes",
-                  activo: mes,
-                  opciones: meses.map((m, i) => ({
-                    valor: m,
-                    etiqueta: `${mayuscula(nombreMes(m))}${i === 0 ? " (en curso)" : ""}`,
-                  })),
-                  hrefs: Object.fromEntries(meses.map((m) => [m, enlace({ mes: m })])),
-                },
-              ]}
+          <header className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+            <h1 className="font-display text-3xl font-semibold">Ventas de {nombreMes(mes).split(" ")[0]}</h1>
+            <SelectorMes
+              meses={[...meses].reverse().map((m) => ({
+                valor: m,
+                etiqueta: nombreMesCorto(m),
+                nombre: mayuscula(nombreMes(m)),
+                href: enlace({ mes: m }),
+              }))}
+              activo={mes}
             />
-          </div>
+          </header>
         }
       >
         {!datos ? (
-          <div className="vidrio p-5 text-sm text-ink-muted">Todavía no hay ventas cargadas para {nombreMes(mes)}.</div>
+          <div className="vidrio p-6 text-sm text-ink-muted">Todavía no hay ventas cargadas para {nombreMes(mes)}.</div>
         ) : (
           <>
             <Resumen
               actual={actual}
-              comparacion={comparacion}
               datos={datos}
               datosComparacion={datosComparacion}
               familia={familia}
@@ -222,7 +217,7 @@ function Empresas({
 }) {
   const total = datos.monto || 1;
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-6 lg:grid-cols-4">
       {EMPRESAS_FILTRO.map((g, i) => {
         // Por cliente de la guia: la tarjeta cuadra con la suma de sus centros.
         const monto = datos.porCliente[g]?.monto ?? 0;
@@ -235,21 +230,18 @@ function Empresas({
             key={g}
             href={href(g)}
             activo={esActiva}
-            className={`vidrio animar-subir elevar retraso-${i + 1} flex flex-col gap-1 p-4 hover:border-teal ${esActiva ? "border-teal ring-1 ring-teal" : ""}`}
+            className={`vidrio animar-subir elevar retraso-${i + 1} flex flex-col gap-1 p-6 hover:border-teal ${esActiva ? "border-teal ring-1 ring-teal" : ""}`}
           >
             <span className="flex items-center justify-between text-sm">
               <span className="font-medium">{NOMBRE_GRUPO[g]}</span>
-              <span className="text-xs text-ink-muted">{Math.round((monto / total) * 100)}%</span>
+              <span className="text-xs text-ink-muted" title="Parte del total del mes">{Math.round((monto / total) * 100)}% del total</span>
             </span>
-            <span className="font-mono text-2xl font-semibold">{pesosCorto(monto)}</span>
+            <span className="font-display text-2xl font-semibold tabular-nums">{pesos(monto)}</span>
             <span className="flex items-center justify-between text-xs text-ink-muted">
               <span>{centros} {centros === 1 ? "centro" : "centros"}</span>
               {cambio != null && (
                 <span className={Math.round(cambio) === 0 ? "" : cambio > 0 ? "text-valido" : "text-error"}>{textoVariacion(cambio)}</span>
               )}
-            </span>
-            <span className="mt-1 h-1 overflow-hidden rounded-full bg-surface-muted">
-              <span className="animar-llenar block h-full rounded-full bg-teal" style={{ width: `${Math.max(2, (monto / total) * 100)}%` }} />
             </span>
           </EnlaceVentas>
         );
@@ -296,24 +288,21 @@ function Cambio({ v }: { v: number | null }) {
   return <span className={Math.round(v) === 0 ? "text-ink-muted" : v > 0 ? "text-valido" : "text-error"}>{textoVariacion(v)}</span>;
 }
 
-/** Encabezado del mes (todas las empresas): el total en grande, tres datos en linea y la tendencia de 6 meses. */
+/** Encabezado del mes (todas las empresas): el total en grande y lo vendido por familia. */
 function Resumen({
   actual,
-  comparacion,
   datos,
   datosComparacion,
   familia,
   hrefFamilia,
 }: {
   actual: Periodo;
-  comparacion: Periodo;
   datos: AgregadoPeriodo;
   datosComparacion: AgregadoPeriodo | null;
   familia: string;
   hrefFamilia: (f: string) => string;
 }) {
   const c = datosComparacion;
-  const cambio = c ? variacion(datos.monto, c.monto) : null;
   // Lo vendido por familia (todas las empresas); tocar una filtra el resto de la pagina.
   const familias = FAMILIAS.map((f) => {
     const monto = sumarMonto(datos, (p) => p.familia === f) ?? 0;
@@ -323,11 +312,10 @@ function Resumen({
   return (
     <section className="vidrio animar-subir p-6">
       <div className="flex flex-col justify-between gap-5">
-        <div className="text-center" title={`${pesos(datos.monto)} · ${entero(datos.guias)} guías · vs. ${nombrePeriodo(comparacion)}`}>
-          <p className="text-sm text-ink-muted">Vendido {cuando(actual)}</p>
-          <p className="font-mono text-5xl font-semibold tracking-tight text-teal">{pesosCorto(datos.monto)}</p>
-          <p className="mt-1 text-sm">
-            <Cambio v={cambio} /> <span className="text-ink-muted">vs. {nombrePeriodo(comparacion)}</span>
+        <div className="text-center">
+          <p className="text-sm text-ink-muted">Vendido {cuando(actual)}, neto sin IVA</p>
+          <p className="mt-1 font-display text-6xl leading-tight font-semibold tracking-tight tabular-nums text-teal">
+            {pesos(datos.monto)}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-y-3 border-t border-line pt-4 sm:grid-cols-4 sm:divide-x sm:divide-line">
@@ -340,7 +328,7 @@ function Resumen({
               className={`rounded-md px-3 text-center transition-colors hover:text-teal ${familia === x.f ? "text-teal" : ""}`}
             >
               <span className="block truncate text-xs text-ink-muted">{FAMILIA_CORTA[x.f] ?? NOMBRE_FAMILIA[x.f]}</span>
-              <span className="block font-mono text-lg font-semibold">{pesosCorto(x.monto)}</span>
+              <span className="block font-display text-lg font-semibold tabular-nums">{pesos(x.monto)}</span>
               <span className="block text-xs">
                 <Cambio v={x.v} />
               </span>
@@ -388,7 +376,7 @@ function MasVendidos({ datos, empresa, familia }: { datos: AgregadoPeriodo; empr
       {filas.length === 0 ? (
         <p className="text-sm text-ink-muted">No hay ventas con estos filtros.</p>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2">
           <TablaTop titulo="Por cantidad" filas={porCantidad} etiqueta="Cantidad" modo="cantidad" />
           <TablaTop titulo="Por monto" filas={porMonto} etiqueta="Monto neto" modo="monto" />
         </div>

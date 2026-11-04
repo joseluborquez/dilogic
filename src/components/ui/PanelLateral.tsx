@@ -10,6 +10,7 @@ import {
   IconoEmpresas,
   IconoGuiaManual,
   IconoHistorial,
+  IconoReportes,
   IconoSalir,
   IconoTraspaso,
   IconoUsuarios,
@@ -28,6 +29,7 @@ const SECCIONES: Seccion[] = [
   { href: "/", titulo: "Inicio", icono: <IconoInicio /> },
   { href: "/guia-manual", titulo: "Guía manual", icono: <IconoGuiaManual /> },
   { href: "/historial", titulo: "Historial", icono: <IconoHistorial /> },
+  { href: "/reportes", titulo: "Reportes", icono: <IconoReportes /> },
   { href: "/empresas", titulo: "Empresas", icono: <IconoEmpresas /> },
   { href: "/catalogo", titulo: "Catálogo", icono: <IconoCatalogo /> },
   { href: "/traspaso", titulo: "Traspaso de costos", icono: <IconoTraspaso />, soloAdmin: true },
@@ -63,8 +65,8 @@ export function PanelLateral({
 
   return (
     <aside className="vidrio flex flex-col gap-4 p-4 md:sticky md:top-4 md:h-[calc(100dvh-2rem)] md:w-60 md:shrink-0 md:gap-6 md:p-5">
-      <p className="font-display text-xs font-semibold tracking-[0.2em] text-teal uppercase">
-        Dilogic · Guías
+      <p className="font-display text-lg font-semibold text-ink">
+        Dilogic <span className="font-medium text-ink-muted">Guías</span>
       </p>
 
       <nav aria-label="Secciones" className="-mx-1 overflow-x-auto md:mx-0 md:overflow-visible">

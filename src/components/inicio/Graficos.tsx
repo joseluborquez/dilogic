@@ -23,17 +23,6 @@ export function nombreLegible(nombre: string): string {
     .join(" ");
 }
 
-function Barra({ fraccion, atenuada }: { fraccion: number; atenuada?: boolean }) {
-  return (
-    <span className="block h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
-      <span
-        className={`animar-llenar block h-full rounded-full bg-teal transition-opacity ${atenuada ? "opacity-35 group-hover:opacity-70" : ""}`}
-        style={{ width: `${Math.max(1.5, fraccion * 100)}%` }}
-      />
-    </span>
-  );
-}
-
 function Cambio({ v }: { v: number | null | undefined }) {
   if (v == null) return null;
   const r = Math.round(v);
@@ -113,9 +102,8 @@ export interface FilaBarra {
   activo?: boolean;
 }
 
-/** Reparto por empresa o familia: nombre y monto en una linea, barra fina debajo. */
-export function BarrasReparto({ filas, hayActivo = false, maximo }: { filas: FilaBarra[]; hayActivo?: boolean; maximo?: number }) {
-  const max = maximo ?? Math.max(1, ...filas.map((f) => f.valor));
+/** Reparto por empresa, familia o centro: nombre y monto en una linea (sin barra: Hugo, 03-11). */
+export function BarrasReparto({ filas }: { filas: FilaBarra[]; hayActivo?: boolean; maximo?: number }) {
   return (
     <ul className="flex flex-col gap-3">
       {filas.map((f) => (
@@ -128,7 +116,6 @@ export function BarrasReparto({ filas, hayActivo = false, maximo }: { filas: Fil
                 <Cambio v={f.cambio} />
               </span>
             </span>
-            <Barra fraccion={f.valor / max} atenuada={hayActivo && !f.activo} />
           </Envoltura>
         </li>
       ))}

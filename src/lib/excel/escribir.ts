@@ -15,11 +15,17 @@ export const ESTILO = {
   pesosNegrita: 6,
   titulo: 7,
   ajustado: 8,
+  /** Negrita sin relleno: encabezados de los reportes por empresa (Excel simples, sin colores). */
+  negrita: 9,
+  /** Fecha real de Excel mostrada como 03-09-2026 (usar `fechaExcel`). */
+  fecha: 10,
 } as const;
 
 export interface CeldaXlsx {
   v: string | number | null;
   s?: number;
+  /** Formula sin el "=" inicial (p. ej. "SUM(D2:D20)"). Excel la calcula al abrir. */
+  f?: string;
 }
 
 export interface HojaXlsx {
@@ -31,11 +37,19 @@ export interface HojaXlsx {
   filasFijas?: number;
   /** Rango con filtro, p. ej. "A4:M40". */
   filtro?: string;
+  /** Rangos de celdas combinadas, p. ej. ["B2:E2"]. */
+  combinadas?: string[];
+}
+
+/** "2026-09-03" -> numero de serie de Excel (fecha real, se ordena y filtra como fecha). */
+export function fechaExcel(iso: string): number {
+  const [a, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return (Date.UTC(a, m - 1, d) - Date.UTC(1899, 11, 30)) / 86_400_000;
 }
 
 const xml = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function columna(i: number): string {
+export function columna(i: number): string {
   let s = "";
   for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
   return s;
@@ -43,7 +57,7 @@ function columna(i: number): string {
 
 const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<numFmts count="1"><numFmt numFmtId="164" formatCode="&quot;$&quot;#,##0"/></numFmts>
+<numFmts count="2"><numFmt numFmtId="164" formatCode="&quot;$&quot;#,##0"/><numFmt numFmtId="165" formatCode="dd\\-mm\\-yyyy"/></numFmts>
 <fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><name val="Calibri"/></font></fonts>
 <fills count="6"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFD9E7E5"/></patternFill></fill>
@@ -52,7 +66,7 @@ const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <fill><patternFill patternType="solid"><fgColor rgb="FFF9D3D0"/></patternFill></fill></fills>
 <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="9">
+<cellXfs count="11">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
 <xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
@@ -62,6 +76,8 @@ const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xf numFmtId="164" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/>
 <xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf>
+<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
 </cellXfs>
 </styleSheet>`;
 
@@ -71,9 +87,10 @@ function hojaXml(h: HojaXlsx): string {
     .map((fila, r) => {
       const celdas = fila
         .map((c, i) => {
-          if (c.v == null || c.v === "") return c.s ? `<c r="${columna(i)}${r + 1}" s="${c.s}"/>` : "";
           const ref = `${columna(i)}${r + 1}`;
           const s = c.s ? ` s="${c.s}"` : "";
+          if (c.f) return `<c r="${ref}"${s}><f>${xml(c.f)}</f></c>`;
+          if (c.v == null || c.v === "") return c.s ? `<c r="${ref}" s="${c.s}"/>` : "";
           if (typeof c.v === "number" && Number.isFinite(c.v)) return `<c r="${ref}"${s}><v>${c.v}</v></c>`;
           return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${xml(String(c.v))}</t></is></c>`;
         })
@@ -85,24 +102,51 @@ function hojaXml(h: HojaXlsx): string {
     ? `<sheetViews><sheetView workbookViewId="0"><pane ySplit="${h.filasFijas}" topLeftCell="A${h.filasFijas + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`
     : "";
   const filtro = h.filtro ? `<autoFilter ref="${h.filtro}"/>` : "";
+  const combinadas = h.combinadas?.length
+    ? `<mergeCells count="${h.combinadas.length}">${h.combinadas.map((r) => `<mergeCell ref="${r}"/>`).join("")}</mergeCells>`
+    : "";
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${fijas}<cols>${cols}</cols><sheetData>${filas}</sheetData>${filtro}</worksheet>`;
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${fijas}<cols>${cols}</cols><sheetData>${filas}</sheetData>${filtro}${combinadas}</worksheet>`;
 }
 
+/** Nombre valido de hoja (sin \\ / ? * [ ] : y hasta 31 caracteres). */
+export const nombreHoja = (n: string) => n.replace(/[\\/?*[\]:]/g, " ").slice(0, 31);
+
 export function crearXlsx(hoja: HojaXlsx): Uint8Array {
-  const nombre = xml(hoja.nombre.replace(/[\\/?*[\]:]/g, " ").slice(0, 31));
-  return zipSync({
+  return crearXlsxLibro([hoja]);
+}
+
+/** Libro con varias hojas, en el orden dado. Las formulas pueden apuntar a otra hoja ('NOMBRE'!E18). */
+export function crearXlsxLibro(hojas: HojaXlsx[]): Uint8Array {
+  const nombres = hojas.map((h) => xml(nombreHoja(h.nombre)));
+  const archivos: Record<string, Uint8Array> = {
     "[Content_Types].xml": strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`),
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${hojas
+      .map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`)
+      .join("")}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`),
     "_rels/.rels": strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`),
     "xl/workbook.xml": strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${nombre}" sheetId="1" r:id="rId1"/></sheets>${
-      hoja.filtro ? `<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'${nombre}'!${hoja.filtro.replace(/([A-Z]+)(\d+)/g, "$$$1$$$2")}</definedName></definedNames>` : ""
-    }</workbook>`),
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${nombres
+      .map((n, i) => `<sheet name="${n}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`)
+      .join("")}</sheets>${(() => {
+      const filtros = hojas
+        .map((h, i) =>
+          h.filtro
+            ? `<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${nombres[i]}'!${h.filtro.replace(/([A-Z]+)(\d+)/g, "$$$1$$$2")}</definedName>`
+            : ""
+        )
+        .join("");
+      return filtros ? `<definedNames>${filtros}</definedNames>` : "";
+    })()}<calcPr fullCalcOnLoad="1"/></workbook>`),
     "xl/_rels/workbook.xml.rels": strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`),
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${hojas
+      .map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`)
+      .join("")}<Relationship Id="rId${hojas.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`),
     "xl/styles.xml": strToU8(STYLES),
-    "xl/worksheets/sheet1.xml": strToU8(hojaXml(hoja)),
+  };
+  hojas.forEach((h, i) => {
+    archivos[`xl/worksheets/sheet${i + 1}.xml`] = strToU8(hojaXml(h));
   });
+  return zipSync(archivos);
 }

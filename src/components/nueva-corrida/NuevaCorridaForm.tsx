@@ -31,7 +31,7 @@ export function NuevaCorridaForm({ empresas }: { empresas: EmpresaOpcion[] }) {
 
   return (
     <div className="flex flex-col gap-8">
-      <form action={formAction} className="flex flex-col gap-5 vidrio p-5">
+      <form action={formAction} className="flex flex-col gap-5 vidrio p-6">
         <div>
           <p className="mb-2 text-xs tracking-wide text-ink-muted uppercase">Empresa</p>
           {empresas.length === 0 && (
