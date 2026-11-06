@@ -53,7 +53,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   const actual = periodoDelMes(mes);
   const periodosGrafico = [...meses].reverse().map((m) => periodoDelMes(m));
 
-  const [, guias, pedir, catalogo] = await Promise.all([
+  const [, { guias, sinHoy }, pedir, catalogo] = await Promise.all([
     requerirUsuario(),
     guiasDeEmpresa(empresa, `${moverMes(hoyChile().slice(0, 7), -MESES_ATRAS)}-01`),
     crearPedidorDeVentas(),
@@ -131,7 +131,12 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
           </header>
         }
       >
-        <Bloque titulo="Período" comoLeer="Toca el primer y el último día de despacho. Las guías de hoy aparecen mañana.">
+        <Bloque titulo="Período" comoLeer="Toca el primer y el último día de despacho. Las guías de hoy aparecen a los pocos minutos de emitirlas.">
+          {sinHoy && (
+            <p role="status" className="rounded-lg border border-line bg-surface-muted px-3 py-2 text-sm">
+              Relbase no respondió: pueden faltar las guías emitidas hoy. Recarga la página en unos minutos.
+            </p>
+          )}
           <Calendario dias={dias} desde={desde} hasta={hasta} plantilla={enlace("__D__", "__H__")} />
           {periodo && (
             <div className="flex flex-col gap-3 border-t border-line pt-4">

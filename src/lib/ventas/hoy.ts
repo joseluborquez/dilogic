@@ -77,20 +77,27 @@ async function guiasDeHoy() {
 const todasAUnPeso = (lineas: LineaParaAgregar[]) => lineas.length > 0 && lineas.every((l) => Math.round(l.precio) <= 1);
 
 /**
- * Lo de hoy que la sincronizacion todavia no trajo, listo para juntar con el
- * mes. Si alguien sincroniza a mitad del dia, esas guias ya estan en Supabase:
- * se descartan consultando solo los dte_id de hoy (unas pocas filas).
+ * Guias de hoy que la sincronizacion todavia no trajo, tal como las lista
+ * Relbase (anuladas incluidas). Si alguien sincroniza a mitad del dia, esas
+ * guias ya estan en Supabase: se descartan consultando solo los dte_id de hoy
+ * (unas pocas filas). Tambien la usan los reportes (lib/reportes/datos).
  */
-export async function agregadoDeHoy(): Promise<AgregadoPeriodo | null> {
+export async function guiasNuevasDeHoy(): Promise<{ fecha: string; guias: RelbaseDteResumen[] }> {
   const { guias, fecha } = await guiasDeHoy();
-  if (guias.length === 0) return null;
-  const [{ data, error }, empresaDeCliente] = await Promise.all([
-    getSupabaseServiceClient().from("ventas_guias").select("dte_id").eq("fecha", fecha),
-    empresasPorCliente(),
-  ]);
+  if (guias.length === 0) return { fecha, guias };
+  const { data, error } = await getSupabaseServiceClient().from("ventas_guias").select("dte_id").eq("fecha", fecha);
   if (error) throw error;
   const ya = new Set((data ?? []).map((g) => Number(g.dte_id)));
-  const nuevas = guias.filter((g) => !ya.has(g.id) && !todasAUnPeso(lineasPorGuia.get(g.id) ?? []));
+  return { fecha, guias: guias.filter((g) => !ya.has(g.id)) };
+}
+
+/** Productos de una guia de guiasNuevasDeHoy (vacio en anuladas y bins por contacto: no se piden). */
+export const lineasDeHoy = (dteId: number): LineaParaAgregar[] => lineasPorGuia.get(dteId) ?? [];
+
+/** Lo de hoy que la sincronizacion todavia no trajo, listo para juntar con el mes. */
+export async function agregadoDeHoy(): Promise<AgregadoPeriodo | null> {
+  const [{ guias, fecha }, empresaDeCliente] = await Promise.all([guiasNuevasDeHoy(), empresasPorCliente()]);
+  const nuevas = guias.filter((g) => !todasAUnPeso(lineasDeHoy(g.id)));
   if (nuevas.length === 0) return null;
   return agregar(
     fecha,
@@ -102,7 +109,7 @@ export async function agregadoDeHoy(): Promise<AgregadoPeriodo | null> {
       contacto: g.contact,
       customer_id: g.customer_id,
     })),
-    nuevas.flatMap((g) => lineasPorGuia.get(g.id) ?? []),
+    nuevas.flatMap((g) => lineasDeHoy(g.id)),
     empresaDeCliente
   );
 }
