@@ -71,8 +71,12 @@ export async function leerCompraRelbase(id: number): Promise<FacturaLeida & { pr
   const problemas: string[] = [];
   if (lineas.length === 0) {
     problemas.push("Relbase no tiene los productos de esta factura (el proveedor no envió el detalle): súbela en PDF.");
-  } else if (Math.abs(subtotal - (neto + exento)) > lineas.length) {
-    // Tolerancia: un peso por linea, por los precios con decimales.
+  } else if (Math.abs(subtotal - (neto + exento)) > Math.max(lineas.length, (neto + exento) * 0.001)) {
+    // Tolerancia: un peso por linea o el 0,1% del neto, lo que sea mayor. Hay
+    // proveedores que ajustan el total de la factura sin reflejarlo en las
+    // lineas (Ovando, folio 49564: $58 en $127.894, 06-nov-2026). No cambia
+    // el monto de las guias: armarTraspaso reparte el neto real de la factura
+    // entre las lineas y cuadra el total peso a peso con el de las facturas.
     problemas.push(
       `Los productos en Relbase suman $${Math.round(subtotal).toLocaleString("es-CL")} y el neto es $${(neto + exento).toLocaleString("es-CL")}.`
     );
