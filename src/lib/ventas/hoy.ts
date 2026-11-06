@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import { obtenerDte } from "@/lib/relbase/client";
 import type { RelbaseDteResumen } from "@/lib/relbase/types";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
@@ -31,31 +32,49 @@ const lineasPorGuia = new Map<number, LineaParaAgregar[]>();
 let ultimo: { guias: RelbaseDteResumen[]; fecha: string; en: number } | null = null;
 let enCurso: Promise<{ guias: RelbaseDteResumen[]; fecha: string }> | null = null;
 
+/**
+ * Productos de una guia, en la cache de datos de Vercel (compartida entre
+ * instancias y despliegues): el contenido de una guia emitida no cambia. Sin
+ * esto, cada instancia nueva volvia a pedir a Relbase el detalle de todas las
+ * guias del dia (36 guias = ~15 s a 4,5 req/s) y Inicio y Reportes esperaban.
+ */
+const lineasDeRelbase = unstable_cache(
+  async (id: number): Promise<LineaParaAgregar[]> => {
+    const productos = (await obtenerDte(id)).products ?? [];
+    return productos.map((p) => {
+      const cantidad = Number(p.quantity) || 0;
+      const precio = Number(p.price) || 0;
+      const descuento = p.discount == null ? 0 : Number(p.discount);
+      return {
+        dte_id: id,
+        codigo: p.code,
+        nombre: p.name,
+        ...clasificarCodigo(p.code, p.product_id),
+        cantidad,
+        precio,
+        // Igual que la sincronizacion (lib/ventas/sincronizar.ts).
+        monto_neto: Math.round(cantidad * precio * (1 - descuento / 100)),
+      };
+    });
+  },
+  ["relbase-dte-lineas-v1"],
+  { revalidate: 7 * 86400 }
+);
+
+/** Listado del dia, tambien compartido entre instancias por VIGENCIA_MS. */
+const listadoDeHoy = unstable_cache(
+  async (fecha: string) => (await recorrerGuiasDesde(fecha)).filter((g) => g.start_date === fecha),
+  ["relbase-guias-hoy-v1"],
+  { revalidate: VIGENCIA_MS / 1000 }
+);
+
 async function leer(): Promise<{ guias: RelbaseDteResumen[]; fecha: string }> {
   const fecha = hoyChile();
-  const guias = (await recorrerGuiasDesde(fecha)).filter((g) => g.start_date === fecha);
+  const guias = await listadoDeHoy(fecha);
   // Productos solo de las guias nuevas, de a 5 a la vez (el cliente igual respeta el limite de Relbase).
   const sinDetalle = guias.filter((g) => g.sii_status !== "cancel" && !esBins(g.contact) && !lineasPorGuia.has(g.id));
   await enLotes(sinDetalle, 5, async (g) => {
-    const productos = (await obtenerDte(g.id)).products ?? [];
-    lineasPorGuia.set(
-      g.id,
-      productos.map((p) => {
-        const cantidad = Number(p.quantity) || 0;
-        const precio = Number(p.price) || 0;
-        const descuento = p.discount == null ? 0 : Number(p.discount);
-        return {
-          dte_id: g.id,
-          codigo: p.code,
-          nombre: p.name,
-          ...clasificarCodigo(p.code, p.product_id),
-          cantidad,
-          precio,
-          // Igual que la sincronizacion (lib/ventas/sincronizar.ts).
-          monto_neto: Math.round(cantidad * precio * (1 - descuento / 100)),
-        };
-      })
-    );
+    lineasPorGuia.set(g.id, await lineasDeRelbase(g.id));
   });
   return { guias, fecha };
 }
