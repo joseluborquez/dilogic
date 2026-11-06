@@ -68,6 +68,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Se excluyen estaticos e imagenes: no necesitan sesion y encarecerian cada
-  // request con una llamada a Supabase.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|ico|webp)$).*)"],
+  // request con una llamada a Supabase. Tambien /api/salud (responde "ok",
+  // sin datos), para que las visitas que mantienen despierta la app no la toquen.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/salud|.*\\.(?:png|jpg|jpeg|svg|ico|webp)$).*)"],
 };

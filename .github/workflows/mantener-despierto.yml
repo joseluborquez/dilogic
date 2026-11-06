@@ -1,0 +1,24 @@
+# Visita la app cada 5 minutos en horario de oficina para que Vercel no apague
+# el servidor (arrancar en frio hacia que la primera pantalla tardara ~6 s).
+# Solo pide /api/salud, que responde "ok" sin consultar Supabase ni Relbase.
+# Repositorio publico: GitHub Actions no cobra estos minutos.
+name: Mantener despierta la app
+
+on:
+  schedule:
+    # Lunes a sabado, 11:00-23:55 UTC = 8:00-20:55 en Chile (horario de verano, UTC-3).
+    - cron: "*/5 11-23 * * 1-6"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  visitar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Visitar /api/salud
+        run: |
+          for ruta in salud salud/60 salud/300; do
+            curl -fsS --max-time 30 -o /dev/null -w "$ruta %{http_code} %{time_total}s\n" "https://dilogic.vercel.app/api/$ruta" || echo "$ruta fallo"
+          done
