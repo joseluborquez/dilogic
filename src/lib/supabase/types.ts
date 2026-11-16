@@ -284,6 +284,12 @@ export interface Database {
         Update: Partial<MemoriaListado>;
         Relationships: [];
       };
+      reportes_descargados: {
+        Row: ReporteDescargado;
+        Insert: Partial<ReporteDescargado>;
+        Update: Partial<ReporteDescargado>;
+        Relationships: [];
+      };
       guias_manuales: {
         Row: GuiaManual;
         Insert: Partial<GuiaManual>;
@@ -330,3 +336,16 @@ export interface Database {
     CompositeTypes: Record<string, never>;
   };
 }
+
+/** Excel de /reportes descargado (0021): el ultimo de cada empresa se marca en el calendario. */
+export type ReporteDescargado = {
+  id: string;
+  empresa: string;
+  desde: string;
+  hasta: string;
+  guias: number;
+  monto_neto: number;
+  usuario_id: string | null;
+  usuario: string | null;
+  created_at: string;
+};

@@ -224,3 +224,52 @@ export function rango(desde: string, hasta: string): { desde: string; hasta: str
 }
 
 export const enRango = (fecha: string, r: { desde: string; hasta: string } | null) => r != null && fecha >= r.desde && fecha <= r.hasta;
+
+/** Ultimo reporte descargado de una empresa (se marca en el calendario). */
+export interface UltimoReporte {
+  desde: string;
+  hasta: string;
+  guias: number;
+  /** yyyy-mm-dd, hora de Chile. */
+  descargadoEl: string;
+  usuario: string | null;
+}
+
+/** Anota la descarga del Excel; si falla, la descarga sigue igual. */
+export async function registrarDescarga(
+  empresa: EmpresaReporte,
+  periodo: { desde: string; hasta: string },
+  guias: GuiaReporte[],
+  usuario: { id: string; nombre: string | null; email: string }
+): Promise<void> {
+  const { error } = await getSupabaseServiceClient()
+    .from("reportes_descargados")
+    .insert({
+      empresa,
+      desde: periodo.desde,
+      hasta: periodo.hasta,
+      guias: guias.length,
+      monto_neto: guias.reduce((s, g) => s + g.neto, 0),
+      usuario_id: usuario.id,
+      usuario: usuario.nombre ?? usuario.email,
+    });
+  if (error) console.error("Reportes: no se pudo anotar la descarga", error.message);
+}
+
+export async function ultimoReporte(empresa: EmpresaReporte): Promise<UltimoReporte | null> {
+  const { data, error } = await getSupabaseServiceClient()
+    .from("reportes_descargados")
+    .select("desde, hasta, guias, usuario, created_at")
+    .eq("empresa", empresa)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return {
+    desde: String(data.desde),
+    hasta: String(data.hasta),
+    guias: Number(data.guias),
+    descargadoEl: new Date(data.created_at).toLocaleDateString("en-CA", { timeZone: "America/Santiago" }),
+    usuario: data.usuario,
+  };
+}

@@ -24,12 +24,14 @@ function Mes({
   dias,
   desde,
   hasta,
+  ultimo,
   elegir,
 }: {
   mes: string;
   dias: Record<string, number>;
   desde: string;
   hasta: string;
+  ultimo: { desde: string; hasta: string } | null;
   elegir: (f: string) => void;
 }) {
   const [a, m] = mes.split("-").map(Number);
@@ -55,14 +57,17 @@ function Mes({
           const guias = dias[f] ?? 0;
           const borde = f === desde || f === fin;
           const dentro = desde && f > desde && f < fin;
+          const enUltimo = ultimo != null && f >= ultimo.desde && f <= ultimo.hasta;
           return (
             <button
               key={f}
               type="button"
               disabled={!guias}
               onClick={() => elegir(f)}
-              title={guias ? `${guias} ${guias === 1 ? "guía" : "guías"}` : "Sin guías"}
+              title={`${guias ? `${guias} ${guias === 1 ? "guía" : "guías"}` : "Sin guías"}${enUltimo ? " · último reporte" : ""}`}
               className={`relative rounded-md py-1.5 tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-teal ${
+                enUltimo ? "ring-1 ring-inset ring-advertencia/70" : ""
+              } ${
                 borde
                   ? "bg-teal font-semibold text-on-accent"
                   : dentro
@@ -88,12 +93,15 @@ export function Calendario({
   dias,
   desde,
   hasta,
+  ultimo: reporte = null,
   plantilla,
 }: {
   /** yyyy-mm-dd -> guias de ese dia. */
   dias: Record<string, number>;
   desde: string;
   hasta: string;
+  /** Periodo del ultimo Excel descargado: va con borde ambar. */
+  ultimo?: { desde: string; hasta: string } | null;
   /** href de la pagina con __D__ y __H__ en lugar de las fechas (lo arma el servidor). */
   plantilla: string;
 }) {
@@ -123,8 +131,8 @@ export function Calendario({
           ‹
         </button>
         <div className="grid flex-1 gap-6 sm:grid-cols-2">
-          <Mes mes={moverMes(derecha, -1)} dias={dias} desde={desde} hasta={hasta} elegir={elegir} />
-          <Mes mes={derecha} dias={dias} desde={desde} hasta={hasta} elegir={elegir} />
+          <Mes mes={moverMes(derecha, -1)} dias={dias} desde={desde} hasta={hasta} ultimo={reporte} elegir={elegir} />
+          <Mes mes={derecha} dias={dias} desde={desde} hasta={hasta} ultimo={reporte} elegir={elegir} />
         </div>
         <button type="button" className={flecha} onClick={() => setDerecha(moverMes(derecha, 1))} disabled={derecha >= ultimo} aria-label="Meses siguientes">
           ›

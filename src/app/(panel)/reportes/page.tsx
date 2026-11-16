@@ -6,6 +6,7 @@ import {
   guiasDeEmpresa,
   rango,
   type EmpresaReporte,
+  ultimoReporte,
   type GuiaReporte,
 } from "@/lib/reportes/datos";
 import { fechaTexto } from "@/lib/reportes/excel";
@@ -53,11 +54,12 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   const actual = periodoDelMes(mes);
   const periodosGrafico = [...meses].reverse().map((m) => periodoDelMes(m));
 
-  const [, { guias, sinHoy }, pedir, catalogo] = await Promise.all([
+  const [, { guias, sinHoy }, pedir, catalogo, ultimo] = await Promise.all([
     requerirUsuario(),
     guiasDeEmpresa(empresa, `${moverMes(hoyChile().slice(0, 7), -MESES_ATRAS)}-01`),
     crearPedidorDeVentas(),
     catalogoVigente(),
+    ultimoReporte(empresa),
   ]);
   const [datos, datosAnterior, ...datosGrafico] = await Promise.all([
     pedir(actual),
@@ -137,7 +139,21 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
               Relbase no respondió: pueden faltar las guías emitidas hoy. Recarga la página en unos minutos.
             </p>
           )}
-          <Calendario dias={dias} desde={desde} hasta={hasta} plantilla={enlace("__D__", "__H__")} />
+          <Calendario dias={dias} desde={desde} hasta={hasta} ultimo={ultimo} plantilla={enlace("__D__", "__H__")} />
+          <p className="flex items-center gap-2 text-sm text-ink-muted">
+            <span aria-hidden className="inline-block h-3 w-3 rounded-sm ring-1 ring-inset ring-advertencia/70" />
+            {ultimo ? (
+              <span>
+                Último reporte:{" "}
+                <span className="font-medium text-ink">
+                  {fechaTexto(ultimo.desde)} al {fechaTexto(ultimo.hasta)}
+                </span>{" "}
+                · {entero(ultimo.guias)} {ultimo.guias === 1 ? "guía" : "guías"} · descargado el {fechaTexto(ultimo.descargadoEl)}
+              </span>
+            ) : (
+              <span>Aún no hay reportes descargados de {NOMBRE_EMPRESA_REPORTE[empresa]}. El próximo Excel que descargues quedará marcado aquí.</span>
+            )}
+          </p>
           {periodo && (
             <div className="flex flex-col gap-3 border-t border-line pt-4">
               <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">

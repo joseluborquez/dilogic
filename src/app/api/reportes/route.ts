@@ -1,5 +1,5 @@
 import { obtenerUsuario } from "@/lib/auth/sesion";
-import { EMPRESAS_REPORTE, guiasDeEmpresa, lineasDeGuias, rango, type EmpresaReporte } from "@/lib/reportes/datos";
+import { EMPRESAS_REPORTE, guiasDeEmpresa, lineasDeGuias, rango, registrarDescarga, type EmpresaReporte } from "@/lib/reportes/datos";
 import { armarReporte } from "@/lib/reportes/excel";
 
 /**
@@ -27,6 +27,8 @@ export async function GET(request: Request) {
   }
   const lineas = empresa === "MTX" ? await lineasDeGuias(guias.map((g) => g.dteId)) : [];
   const reporte = armarReporte(empresa, periodo, guias, lineas);
+  // Queda como "ultimo reporte" de la empresa, marcado en el calendario.
+  await registrarDescarga(empresa, periodo, guias, usuario);
 
   return new Response(Buffer.from(reporte.contenido), {
     headers: {
