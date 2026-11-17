@@ -8,7 +8,7 @@ import { enLotes } from "@/lib/util/lotes";
 import { clasificarCodigo } from "./clasificar";
 import {
   agregar,
-  empresasPorCliente,
+  reglasDeVentas,
   esBins,
   hoyChile,
   type AgregadoPeriodo,
@@ -115,7 +115,7 @@ export const lineasDeHoy = (dteId: number): LineaParaAgregar[] => lineasPorGuia.
 
 /** Lo de hoy que la sincronizacion todavia no trajo, listo para juntar con el mes. */
 export async function agregadoDeHoy(): Promise<AgregadoPeriodo | null> {
-  const [{ guias, fecha }, empresaDeCliente] = await Promise.all([guiasNuevasDeHoy(), empresasPorCliente()]);
+  const [{ guias, fecha }, reglas] = await Promise.all([guiasNuevasDeHoy(), reglasDeVentas()]);
   const nuevas = guias.filter((g) => !todasAUnPeso(lineasDeHoy(g.id)));
   if (nuevas.length === 0) return null;
   return agregar(
@@ -129,6 +129,6 @@ export async function agregadoDeHoy(): Promise<AgregadoPeriodo | null> {
       customer_id: g.customer_id,
     })),
     nuevas.flatMap((g) => lineasDeHoy(g.id)),
-    empresaDeCliente
+    reglas
   );
 }

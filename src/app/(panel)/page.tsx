@@ -160,6 +160,11 @@ function Empresas({
               <span className="text-xs text-ink-muted" title="Parte del total del mes">{Math.round((monto / total) * 100)}% del total</span>
             </span>
             <span className="font-display text-2xl font-semibold tabular-nums">{pesos(monto)}</span>
+            {!!datos.porCliente[g]?.traspaso && (
+              <span className="text-xs text-ink-muted" title="Se factura, pero no son productos propios ni dejan ganancia">
+                de esto, traspasos {pesos(datos.porCliente[g]!.traspaso!)}
+              </span>
+            )}
             <span className="flex items-center justify-between text-xs text-ink-muted">
               <span>{centros} {centros === 1 ? "centro" : "centros"}</span>
               {cambio != null && (

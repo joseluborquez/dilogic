@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { TAG_VENTAS } from "@/lib/ventas/indicadores";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import {
   buscarCiudadesRelbase,
@@ -230,3 +231,28 @@ export async function alternarActivoEmpresaAction(
   revalidatePath("/nueva-corrida");
   return { ok: true };
 }
+
+/**
+ * Confirma un centro «por revisar» de la lista oficial (Hugo, 17-11-2026): es un centro (nuevo o juntado con uno que
+ * ya existe), va a «Otros» de su empresa, o queda fuera (no cuenta como venta). La lista la usa también el buscador
+ * de productos, desde su copia del día siguiente.
+ */
+export async function revisarCentroAction(
+  id: number,
+  decision: { tipo: "centro" | "otros" | "fuera" | "traspaso"; centro?: string }
+): Promise<{ ok: true } | { ok: false; mensaje: string }> {
+  const usuario = await requerirAdmin();
+  const centro =
+    decision.tipo === "otros" ? "Otros" : decision.tipo === "fuera" ? "Fuera" : (decision.centro ?? "").trim().replace(/\s+/g, " ");
+  if (!centro) return { ok: false, mensaje: "Escribe el nombre del centro." };
+  const { error } = await getSupabaseServiceClient()
+    .from("centros")
+    .update({ centro, tipo: decision.tipo, revisado: true, nota: `revisado por ${usuario.nombre ?? usuario.email}` })
+    .eq("id", id);
+  if (error) return { ok: false, mensaje: `No se pudo guardar: ${error.message}` };
+  revalidateTag(TAG_VENTAS, "max");
+  revalidatePath("/empresas");
+  revalidatePath("/");
+  return { ok: true };
+}
+

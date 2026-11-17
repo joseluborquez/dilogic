@@ -117,6 +117,18 @@ export type VentaLinea = {
   unidad?: string | null;
 };
 
+/** Lista oficial de centros (17-11-2026), compartida con el buscador de productos. contacto = normalizado. */
+export type Centro = {
+  id: number;
+  customer_id: number;
+  contacto: string;
+  centro: string;
+  tipo: "centro" | "otros" | "bins" | "fuera" | "traspaso";
+  revisado: boolean;
+  nota: string | null;
+  creado_en: string;
+};
+
 export type SincronizacionVentas = {
   id: string;
   origen: "manual" | "automatica" | "carga_inicial";
@@ -272,6 +284,12 @@ export interface Database {
         Row: VentaLinea;
         Insert: Partial<VentaLinea>;
         Update: Partial<VentaLinea>;
+        Relationships: [];
+      };
+      centros: {
+        Row: Centro;
+        Insert: Partial<Centro>;
+        Update: Partial<Centro>;
         Relationships: [];
       };
       sincronizaciones_ventas: {

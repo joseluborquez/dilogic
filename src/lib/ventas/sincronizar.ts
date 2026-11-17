@@ -4,9 +4,11 @@ import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { traerTodasLasFilas } from "@/lib/supabase/paginar";
 import { obtenerDte } from "@/lib/relbase/client";
 import type { RelbaseDteResumen } from "@/lib/relbase/types";
-import type { SincronizacionVentas, VentaLinea } from "@/lib/supabase/types";
+import type { Centro, SincronizacionVentas, VentaLinea } from "@/lib/supabase/types";
 import { dividirEnLotes } from "@/lib/util/lotes";
+import { claveContacto } from "./centros";
 import { clasificarCodigo } from "./clasificar";
+import { reglasDeVentas } from "./indicadores";
 import { recorrerGuiasDesde } from "./recorrer";
 
 /** Detalles (GET /dtes/{id}) que se piden a la vez. */
@@ -118,6 +120,8 @@ export async function sincronizarVentas({
       if (error) throw new Error(`No se pudieron guardar las guías: ${error.message}`);
     }
 
+    await registrarCentrosNuevos(guias);
+
     const pendientes = await traerTodasLasFilas((d, h) =>
       supabase
         .from("ventas_guias")
@@ -167,6 +171,33 @@ export async function sincronizarVentas({
         .eq("id", registro.id);
     }
     throw err;
+  }
+}
+
+/**
+ * Contactos de Cermaq, Multiexport y Yadran que no estan en la lista oficial de centros: se agregan «por revisar»
+ * (revisado = false) con la decision automatica (bins, el centro que difiere en una letra, o centro nuevo), para que
+ * Hugo los confirme en Empresas. Un error aqui no detiene la sincronizacion de ventas.
+ */
+async function registrarCentrosNuevos(guias: RelbaseDteResumen[]) {
+  try {
+    const reglas = await reglasDeVentas();
+    const nuevos = new Map<string, { customer_id: number; contacto: string; centro: string; tipo: Centro["tipo"] }>();
+    for (const g of guias) {
+      if (g.sii_status === "cancel" || !g.contact?.trim()) continue;
+      const empresa = reglas.empresaDeCliente.get(Number(g.customer_id));
+      if (!empresa || !["CERQ", "MTX", "YDR"].includes(empresa)) continue;
+      const c = reglas.centroDe(g.customer_id, g.contact);
+      if (!c.nuevo) continue;
+      const contacto = claveContacto(g.contact);
+      nuevos.set(`${g.customer_id}|${contacto}`, { customer_id: Number(g.customer_id), contacto, centro: c.centro, tipo: c.tipo });
+    }
+    if (nuevos.size === 0) return;
+    const filas = [...nuevos.values()].map((n) => ({ ...n, revisado: false, nota: "agregado automático: por revisar" }));
+    const { error } = await getSupabaseServiceClient().from("centros").upsert(filas, { onConflict: "customer_id,contacto", ignoreDuplicates: true });
+    if (error) console.error("Centros nuevos: no se pudieron guardar", error.message);
+  } catch (err) {
+    console.error("Centros nuevos: no se pudieron revisar", err);
   }
 }
 

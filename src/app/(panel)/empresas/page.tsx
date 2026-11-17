@@ -3,6 +3,8 @@ import { listarBodegas, listarEmpresas, obtenerValoresPorDefecto } from "@/lib/e
 import { NuevaEmpresaForm } from "@/components/empresas/NuevaEmpresaForm";
 import { FilaEmpresa } from "@/components/empresas/FilaEmpresa";
 import { ConexionRelbase } from "@/components/empresas/ConexionRelbase";
+import { CentrosPorRevisar } from "@/components/empresas/CentrosPorRevisar";
+import { centrosPorRevisar } from "@/lib/empresas/centros";
 import { obtenerEstadoConexion } from "@/lib/relbase/oauth";
 
 export const dynamic = "force-dynamic";
@@ -25,11 +27,13 @@ export default async function EmpresasPage({
   // Sin await: las bodegas salen de Relbase (lento) y solo se usan al abrir
   // "Agregar empresa". La pantalla se muestra sin esperarlas.
   const bodegas = listarBodegas();
-  const [empresas, valoresPorDefecto, conexion] = await Promise.all([
+  const [empresas, valoresPorDefecto, conexion, porRevisar] = await Promise.all([
     listarEmpresas(),
     obtenerValoresPorDefecto(),
     // Ademas de mostrarse solo a admins, el estado de la conexion no se consulta para operadores.
     esAdmin ? obtenerEstadoConexion() : Promise.resolve(null),
+    // Centros nuevos de las guias por confirmar (lista oficial compartida con el buscador): solo admins.
+    esAdmin ? centrosPorRevisar() : Promise.resolve([]),
   ]);
 
   return (
@@ -51,6 +55,8 @@ export default async function EmpresasPage({
           motivo={primerValor(params.motivo)}
         />
       )}
+
+      {esAdmin && <CentrosPorRevisar centros={porRevisar} />}
 
       <NuevaEmpresaForm valoresPorDefecto={valoresPorDefecto} bodegas={bodegas} />
 
