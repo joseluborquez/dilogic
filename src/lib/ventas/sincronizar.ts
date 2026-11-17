@@ -75,6 +75,8 @@ async function cargarDetalle(dteId: number): Promise<void> {
       precio,
       descuento,
       monto_neto: Math.round(cantidad * precio * (1 - (descuento ?? 0) / 100)),
+      // La lee el buscador de productos, que copia sus ventas desde esta base (17-11-2026).
+      unidad: p.unit_item ?? null,
     };
   });
   if (lineas.length > 0) {

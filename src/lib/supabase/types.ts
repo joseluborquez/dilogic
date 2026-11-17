@@ -113,6 +113,8 @@ export type VentaLinea = {
   precio: number;
   descuento: number | null;
   monto_neto: number;
+  /** Unidad de venta de relBase ("KG", "UN"); null en las guías anteriores al 17-11-2026. */
+  unidad?: string | null;
 };
 
 export type SincronizacionVentas = {

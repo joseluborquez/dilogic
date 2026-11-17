@@ -143,6 +143,8 @@ export interface RelbaseDteLinea {
   price: number;
   quantity: number;
   discount: number | null;
+  /** Unidad de venta ("KG", "UN"...). */
+  unit_item?: string | null;
 }
 
 export interface RelbaseDteDetalle {
