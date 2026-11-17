@@ -16,7 +16,8 @@ import { createServerClient } from "@supabase/ssr";
 // /api/cron: la llama Vercel sin sesion; se autentica con CRON_SECRET en la
 // propia ruta. Lista minima a proposito: todo lo que este aca queda abierto a
 // internet, incluida cualquier ruta que se cree despues bajo ese prefijo.
-const PUBLICAS = ["/login", "/api/cron"];
+// /api/auth/pase: entrada con pase desde el buscador de productos (valida el pase firmado, ver la ruta).
+const PUBLICAS = ["/login", "/api/cron", "/api/auth/pase"];
 
 export async function proxy(request: NextRequest) {
   const respuesta = NextResponse.next({ request });

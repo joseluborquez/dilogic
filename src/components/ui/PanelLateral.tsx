@@ -90,6 +90,18 @@ export function PanelLateral({
               </li>
             );
           })}
+          {/* La otra app de Dilogic (unificación, paso 3: 17-11-2026). */}
+          <li className="shrink-0 md:mt-2 md:border-t md:border-line md:pt-2">
+            <a
+              href="/api/auth/ir-buscador"
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm whitespace-nowrap text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+            >
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 3h7v7M21 3l-9 9M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
+              </svg>
+              Buscador de productos
+            </a>
+          </li>
         </ul>
       </nav>
 
