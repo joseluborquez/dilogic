@@ -115,11 +115,16 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
         return;
       }
 
+      // Celda de cantidad vacia o en 0: ese producto no se pidio esta vez (la
+      // planilla trae el catalogo completo). Se omite igual que en formato matriz.
+      if (cantidadRaw === undefined || cantidadRaw === null || String(cantidadRaw).trim() === "") return;
+
       const cantidad = typeof cantidadRaw === "number" ? cantidadRaw : Number(cantidadRaw);
-      if (!Number.isFinite(cantidad) || cantidad <= 0) {
+      if (cantidad === 0) return;
+      if (!Number.isFinite(cantidad) || cantidad < 0) {
         errores.push({
           fila: numeroFila,
-          mensaje: `Cantidad invalida para el codigo ${codigo}: "${cantidadRaw ?? ""}".`,
+          mensaje: `Cantidad invalida para el codigo ${codigo}: "${cantidadRaw}".`,
         });
         return;
       }
