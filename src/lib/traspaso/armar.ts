@@ -98,10 +98,16 @@ export function armarTraspaso(facturas: FacturaLeida[]): ResultadoTraspaso {
     precio: 0,
   }));
 
-  // 3) Guias de hasta 60 lineas y ajuste fino: el IVA se redondea por guia,
-  //    asi que se corrige peso a peso hasta que el total calce exacto.
+  // 3) La menor cantidad de guias de hasta 60 lineas, con las lineas
+  //    repartidas parejo (61 -> 31 + 30, no 60 + 1). Ajuste fino: el IVA se
+  //    redondea por guia, asi que se corrige peso a peso hasta que calce.
+  const cantidadGuias = Math.max(1, Math.ceil(lineas.length / MAX_LINEAS_POR_GUIA));
   const grupos: LineaGuiaTraspaso[][] = [];
-  for (let i = 0; i < lineas.length; i += MAX_LINEAS_POR_GUIA) grupos.push(lineas.slice(i, i + MAX_LINEAS_POR_GUIA));
+  for (let g = 0, inicio = 0; g < cantidadGuias; g += 1) {
+    const tamano = Math.floor(lineas.length / cantidadGuias) + (g < lineas.length % cantidadGuias ? 1 : 0);
+    grupos.push(lineas.slice(inicio, inicio + tamano));
+    inicio += tamano;
+  }
   const totalActual = () => grupos.reduce((n, g) => n + totalesGuia(g).total, 0);
   for (let intento = 0; intento < 200 && totalActual() !== totalFacturas; intento += 1) {
     const diferencia = totalFacturas - totalActual();
