@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useActionState, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import {
   emitirTraspasoAction,
   revisarTraspasoAction,
@@ -54,6 +55,14 @@ export function TraspasoForm({
   const [idempotencyKey, setIdempotencyKey] = useState(nuevaClave);
   const [descargando, setDescargando] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
+
+  // Con el resultado ya en pantalla, se refrescan las facturas (la emitida
+  // pasa a "ya traspasadas") y los traspasos anteriores. Va aparte de la
+  // emision para que un Relbase lento no retenga el resultado.
+  useEffect(() => {
+    if (emision.status === "listo" && emision.ok && !emision.yaExistia) router.refresh();
+  }, [emision, router]);
 
   // Las acciones se lanzan a mano y no como action/formAction del <form>:
   // React 19 resetea el formulario despues de una accion de formulario, y eso

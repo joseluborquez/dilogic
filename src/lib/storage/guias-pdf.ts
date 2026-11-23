@@ -29,7 +29,8 @@ export async function guardarPdfGuia(params: {
 }): Promise<string> {
   const { empresaCodigo, categoria, centro, folio, pdfUrl } = params;
 
-  const res = await fetch(pdfUrl);
+  // Con plazo: si Relbase no entrega el PDF, la guia igual queda registrada (sin PDF).
+  const res = await fetch(pdfUrl, { signal: AbortSignal.timeout(20_000) });
   if (!res.ok) {
     throw new Error(`No se pudo descargar el PDF de Relbase (${res.status}).`);
   }

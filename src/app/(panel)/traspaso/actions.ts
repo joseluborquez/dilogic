@@ -71,8 +71,11 @@ export async function emitirTraspasoAction(
     usuario,
   });
   revalidatePath("/historial");
-  // La lista de traspasos anteriores de esta misma pantalla.
-  revalidatePath("/traspaso");
+  // /traspaso NO se revalida aqui: eso rehace la pantalla (que consulta las
+  // compras en Relbase) dentro de esta misma respuesta, y si Relbase se pone
+  // lento el resultado no llega y el boton queda en "Emitiendo…" aunque la
+  // guia ya salio (folio 41262, 23-nov-2026). La pantalla se refresca aparte
+  // desde el navegador, despues de mostrar el resultado.
   // La revision completa (con lineas) no hace falta en pantalla.
   if (!resultado.ok && resultado.revision) {
     return { status: "listo", ok: false, mensaje: resultado.mensaje };

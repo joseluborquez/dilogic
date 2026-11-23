@@ -44,10 +44,17 @@ async function errorDesdeRespuesta(res: Response, path: string): Promise<Relbase
   return error;
 }
 
+// Una lectura que no responde en este plazo se corta: sin plazo, un Relbase
+// lento dejaba colgada la pantalla hasta el limite de la funcion (23-nov-2026).
+// Los POST no llevan plazo: cortar uno no dice si la guia quedo creada.
+const PLAZO_LECTURA_MS = 20_000;
+
 async function enviar(path: string, init: RequestInit) {
+  const esLectura = (init.method ?? "GET").toUpperCase() === "GET";
   const conToken = (token: string) =>
     fetch(`${BASE_URL}${path}`, {
       ...init,
+      signal: init.signal ?? (esLectura ? AbortSignal.timeout(PLAZO_LECTURA_MS) : undefined),
       headers: {
         authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
