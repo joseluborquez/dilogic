@@ -45,7 +45,7 @@ export async function GET(request: Request) {
 
   // La corrida (dueña y empresa) y la guía dependen solo de los parámetros: se piden a la vez.
   const [{ data: corridaRow }, { data: guia }] = await Promise.all([
-    supabase.from("corridas").select("usuario_id, empresa_id").eq("id", corrida).maybeSingle(),
+    supabase.from("corridas").select("usuario_id, empresa_id, archivo_original_nombre").eq("id", corrida).maybeSingle(),
     supabase
       .from("guias_generadas")
       .select("pdf_path, centro")
@@ -57,9 +57,11 @@ export async function GET(request: Request) {
       .maybeSingle(),
   ]);
 
-  // Un operador solo puede abrir los PDF de sus propias corridas. Va antes del 404 para no
-  // revelar a un tercero qué guías existen.
-  if (usuario.rol !== "admin" && (!corridaRow || corridaRow.usuario_id !== usuario.id)) {
+  // Un operador solo puede abrir los PDF de sus propias corridas, mas los de los traspasos de
+  // costos (la pantalla de Traspaso, abierta a operadores, lista los anteriores de todos).
+  // Va antes del 404 para no revelar a un tercero qué guías existen.
+  const esTraspaso = corridaRow?.archivo_original_nombre?.startsWith("Traspaso de costos") ?? false;
+  if (usuario.rol !== "admin" && !esTraspaso && (!corridaRow || corridaRow.usuario_id !== usuario.id)) {
     return new Response("No tienes acceso a esa guia.", { status: 403 });
   }
 

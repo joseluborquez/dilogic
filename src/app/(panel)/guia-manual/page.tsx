@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { requerirUsuario } from "@/lib/auth/sesion";
+import { requerirAdmin } from "@/lib/auth/sesion";
 import { listarFormasPago, obtenerTiposTraslado } from "@/lib/relbase/client";
 import { productosCreados, productosParaGuia, desdePrecios } from "@/lib/guia-manual/datos";
 import { cargarMemoria } from "@/lib/guia-manual/memoria";
@@ -14,7 +14,7 @@ const tiposTraslado = unstable_cache(obtenerTiposTraslado, ["relbase-tipos-trasl
 const formasPago = unstable_cache(listarFormasPago, ["relbase-formas-pago-v1"], { revalidate: 86400 });
 
 export default async function GuiaManualPage() {
-  const [, productos, creados, memoria, tipos, formas] = await Promise.all([requerirUsuario(), productosParaGuia(), productosCreados(), cargarMemoria(), tiposTraslado(), formasPago()]);
+  const [, productos, creados, memoria, tipos, formas] = await Promise.all([requerirAdmin(), productosParaGuia(), productosCreados(), cargarMemoria(), tiposTraslado(), formasPago()]);
   const desde = desdePrecios();
 
   return (

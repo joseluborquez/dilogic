@@ -1,4 +1,4 @@
-import { requerirUsuario } from "@/lib/auth/sesion";
+import { requerirAdmin } from "@/lib/auth/sesion";
 import { listarBodegas, listarEmpresas, obtenerValoresPorDefecto } from "@/lib/empresas/consultar";
 import { NuevaEmpresaForm } from "@/components/empresas/NuevaEmpresaForm";
 import { FilaEmpresa } from "@/components/empresas/FilaEmpresa";
@@ -20,7 +20,7 @@ export default async function EmpresasPage({
 }) {
   // Los operadores pueden crear empresas; editarlas, activarlas y la conexion
   // con Relbase quedan para administradores.
-  const usuario = await requerirUsuario();
+  const usuario = await requerirAdmin();
   const esAdmin = usuario.rol === "admin";
   const params = await searchParams;
 

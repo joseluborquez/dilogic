@@ -2,7 +2,7 @@
 
 import Papa from "papaparse";
 import { leerLibro, listaHojas } from "@/lib/excel/libro";
-import { requerirUsuario } from "@/lib/auth/sesion";
+import { requerirAdmin } from "@/lib/auth/sesion";
 import type { Celda } from "@/lib/listado-cliente/columnas";
 
 const MAX_FILAS = 600;
@@ -34,7 +34,7 @@ function aCelda(v: unknown): Celda {
  * filas con datos.
  */
 export async function leerListadoAction(formData: FormData): Promise<ListadoLeido> {
-  await requerirUsuario();
+  await requerirAdmin();
   const archivo = formData.get("archivo");
   const hojaPedida = formData.get("hoja");
   if (!(archivo instanceof File) || archivo.size === 0) return { status: "error", mensaje: "Adjunta el Excel o CSV del cliente." };

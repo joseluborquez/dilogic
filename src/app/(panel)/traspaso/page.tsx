@@ -1,7 +1,7 @@
 import { TraspasoForm } from "@/components/traspaso/TraspasoForm";
 import { TraspasosAnteriores } from "@/components/traspaso/TraspasosAnteriores";
 import { traspasosAnteriores } from "@/lib/traspaso/anteriores";
-import { requerirAdmin } from "@/lib/auth/sesion";
+import { requerirUsuario } from "@/lib/auth/sesion";
 import { listarEmpresasActivas } from "@/lib/empresas/consultar";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { comprasRecibidas, proveedorEsencial, type CompraRecibida } from "@/lib/traspaso/compras";
@@ -15,7 +15,7 @@ export default async function TraspasoPage() {
   // Se proponen la empresa y el centro del ultimo traspaso: casi siempre se
   // repiten (hoy, Yadran / PALVITAD). Lo que no depende entre si sale junto.
   const [, empresas, { data: ultimo }, proveedor] = await Promise.all([
-    requerirAdmin(),
+    requerirUsuario(),
     listarEmpresasActivas(),
     getSupabaseServiceClient()
       .from("traspasos_factura")

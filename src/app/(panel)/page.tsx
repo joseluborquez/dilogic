@@ -55,8 +55,17 @@ export default async function InicioPage({
   const actual = periodoDelMes(mes);
   const comparacion = periodoDeComparacion(actual);
 
-  // La sesion sale junto con la primera consulta: esperarla antes sumaba un viaje.
-  const [, pedir] = await Promise.all([requerirUsuario(), crearPedidorDeVentas()]);
+  // La sesion ya la pidio el layout (queda en cache): no suma un viaje.
+  const usuario = await requerirUsuario();
+  // Un operador no ve ventas: su inicio es solo crear guias.
+  if (usuario.rol !== "admin") {
+    return (
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6">
+        <SeccionNuevaCorrida empresas={await listarEmpresasActivas()} principal />
+      </div>
+    );
+  }
+  const pedir = await crearPedidorDeVentas();
   const [empresasCorrida, datos, datosComparacion] = await Promise.all([
     listarEmpresasActivas(),
     pedir(actual),
@@ -113,16 +122,30 @@ export default async function InicioPage({
       </NavegacionVentas>
 
       {/* Fuera de NavegacionVentas: cambiar de mes no atenua ni reinicia una corrida a medio validar. */}
-      <section id="nueva-corrida" className="flex scroll-mt-6 flex-col gap-4">
-        <header className="flex flex-col gap-1">
-          <h2 className="font-display text-xl font-semibold">Crear guías automáticas</h2>
-          <p className="text-sm text-ink-muted">
-            Sube el pedido ya depurado, revisa la validación por fila y genera las guías en Relbase.
-          </p>
-        </header>
-        <NuevaCorridaForm empresas={empresasCorrida} />
-      </section>
+      <SeccionNuevaCorrida empresas={empresasCorrida} />
     </div>
+  );
+}
+
+/** Subir un pedido y generar sus guias. Para un operador es todo el inicio (titulo principal). */
+function SeccionNuevaCorrida({
+  empresas,
+  principal = false,
+}: {
+  empresas: Awaited<ReturnType<typeof listarEmpresasActivas>>;
+  principal?: boolean;
+}) {
+  const Titulo = principal ? "h1" : "h2";
+  return (
+    <section id="nueva-corrida" className="flex scroll-mt-6 flex-col gap-4">
+      <header className="flex flex-col gap-1">
+        <Titulo className={`font-display font-semibold ${principal ? "text-3xl" : "text-xl"}`}>Crear guías automáticas</Titulo>
+        <p className="text-sm text-ink-muted">
+          Sube el pedido ya depurado, revisa la validación por fila y genera las guías en Relbase.
+        </p>
+      </header>
+      <NuevaCorridaForm empresas={empresas} />
+    </section>
   );
 }
 

@@ -27,11 +27,11 @@ interface Seccion {
 // puede viajar del servidor al cliente.
 const SECCIONES: Seccion[] = [
   { href: "/", titulo: "Inicio", icono: <IconoInicio /> },
-  { href: "/guia-manual", titulo: "Guía manual", icono: <IconoGuiaManual /> },
-  { href: "/traspaso", titulo: "Traspaso de costos", icono: <IconoTraspaso />, soloAdmin: true },
+  { href: "/guia-manual", titulo: "Guía manual", icono: <IconoGuiaManual />, soloAdmin: true },
+  { href: "/traspaso", titulo: "Traspaso de costos", icono: <IconoTraspaso /> },
   { href: "/reportes", titulo: "Reportes", icono: <IconoReportes /> },
   { href: "/historial", titulo: "Historial", icono: <IconoHistorial /> },
-  { href: "/empresas", titulo: "Empresas", icono: <IconoEmpresas /> },
+  { href: "/empresas", titulo: "Empresas", icono: <IconoEmpresas />, soloAdmin: true },
   { href: "/catalogo", titulo: "Catálogo", icono: <IconoCatalogo /> },
   { href: "/usuarios", titulo: "Usuarios", icono: <IconoUsuarios />, soloAdmin: true },
 ];
@@ -90,7 +90,8 @@ export function PanelLateral({
               </li>
             );
           })}
-          {/* La otra app de Dilogic (unificación, paso 3: 17-11-2026). */}
+          {/* La otra app de Dilogic (unificación, paso 3: 17-11-2026). Solo administradores. */}
+          {esAdmin && (
           <li className="shrink-0 md:mt-2 md:border-t md:border-line md:pt-2">
             <a
               href="/api/auth/ir-buscador"
@@ -102,6 +103,7 @@ export function PanelLateral({
               Buscador de productos
             </a>
           </li>
+          )}
         </ul>
       </nav>
 

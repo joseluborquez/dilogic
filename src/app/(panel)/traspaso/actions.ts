@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requerirAdmin } from "@/lib/auth/sesion";
+import { requerirUsuario } from "@/lib/auth/sesion";
 import {
   emitirTraspaso,
   revisarFacturas,
@@ -34,7 +34,7 @@ export async function revisarTraspasoAction(
   _prev: EstadoRevision,
   formData: FormData
 ): Promise<EstadoRevision> {
-  await requerirAdmin();
+  await requerirUsuario();
   const archivos = archivosDe(formData);
   const compras = comprasDe(formData);
   if (archivos.length === 0 && compras.length === 0) {
@@ -61,7 +61,7 @@ export async function emitirTraspasoAction(
   _prev: EstadoEmision,
   formData: FormData
 ): Promise<EstadoEmision> {
-  const usuario = await requerirAdmin();
+  const usuario = await requerirUsuario();
   const resultado = await emitirTraspaso({
     archivos: archivosDe(formData),
     compraIds: comprasDe(formData),

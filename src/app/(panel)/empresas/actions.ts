@@ -11,7 +11,7 @@ import {
 } from "@/lib/relbase/client";
 import { aOpcion, type OpcionReferencia } from "@/lib/empresas/referencias";
 import { importarCatalogoDesdeExcel } from "@/lib/catalogo/importar";
-import { requerirAdmin, requerirUsuario } from "@/lib/auth/sesion";
+import { requerirAdmin } from "@/lib/auth/sesion";
 
 export type EstadoEmpresa =
   | { status: "inicial" }
@@ -22,7 +22,7 @@ export type EstadoEmpresa =
 export async function buscarClienteRelbaseAction(
   query: string
 ): Promise<{ ok: true; clientes: OpcionReferencia[] } | { ok: false; mensaje: string }> {
-  await requerirUsuario();
+  await requerirAdmin();
   const texto = query.trim();
   if (texto.length < 3) {
     return { ok: false, mensaje: "Escribe al menos 3 caracteres (RUT o nombre)." };
@@ -57,7 +57,7 @@ export async function buscarReferenciaRelbaseAction(
   /** Comunas: Relbase solo las lista dentro de una ciudad. */
   ciudadId?: number
 ): Promise<{ ok: true; opciones: OpcionReferencia[] } | { ok: false; mensaje: string }> {
-  await requerirUsuario();
+  await requerirAdmin();
   const texto = query.trim();
   if (tipo === "comuna" && !ciudadId) {
     return { ok: false, mensaje: "Elige primero la ciudad." };
@@ -106,7 +106,7 @@ export async function crearEmpresaAction(
   _prevState: EstadoEmpresa,
   formData: FormData
 ): Promise<EstadoEmpresa> {
-  await requerirUsuario();
+  await requerirAdmin();
   const nombre = String(formData.get("nombre") ?? "").trim();
   const codigo = String(formData.get("codigo") ?? "")
     .trim()

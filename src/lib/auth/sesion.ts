@@ -45,7 +45,12 @@ export const obtenerUsuario = cache(async (): Promise<UsuarioSesion | null> => {
     id: perfil.id,
     email: perfil.email,
     nombre: perfil.nombre,
-    rol: perfil.rol as RolUsuario,
+    // VER_COMO_OPERADOR=1 en .env.local muestra la app como la ve un operador.
+    // Solo en local (npm run dev): en Vercel no tiene efecto.
+    rol:
+      process.env.NODE_ENV === "development" && process.env.VER_COMO_OPERADOR === "1"
+        ? "operador"
+        : (perfil.rol as RolUsuario),
     estado: perfil.estado as EstadoUsuario,
   };
 });

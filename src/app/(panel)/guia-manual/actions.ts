@@ -2,7 +2,7 @@
 
 import { datosTrasladoFijos } from "@/lib/relbase/traslado";
 import { createHash } from "node:crypto";
-import { requerirUsuario } from "@/lib/auth/sesion";
+import { requerirAdmin } from "@/lib/auth/sesion";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import {
   buscarCiudadesRelbase,
@@ -39,7 +39,7 @@ export interface ClienteEncontrado {
 }
 
 export async function buscarClientesAction(texto: string): Promise<ClienteEncontrado[]> {
-  await requerirUsuario();
+  await requerirAdmin();
   const q = texto.trim();
   if (q.length < 2) return [];
   const lista = await buscarClientesRelbase(q);
@@ -88,7 +88,7 @@ async function nombresDeLugar(ciudadId: number | null, comunaId: number | null) 
 export async function cargarClienteAction(
   id: number
 ): Promise<{ ok: true; cliente: ClienteCompleto } | { ok: false; mensaje: string }> {
-  await requerirUsuario();
+  await requerirAdmin();
   const [cliente, direcciones] = await Promise.all([obtenerCliente(id), listarDireccionesCliente(id)]);
   if (!cliente) return { ok: false, mensaje: "Relbase no encontró ese cliente." };
 
@@ -116,7 +116,7 @@ export async function cargarClienteAction(
 
 /** Productos de Relbase fuera del catalogo de la app (otros formatos de codigo). */
 export async function buscarOtrosProductosAction(texto: string): Promise<ProductoGuia[]> {
-  await requerirUsuario();
+  await requerirAdmin();
   const q = texto.trim();
   if (q.length < 2) return [];
   const lista = await buscarProductos(q);
@@ -146,7 +146,7 @@ const MAX_CODIGOS_LISTADO = 40;
  * guia valida; si nunca se vendio, el de Relbase. Solo lecturas.
  */
 export async function productosPorCodigoAction(codigos: string[]): Promise<ProductoGuia[]> {
-  await requerirUsuario();
+  await requerirAdmin();
   const pedidos = [...new Set(codigos.map((c) => c.trim().toUpperCase()).filter(Boolean))].slice(0, MAX_CODIGOS_LISTADO);
   if (pedidos.length === 0) return [];
 
@@ -267,7 +267,7 @@ const errorDeRelbase = (err: RelbaseApiError) => {
 };
 
 export async function emitirGuiaManualAction(pedida: GuiaPedida): Promise<ResultadoEmision> {
-  const usuario = await requerirUsuario();
+  const usuario = await requerirAdmin();
   const fallo = (mensaje: string, nuevaLlave = false): ResultadoEmision => ({ status: "error", mensaje, nuevaLlave });
 
   // --- Validaciones que no dependen de Relbase ---------------------------
