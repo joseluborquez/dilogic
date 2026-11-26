@@ -207,9 +207,16 @@ export async function emitirTraspaso(params: {
   // Reenvio de un traspaso ya emitido: se devuelve lo que quedo.
   const { data: previa } = await supabase
     .from("corridas")
-    .select("id")
+    .select("id, estado")
     .eq("idempotency_key", idempotencyKey)
     .maybeSingle();
+  if (previa?.estado === "generando") {
+    return {
+      ok: false,
+      mensaje:
+        "Este traspaso ya se empezó a emitir y no terminó (o sigue en curso). No se emitió nada nuevo. Revisa en el Historial qué guías salieron.",
+    };
+  }
   if (previa) {
     const { data: filas } = await supabase
       .from("guias_generadas")
@@ -316,13 +323,8 @@ export async function emitirTraspaso(params: {
         `dilogic-traspaso-${corrida.id}-${indice}`
       );
       const folio = String(respuesta.folio ?? respuesta.id);
-      let pdfPath: string | null = null;
-      try {
-        const url = await obtenerPdfUrlDte(respuesta.id);
-        if (url) pdfPath = await guardarPdfGuia({ empresaCodigo, categoria: "GENERICO", centro, folio, pdfUrl: url });
-      } catch {
-        pdfPath = null;
-      }
+      // Se registra apenas sale el folio, antes de esperar el PDF: si la
+      // funcion se corta en esa espera, la guia igual queda en el historial.
       await supabase.from("guias_generadas").insert(
         guia.lineas.map((l) => ({
           corrida_id: corrida.id,
@@ -335,11 +337,25 @@ export async function emitirTraspaso(params: {
           dte_id_relbase: respuesta.id,
           estado: "generada",
           fecha_generacion: new Date().toISOString(),
-          pdf_path: pdfPath,
+          pdf_path: null,
         }))
       );
       exitosas += guia.lineas.length;
       resultado.push({ folio, lineas: guia.lineas.length, total: guia.total, error: null });
+      // El PDF es secundario: sin el, la guia queda generada y se pide despues.
+      try {
+        const url = await obtenerPdfUrlDte(respuesta.id);
+        if (url) {
+          const pdfPath = await guardarPdfGuia({ empresaCodigo, categoria: "GENERICO", centro, folio, pdfUrl: url });
+          await supabase
+            .from("guias_generadas")
+            .update({ pdf_path: pdfPath })
+            .eq("corrida_id", corrida.id)
+            .eq("dte_id_relbase", respuesta.id);
+        }
+      } catch {
+        // Sin PDF: se puede recuperar con dte_id_relbase.
+      }
     } catch (err) {
       const mensaje =
         err instanceof RelbaseApiError

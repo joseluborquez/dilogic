@@ -16,6 +16,20 @@ import { descargarZipGuias } from "@/components/historial/descargar-zip";
 const REVISION_INICIAL: EstadoRevision = { status: "inicial" };
 const EMISION_INICIAL: EstadoEmision = { status: "inicial" };
 
+/** Si la respuesta no llega, se avisa en vez de mostrar la pantalla de error de Next. */
+async function emitirSinCaerse(prev: EstadoEmision, datos: FormData): Promise<EstadoEmision> {
+  try {
+    return await emitirTraspasoAction(prev, datos);
+  } catch {
+    return {
+      status: "listo",
+      ok: false,
+      mensaje:
+        "Se perdió la respuesta del servidor y no sabemos si terminó. Las guías pueden haberse emitido: revisa el Historial (o Relbase) antes de volver a emitir.",
+    };
+  }
+}
+
 const pesos = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 
 function nuevaClave(): string {
@@ -37,7 +51,7 @@ export function TraspasoForm({
   recibidas: CompraRecibida[] | null;
 }) {
   const [revision, revisar, revisando] = useActionState(revisarTraspasoAction, REVISION_INICIAL);
-  const [emision, emitir, emitiendo] = useActionState(emitirTraspasoAction, EMISION_INICIAL);
+  const [emision, emitir, emitiendo] = useActionState(emitirSinCaerse, EMISION_INICIAL);
   const [empresa, setEmpresa] = useState(empresaInicial);
   const [centro, setCentro] = useState(centroInicial);
   // Huella de los archivos elegidos: la revision vale solo para esos archivos.

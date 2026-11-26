@@ -10,6 +10,23 @@ import { PRODUCTO_GENERICO } from "@/lib/catalogo/generico";
 
 const ESTADO_INICIAL: EstadoGeneracion = { status: "inicial" };
 
+/**
+ * Si la respuesta no llega (Vercel corto la funcion, se cayo internet), la
+ * accion falla en el navegador: sin esto se veia la pantalla de error de Next
+ * y nada decia que algunas guias pudieron emitirse igual.
+ */
+async function generarSinCaerse(prev: EstadoGeneracion, datos: FormData): Promise<EstadoGeneracion> {
+  try {
+    return await generarGuiasAction(prev, datos);
+  } catch {
+    return {
+      status: "error",
+      mensaje:
+        "Se perdió la respuesta del servidor y no sabemos si terminó. Algunas guías pueden haberse emitido: revisa el Historial antes de volver a generar.",
+    };
+  }
+}
+
 interface Props {
   empresaCodigo: string;
   nombreArchivo: string;
@@ -24,7 +41,7 @@ export function GenerarGuiasForm({
   filas,
   idempotencyKey,
 }: Props) {
-  const [estado, formAction, pending] = useActionState(generarGuiasAction, ESTADO_INICIAL);
+  const [estado, formAction, pending] = useActionState(generarSinCaerse, ESTADO_INICIAL);
   const [contacto, setContacto] = useState("");
   const [agrupar, setAgrupar] = useState(false);
   const [descargando, setDescargando] = useState(false);

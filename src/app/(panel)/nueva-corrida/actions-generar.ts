@@ -179,6 +179,15 @@ function claveIdempotenciaGuia(
 // a medio generar no.
 const PRESUPUESTO_ESPERA_PDF_MS = 180_000;
 
+// Vercel corta la funcion a los 300 s. Un corte a medio emitir deja la guia en
+// curso sin registrar y la corrida en "generando". Pasado este tiempo no se
+// empieza ninguna guia nueva: las que faltan quedan en error con un mensaje
+// claro, para emitirlas en otra corrida. El pedido mas largo visto (31 guias)
+// tardo 197 s (26-nov-2026).
+const LIMITE_INICIO_GUIA_MS = 230_000;
+const MENSAJE_SIN_TIEMPO =
+  "No se emitió: se acabó el tiempo de esta corrida. Las demás guías quedaron bien. Sube de nuevo el pedido solo con este centro.";
+
 /**
  * Reconstruye el resultado de una corrida ya generada, para responder a un
  * reenvio con lo que realmente quedo emitido.
@@ -190,10 +199,19 @@ async function recuperarCorridaExistente(
 
   const { data: corrida } = await supabase
     .from("corridas")
-    .select("id")
+    .select("id, estado")
     .eq("idempotency_key", idempotencyKey)
     .maybeSingle();
   if (!corrida) return null;
+  // "generando" es que sigue en curso en otra pestana o que se corto a medio
+  // camino: mostrar solo lo que quedo haria creer que el pedido esta completo.
+  if (corrida.estado === "generando") {
+    return {
+      status: "error",
+      mensaje:
+        "Este pedido ya se empezó a generar y no terminó (o sigue en curso). No se emitió nada nuevo. Revisa en el Historial qué guías salieron antes de volver a intentarlo.",
+    };
+  }
 
   const filas = await traerTodasLasFilas((desde, hasta) =>
     supabase
@@ -385,8 +403,35 @@ export async function generarGuiasAction(
 
   async function generarCadaGuia() {
     for (const [indiceGuia, { centro, categoria, filas: lote }] of guias.entries()) {
+      if (Date.now() - inicioCorrida > LIMITE_INICIO_GUIA_MS) {
+        await supabase.from("guias_generadas").insert(
+          lote.map((f) => ({
+            corrida_id: destino.corridaId,
+            sku: f.codigo,
+            product_id_relbase: f.productIdRelbase,
+            cantidad: f.cantidad,
+            categoria,
+            centro,
+            estado: "error",
+            mensaje_error: MENSAJE_SIN_TIEMPO,
+          }))
+        );
+        totalError += lote.length;
+        resultados.push({
+          centro,
+          categoria,
+          filas: lote.map((f) => f.fila),
+          estado: "error",
+          folio: null,
+          mensajeError: MENSAJE_SIN_TIEMPO,
+        });
+        continue;
+      }
+      // Una vez creada en Relbase, la guia NO puede caer al catch de abajo
+      // (la marcaria como error aunque tenga folio).
+      let respuesta: Awaited<ReturnType<typeof crearGuiaDespacho>>;
       try {
-        const respuesta = await crearGuiaDespacho(
+        respuesta = await crearGuiaDespacho(
           {
             type_document: 52,
             start_date: fecha,
@@ -411,60 +456,6 @@ export async function generarGuiasAction(
           },
           claveIdempotenciaGuia(destino.corridaId, centro, categoria, indiceGuia)
         );
-
-        const folio = String(respuesta.folio ?? respuesta.id);
-
-        // El PDF es secundario a la guia ya creada en Relbase: si falla su
-        // descarga/guardado, la fila igual queda "generada" con su folio.
-        // Relbase genera el PDF de forma asincrona, asi que obtenerPdfUrlDte
-        // reintenta unas pocas veces hasta que este listo (ver su doc).
-        let pdfPath: string | null = null;
-        try {
-          const quedaTiempo = Date.now() - inicioCorrida < PRESUPUESTO_ESPERA_PDF_MS;
-          const pdfUrl = await obtenerPdfUrlDte(
-            respuesta.id,
-            quedaTiempo ? {} : { intentos: 1 }
-          );
-          if (pdfUrl) {
-            pdfPath = await guardarPdfGuia({
-              empresaCodigo,
-              categoria,
-              centro,
-              folio,
-              pdfUrl,
-            });
-          }
-        } catch {
-          pdfPath = null;
-        }
-
-        await supabase.from("guias_generadas").insert(
-          lote.map((f) => ({
-            corrida_id: destino.corridaId,
-            sku: f.codigo,
-            product_id_relbase: f.productIdRelbase,
-            cantidad: f.cantidad,
-            categoria,
-            centro,
-            folio_relbase: folio,
-            // Se guarda aunque el PDF si se haya capturado: es lo que permite
-            // volver a pedirlo a Relbase mas adelante.
-            dte_id_relbase: respuesta.id,
-            estado: "generada",
-            fecha_generacion: new Date().toISOString(),
-            pdf_path: pdfPath,
-          }))
-        );
-
-        totalExitosas += lote.length;
-        resultados.push({
-          centro,
-          categoria,
-          filas: lote.map((f) => f.fila),
-          estado: "generada",
-          folio,
-          mensajeError: null,
-        });
       } catch (err) {
         const mensaje =
           err instanceof RelbaseApiError
@@ -495,6 +486,57 @@ export async function generarGuiasAction(
           folio: null,
           mensajeError: mensaje,
         });
+        continue;
+      }
+
+      const folio = String(respuesta.folio ?? respuesta.id);
+
+      // Se registra apenas Relbase entrega el folio, ANTES de esperar el PDF:
+      // si la funcion se corta durante esa espera, la guia igual queda en el
+      // historial (antes quedaba emitida en Relbase sin rastro aqui).
+      await supabase.from("guias_generadas").insert(
+        lote.map((f) => ({
+          corrida_id: destino.corridaId,
+          sku: f.codigo,
+          product_id_relbase: f.productIdRelbase,
+          cantidad: f.cantidad,
+          categoria,
+          centro,
+          folio_relbase: folio,
+          // Permite volver a pedir el PDF a Relbase mas adelante.
+          dte_id_relbase: respuesta.id,
+          estado: "generada",
+          fecha_generacion: new Date().toISOString(),
+          pdf_path: null,
+        }))
+      );
+      totalExitosas += lote.length;
+      resultados.push({
+        centro,
+        categoria,
+        filas: lote.map((f) => f.fila),
+        estado: "generada",
+        folio,
+        mensajeError: null,
+      });
+
+      // El PDF es secundario a la guia ya creada: si falla su descarga o
+      // guardado, la fila queda "generada" con su folio y sin PDF. Relbase lo
+      // genera de forma asincrona, asi que obtenerPdfUrlDte reintenta unas
+      // pocas veces hasta que este listo (ver su doc).
+      try {
+        const quedaTiempo = Date.now() - inicioCorrida < PRESUPUESTO_ESPERA_PDF_MS;
+        const pdfUrl = await obtenerPdfUrlDte(respuesta.id, quedaTiempo ? {} : { intentos: 1 });
+        if (pdfUrl) {
+          const pdfPath = await guardarPdfGuia({ empresaCodigo, categoria, centro, folio, pdfUrl });
+          await supabase
+            .from("guias_generadas")
+            .update({ pdf_path: pdfPath })
+            .eq("corrida_id", destino.corridaId)
+            .eq("dte_id_relbase", respuesta.id);
+        }
+      } catch {
+        // Sin PDF: se puede recuperar despues con dte_id_relbase.
       }
     }
   }
