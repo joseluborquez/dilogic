@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { requerirUsuario } from "@/lib/auth/sesion";
 import {
   emitirTraspaso,
@@ -70,12 +69,14 @@ export async function emitirTraspasoAction(
     idempotencyKey: String(formData.get("idempotencyKey") ?? ""),
     usuario,
   });
-  revalidatePath("/historial");
-  // /traspaso NO se revalida aqui: eso rehace la pantalla (que consulta las
-  // compras en Relbase) dentro de esta misma respuesta, y si Relbase se pone
-  // lento el resultado no llega y el boton queda en "Emitiendo…" aunque la
-  // guia ya salio (folio 41262, 23-nov-2026). La pantalla se refresca aparte
-  // desde el navegador, despues de mostrar el resultado.
+  // Aqui NO se llama a revalidatePath (de ninguna ruta): en Next 16 cualquier
+  // revalidatePath dentro de una accion rehace la pantalla ACTUAL (/traspaso,
+  // que consulta las compras en Relbase) dentro de esta misma respuesta, y si
+  // Relbase se pone lento el resultado no llega y el boton queda en
+  // "Emitiendo…" aunque las guias ya salieron (41262 el 23-nov; 41269 y 41270
+  // el 26-nov, con revalidatePath("/historial")). /historial es force-dynamic
+  // y no lo necesita. La pantalla se refresca aparte desde el navegador,
+  // despues de mostrar el resultado.
   // La revision completa (con lineas) no hace falta en pantalla.
   if (!resultado.ok && resultado.revision) {
     return { status: "listo", ok: false, mensaje: resultado.mensaje };
