@@ -3,8 +3,8 @@ import "server-only";
 import { zipSync, strToU8 } from "fflate";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
 import { traerTodasLasFilas } from "@/lib/supabase/paginar";
-import { descargarPdfGuia, guardarPdfGuia } from "@/lib/storage/guias-pdf";
-import { obtenerPdfUrlDte } from "@/lib/relbase/client";
+import { descargarPdfGuia } from "@/lib/storage/guias-pdf";
+import { recuperarPdfGuia } from "@/lib/storage/recuperar-pdf";
 import { dividirEnLotes, enLotes } from "@/lib/util/lotes";
 import { claveGuia, corridasDeClaves } from "./claves";
 import { construirNombreDescargaPdf, construirNombreZipSolicitud } from "./nombre-pdf";
@@ -120,33 +120,19 @@ async function resolverGuias(
   return [...porClave.values()];
 }
 
-/**
- * Pide de nuevo a Relbase el PDF de una guia emitida que quedo sin el, lo
- * guarda en el bucket y anota la ruta en todas sus filas. null si Relbase aun
- * no lo tiene o algo falla: la guia queda como faltante.
- */
+/** Recupera el PDF de una guia sin el y devuelve sus bytes (null: queda como faltante). */
 async function recuperarPdf(guia: GuiaParaZip, empresaCodigo: string): Promise<Uint8Array | null> {
-  try {
-    const url = await obtenerPdfUrlDte(guia.dteId!, { intentos: 2 });
-    if (!url) return null;
-    const path = await guardarPdfGuia({
-      empresaCodigo,
-      categoria: guia.categoria,
-      centro: guia.centro,
-      folio: guia.folio!,
-      pdfUrl: url,
-    });
-    await getSupabaseServiceClient()
-      .from("guias_generadas")
-      .update({ pdf_path: path })
-      .eq("corrida_id", guia.corridaId)
-      .eq("folio_relbase", guia.folio!);
-    guia.pdfPath = path;
-    return await descargarPdfGuia(path);
-  } catch (err) {
-    console.error(`No se pudo recuperar el PDF del folio ${guia.folio}`, err);
-    return null;
-  }
+  const path = await recuperarPdfGuia({
+    corridaId: guia.corridaId,
+    folio: guia.folio!,
+    dteId: guia.dteId!,
+    empresaCodigo,
+    categoria: guia.categoria,
+    centro: guia.centro,
+  });
+  if (!path) return null;
+  guia.pdfPath = path;
+  return await descargarPdfGuia(path);
 }
 
 /** Evita que dos guias con el mismo nombre se pisen dentro del ZIP. */

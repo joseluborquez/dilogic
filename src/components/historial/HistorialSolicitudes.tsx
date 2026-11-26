@@ -192,7 +192,7 @@ export function HistorialSolicitudes({ solicitudes, manuales, puedeEliminar }: P
                   <p className="text-xs text-ink-muted">
                     {plural(solicitud.totalGuias, "guía", "guías")}
                     {solicitud.totalConPdf < solicitud.totalGuias && (
-                      <> · {solicitud.totalGuias - solicitud.totalConPdf} sin PDF</>
+                      <> · {solicitud.totalGuias - solicitud.totalConPdf} PDF pendiente</>
                     )}
                   </p>
                 </div>
@@ -356,7 +356,10 @@ function FilaGuia({
       </td>
       <td className="px-3 py-1.5">
         <div className="flex items-center gap-1">
-          {guia.tienePdf && guia.folio ? (
+          {/* Una guia emitida sin PDF guardado igual se puede abrir: la ruta
+              lo pide a Relbase en ese momento (Relbase a veces no lo tiene
+              listo al emitir). */}
+          {guia.estado === "generada" && guia.folio ? (
             <>
               <AccionIconoEnlace
                 href={urlPdf(corridaId, guia.folio, "ver")}
@@ -397,7 +400,11 @@ function FilaGuia({
               <IconoEliminar />
             </AccionIconoBoton>
           )}
-          {!guia.tienePdf && <span className="ml-1 text-xs text-ink-muted">sin PDF</span>}
+          {guia.estado === "generada" && !guia.tienePdf && (
+            <span className="ml-1 text-xs text-ink-muted" title="Al abrirla o descargarla se pide a Relbase">
+              PDF pendiente
+            </span>
+          )}
         </div>
       </td>
     </tr>

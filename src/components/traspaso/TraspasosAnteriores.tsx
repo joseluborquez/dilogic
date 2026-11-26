@@ -41,7 +41,8 @@ export function TraspasosAnteriores({ traspasos }: { traspasos: TraspasoAnterior
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-x-3 gap-y-1">
                       {t.guias.map((g) =>
-                        g.tienePdf ? (
+                        // Sin PDF guardado igual se abre: la ruta lo pide a Relbase.
+                        g.folio ? (
                           <a
                             key={g.folio}
                             href={`/api/guias/pdf?corrida=${t.corridaId}&folio=${encodeURIComponent(g.folio)}&modo=ver`}
