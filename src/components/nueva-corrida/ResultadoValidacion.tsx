@@ -46,7 +46,7 @@ export function ResultadoValidacion({ estado }: { estado: EstadoOk }) {
           </div>
           <div className="text-right">
             <dt className="text-xs text-ink-muted">errores</dt>
-            <dd className="text-error font-semibold">{resumen.errores}</dd>
+            <dd className="text-error font-semibold">{resumen.errores + erroresArchivo.filter((e) => e.tipo !== "aviso").length}</dd>
           </div>
         </dl>
       </div>

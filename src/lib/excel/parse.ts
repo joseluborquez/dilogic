@@ -83,6 +83,35 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
   const nombreDe = (row: unknown[]): string | null =>
     idxNombre !== -1 && row[idxNombre] != null ? String(row[idxNombre]).trim() || null : null;
 
+  // Dos columnas con el mismo papel (ej. «CÓDIGO» y «CODIGO»): la app tomaria
+  // la primera y trataria la otra como centro, con un error por fila que no
+  // explica nada (Multi-X FyV 27-11-2026). Se detiene y se dice cual sobra.
+  const roles: [string, string[]][] = [
+    ["código", ALIAS_CODIGO],
+    ["cantidad", ALIAS_CANTIDAD],
+    ["nombre del producto", ALIAS_NOMBRE],
+    ["precio", ALIAS_PRECIO],
+  ];
+  for (const [rol, alias] of roles) {
+    const repetidas = headers
+      .map((h, idx) => ({ idx, h: h.trim(), n: normalizarHeader(h) }))
+      .filter(({ n }) => alias.includes(n));
+    if (repetidas.length > 1) {
+      const lista = repetidas.map(({ idx, h }) => `${letraColumna(idx)} («${h}»)`).join(" y ");
+      const ejemplos = rows
+        .slice(headerIndex + 1)
+        .find((r) => repetidas.some(({ idx }) => r?.[idx] != null && String(r[idx]).trim() !== ""));
+      const muestra = ejemplos
+        ? ` En la primera fila con datos dicen: ${repetidas.map(({ idx }) => `${letraColumna(idx)} = "${String(ejemplos[idx] ?? "").trim() || "vacía"}"`).join(", ")}.`
+        : "";
+      errores.push({
+        fila: null,
+        mensaje: `No se procesó el archivo: hay ${repetidas.length} columnas de ${rol}, ${lista}, y la app no sabe cuál usar.${muestra} Revisa cuál corresponde a las cantidades, borra la otra y vuelve a subirlo.`,
+      });
+      return { filas: [], errores };
+    }
+  }
+
   if (idxCodigo === -1) {
     errores.push({
       fila: null,
@@ -188,6 +217,23 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
     return { filas: [], errores };
   }
 
+  // Una columna "de centro" que trae texto en varias filas casi nunca es un
+  // centro (codigos, nombres o notas pegadas): un solo mensaje que lo explique
+  // en vez de uno por fila.
+  const columnasConTexto = new Set<number>();
+  for (const { idx, nombre } of columnasCentro) {
+    const malas = dataRows
+      .map((r, i) => ({ fila: headerIndex + i + 2, v: r?.[idx] }))
+      .filter(({ v }) => v != null && v !== "" && !Number.isFinite(typeof v === "number" ? v : Number(v)));
+    if (malas.length < 3) continue;
+    columnasConTexto.add(idx);
+    const ejemplos = malas.slice(0, 3).map(({ fila, v }) => `fila ${fila}: "${String(v).trim()}"`).join(", ");
+    errores.push({
+      fila: null,
+      mensaje: `La columna ${letraColumna(idx)} («${nombre}») se leyó como un centro, pero trae texto en vez de cantidades en ${malas.length} filas (${ejemplos}). Si no es un centro, bórrala o cámbiale el título y vuelve a subir el archivo.`,
+    });
+  }
+
   dataRows.forEach((row, i) => {
     const numeroFila = headerIndex + i + 2;
     const codigo = String(row[idxCodigo] ?? "").trim();
@@ -208,9 +254,10 @@ function construirFilas(rows: unknown[][]): ResultadoParseo {
 
       const cantidad = typeof cantidadRaw === "number" ? cantidadRaw : Number(cantidadRaw);
       if (!Number.isFinite(cantidad)) {
+        if (columnasConTexto.has(idx)) continue; // ya explicado en un solo mensaje
         errores.push({
           fila: numeroFila,
-          mensaje: `Cantidad invalida para el codigo ${codigo} en ${centro}: "${cantidadRaw}".`,
+          mensaje: `Centro ${centro}: la cantidad del código ${codigo} es "${cantidadRaw}" y debe ser un número.`,
         });
         continue;
       }
